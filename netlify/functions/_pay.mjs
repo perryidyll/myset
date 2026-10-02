@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mutateFan, mutateMeta, readMeta, cleanFanId, cleanArtistId, readDoc, grantPaidSongVotes,
-         casDoc, own, roomHash, clientIp } from './_lib.mjs';
+         casDoc, own, roomHash, clientIp, GR_KEEP, KEY, emptyMeta } from './_lib.mjs';
 import { isPlatformOwner } from './_plan.mjs';
 
 /* THE DOOR TO CHECKOUT HAS A LIMIT (decision 0111). /api/pay made a Checkout Session
@@ -186,6 +186,29 @@ async function takeStockFor(owner, item, qty, variant) {
   return mutateProfile(owner, (p) => takeStock(p.merch, item, qty, variant));
 }
 
+/* THE "DELIVERED" FLIP IS CHECKED (decision 0180). It was written once with its
+   error swallowed, so a flip lost under load left the marker saying undelivered
+   with nothing scheduled to look again until somebody pressed the sweep — by which
+   time the fan record holding the grant receipt could be gone (see carryFans).
+   Now the write is read back, and if it still does not land the session goes on
+   the owed list, where the bell retries it within minutes: the retry finds the
+   receipt on the fan, grants nothing, and makes the flip. The buyer is never told
+   about any of this — their votes are already on their phone. */
+async function markDelivered(aid, sid) {
+  try {
+    await casDoc(KEY.meta(aid), emptyMeta, (m) => {
+      m.paid ||= {};
+      if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
+      m.paid[sid].delivered = true;
+      m.paid[sid].deliveredAt = Date.now();
+      return true;
+    }, (m) => !!(m && m.paid && m.paid[sid] && m.paid[sid].delivered === true));
+  } catch (e) {
+    console.error(`pay: the delivered flip for ${sid} (${aid}) did not land; the bell will retry it:`, String((e && e.message) || e));
+    await noteOwed(aid, sid).catch(() => {});
+  }
+}
+
 /* ONE implementation of "grant what this payment bought".
    Used by the return page (/api/confirm), the Stripe webhook and the artist's
    reconcile sweep, so all three grant identically and none can drift.
@@ -274,7 +297,23 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);
   }
 
-  if (md.kind === 'votes' && who && granted) {
+  /* SONG VOTES THE ROOM CAN NO LONGER GIVE (decision 0182). pay.mjs checks the replay
+     is open when Checkout starts, but a card form can take minutes: by the time the
+     money lands the show may have ended, a new one started, or that very song be
+     playing. Ballot entries then would sit on a dead or spent board. They become
+     wallet votes instead — the same pack-shaped grant, carried to the fan's next
+     show like any unspent paid vote — and the reply says so. The receipt (`gr`) is
+     the same either way, so a later retry cannot grant both. */
+  let asCredits = false;
+  if (md.kind === 'song_votes' && who && granted) {
+    const { getShow } = await import('./_lib.mjs');
+    const sh = await getShow(aid, { withName: false });
+    const song = String(md.song || '').slice(0, 60);
+    asCredits = !song || sh.status !== 'live' || String(md.show || '') !== String(sh.showId || '')
+      || sh.nowPlaying === song || !(sh.played || []).includes(song);
+  }
+
+  if ((md.kind === 'votes' || asCredits) && who && granted) {
     /* THE GRANT IS IDEMPOTENT PER (fan, session), recorded on the fan record itself.
        Without that, a re-attempt after a lost `delivered` flip would hand out the
        pack twice — so the retry that fixes losing votes would start minting them.
@@ -287,7 +326,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
         me.gr ||= [];
         if (me.gr.includes(sid)) { alreadyGranted = true; return false; }
         me.gr.push(sid);
-        if (me.gr.length > 20) me.gr = me.gr.slice(-20);
+        if (me.gr.length > GR_KEEP) me.gr = me.gr.slice(-GR_KEEP);
         target = (me.extra || 0) + granted;
         me.extra = target;
         return true;
@@ -297,31 +336,21 @@ export async function redeemSession(aid, session, fallbackFan = '') {
     );
     /* Only now is it delivered. If this flip is lost the marker stays undelivered and
        the sweep tries again — which is safe, because of the guard above. */
-    await mutateMeta(aid, (m) => {
-      if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
-      m.paid[sid].delivered = true;
-      m.paid[sid].deliveredAt = Date.now();
-      return true;
-    }).catch(() => {});
+    await markDelivered(aid, sid);
   }
-  if (md.kind === 'song_votes' && who && granted && md.song) {
+  if (md.kind === 'song_votes' && !asCredits && who && granted && md.song) {
     /* These dollars were offered for one specific replay. They become ballot
        entries directly, with paid attribution, rather than wallet credits the fan
        would still have to remember to cast after returning from Stripe. */
     await grantPaidSongVotes(aid, who, String(md.song).slice(0, 60), granted, sid);
-    await mutateMeta(aid, (m) => {
-      if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
-      m.paid[sid].delivered = true;
-      m.paid[sid].deliveredAt = Date.now();
-      return true;
-    }).catch(() => {});
+    await markDelivered(aid, sid);
   }
   /* A merch order is delivered on the claim, so a retry of one never reaches here
      with the row unwritten — but if it did, the row from the first claim is in
      `pre`, already read. */
   const order = md.kind === 'merch' ? pubOrder(orderRow || orderOf(pre, sid)) : null;
   return { ok: true, kind: md.kind || 'unknown', amount, granted, song: md.song || '', fan: who, at,
-           redelivered: retrying || undefined, ...(order ? { order } : {}) };
+           redelivered: retrying || undefined, asCredits: asCredits || undefined, ...(order ? { order } : {}) };
 }
 
 /* ---------- A PAYMENT STILL OWED (decision 0138) ----------
@@ -387,7 +416,11 @@ export async function redeliverOwed({ now = Date.now(), limit = 10, deadline = D
       done.push(sid); continue;
     }
     try {
-      const session = await stripe.checkout.sessions.retrieve(sid, r.acct ? { stripeAccount: r.acct } : {});
+      /* A row noted by the delivered flip (markDelivered) knows the owner but not
+         the account; the owner's own Connect account is where their sessions live. */
+      let opts = r.acct ? { stripeAccount: r.acct } : null;
+      if (!opts) opts = (await (await import('./_connect.mjs')).stripeFor(r.aid)).opts || {};
+      const session = await stripe.checkout.sessions.retrieve(sid, opts);
       if (session && session.payment_status === 'paid') {
         const got = await redeemSession(r.aid, session);
         // `already` is Stripe's own redelivery, or the buyer's return trip, having got there first

@@ -106,12 +106,23 @@ export const stripeClient = () => {
 
 /** The client plus the request options every call about this artist's money needs.
  *  `opts.stripeAccount` is absent for the founder's own platform account, which is
- *  how his existing live payments keep working untouched. */
+ *  how his existing live payments keep working untouched.
+ *
+ *  EVERY CALLER READS (decision 0183): retrieve, list, statements, balance
+ *  transactions. Creating a charge never comes through here — pay.mjs checks
+ *  connectUsable itself and fails closed. So the scope is the account the money
+ *  LIVES on, which is `c.acct` whether or not Stripe is letting it take new charges
+ *  right now. It used to require `chargesEnabled` too, so the moment Stripe paused
+ *  an artist mid-show (a verification threshold), every read fell back to the
+ *  platform account: buyers who had just paid could not confirm, the sweep found
+ *  nothing, and the night archived $0. The founder's own sessions are on the
+ *  platform, so his clause stays: no usable account, no scope. */
 export async function stripeFor(aid) {
   const stripe = stripeClient();
   if (!stripe) return { stripe: null, opts: {}, acct: '' };
   const c = await readConnect(aid);
-  if (connectUsable(c)) return { stripe, opts: { stripeAccount: c.acct }, acct: c.acct };
+  if (c && c.acct && (connectUsable(c) || !isPlatformOwner(aid)))
+    return { stripe, opts: { stripeAccount: c.acct }, acct: c.acct };
   return { stripe, opts: {}, acct: '' };
 }
 

@@ -169,6 +169,62 @@ ring = await redeliverOwed({});
 eq('after three days it is dropped, not retried for ever', Object.keys(await owed()).length, 0);
 ok('without asking Stripe for it', ![...__stripe.calls].some((c) => c.method === 'checkout.sessions.retrieve' && c.args.id === 'cs_never'));
 
+console.log('\nA LOST "DELIVERED" FLIP IS NOTICED, AND THE BELL MAKES IT  (decision 0180)');
+/* The votes land but the flip does not: it used to be written once with its error
+   swallowed, so the marker said undelivered with nothing scheduled to look again. */
+{
+  const id = 'cs_flip_lost';
+  const session = { ...sess(id, 'gil', 6), metadata: { fan: 'gil', kind: 'votes', votes: '6', artist: 'perry-idyll' } };
+  __stripe.sessions.set(id, { session, onAccount: '' });
+  await casDoc('meta_perry-idyll', () => ({}), (m) => {      // claimed before, never delivered
+    m.paid[id] = { kind: 'votes', amount: 5, granted: 6, fan: 'gil', at: Date.now(), delivered: false }; return true; });
+  __failWrites(/^meta_/);                                       // every meta write: acked, never stuck
+  const r = await redeemSession('perry-idyll', session);
+  __failWrites(null);
+  ok('the buyer is still told it worked — the votes are on their phone', r.ok, r);
+  eq('gil has his six', await extraOf('gil'), 6);
+  eq('the marker still says undelivered', (await marker(id)).delivered, false);
+  ok('THE FIX: and the session is on the owed list for the bell', !!(await owed())[id], await owed());
+  const ring2 = await redeliverOwed({});
+  eq('the bell flips it', (await marker(id)).delivered, true);
+  eq('without granting a second pack', await extraOf('gil'), 6);
+  eq('nothing is owed any more', Object.keys(await owed()).length, 0);
+}
+
+console.log('\nTHE GRANT RECEIPT OUTLIVES THE FAN RECORD  (decision 0180)');
+/* A record with nothing to carry is deleted when the next show starts, and its
+   receipts with it. With the flip lost too, the next sweep granted the pack again. */
+{
+  const { mutateFan, carryFans, getShow, GR_KEEP } = await import('../netlify/functions/_lib.mjs');
+  const id = 'cs_carry';
+  const session = { ...sess(id, 'hal', 4), metadata: { fan: 'hal', kind: 'votes', votes: '4', artist: 'perry-idyll' } };
+  await redeemSession('perry-idyll', session);
+  eq('hal is granted', await extraOf('hal'), 4);
+  await mutateFan('perry-idyll', 'hal', (me) => { me.extra = 0; return true; });   // spent it all
+  await casDoc('meta_perry-idyll', () => ({}), (m) => { m.paid[id].delivered = false; return true; });  // and the flip was lost
+  await carryFans('perry-idyll', await getShow('perry-idyll'));
+  ok('his record is gone (nothing to carry)', !(await readFans('perry-idyll')).hal);
+  const mk = await marker(id);
+  eq('THE FIX: the marker was settled from the receipt first', [mk.delivered, mk.settledBy], [true, 'carry']);
+  const sweep = await redeemSession('perry-idyll', session);
+  eq('so a later delivery attempt answers "already"', sweep.already, true);
+  eq('and hal is not handed the pack again', await extraOf('hal'), 0);
+  eq('one receipt cap everywhere', GR_KEEP, 40);
+}
+
+console.log('\nTHE SWEEP DOES ONLY WHAT IS OWED  (decision 0181)');
+{
+  __stripe.sessions.set('cs_sweep_owed', { session: { ...sess('cs_sweep_owed', 'ivy', 2),
+    metadata: { fan: 'ivy', kind: 'votes', votes: '2', artist: 'perry-idyll' } }, onAccount: '' });
+  const calls = () => __stripe.calls.length;
+  const res = await (await revFn(new Request('https://x/api/revenue?code=devlocal', { method: 'POST' }))).json();
+  ok('it recovers the one that was owed', (res.results || []).some((x) => x.id === 'cs_sweep_owed'), res);
+  eq('ivy has her two', await extraOf('ivy'), 2);
+  eq('and says nothing is left', res.left, 0);
+  const res2 = await (await revFn(new Request('https://x/api/revenue?code=devlocal', { method: 'POST' }))).json();
+  eq('a second press finds nothing to do', [res2.recovered, res2.left], [0, 0]);
+}
+
 delete process.env.STRIPE_WEBHOOK_SECRET;
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);
