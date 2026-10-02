@@ -161,7 +161,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0163](0163-a-sample-s-tagline-is-written-in-the-magazine-voice-too.md) | A sample's tagline is written in the magazine voice too | 2026-10-03 | ui | decided | perry |
 | [0164](0164-a-sample-link-ends-in-a-query-not-a-hash.md) | A sample link ends in ?sample-profile, not #sample-profile | 2026-10-03 | ui | decided | perry-confirmed |
 | [0165](0165-a-sample-link-s-share-card-shows-the-sample-s-photo.md) | A sample link's share card shows the sample's own photo | 2026-10-03 | ui | decided | perry |
-| [0185](0185-the-vote-page-paints-the-board-first-and-asks-for.md) | The vote page paints the board first and asks for its own state only when something changed | 2026-10-03 | scale | decided | perry-confirmed |
+| [0185](0185-the-vote-page-paints-the-board-first-and-asks-for.md) | The vote page paints the board first and asks for its own state only when something changed | 2026-10-03 | scale | decided | claude |
 
 ## By area
 
