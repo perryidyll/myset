@@ -339,8 +339,9 @@ function menuDoors(tab){
   document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
 }
 
-/* AN ABOUT, ONE SENTENCE AT A TIME (decision 0135). A generated About is one block of
-   prose; the founder asked for each sentence on its own, a hairline between them. The
+/* AN ABOUT, ONE SENTENCE AT A TIME (decisions 0135, 0158). A generated About is one
+   block of prose; the founder asked for each sentence on its own, a space between them
+   (a hairline at first; 0158 took it out). The
    writer's own line breaks are kept as breaks; a full stop after a short abbreviation
    (St., Dr., Mt.) or before a lower-case word does not end a sentence. Returns HTML. */
 function aboutLines(text){

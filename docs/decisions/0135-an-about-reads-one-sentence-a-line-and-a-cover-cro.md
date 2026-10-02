@@ -13,6 +13,8 @@ tests: []
 files: [public/fan.js, public/app.css, public/venue.html, public/artist.html]
 ---
 
+> **Revised by 0158:** the founder later asked for two sentences with a space between them, so the black line is gone. The cover crop stands.
+
 ## The question
 
 Looking at Sand & Tan's sample, the founder asked for two changes, on venue pages and on sample artist pages: the cover "could be cropped better", and the About should be "spaced out with a black line between each sentence rather than one big block of text".

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:49 — d8a3e56 — photo-roles@ux/about-two-sentences (0 files since origin/main)
+**tl;dr:** Artist and venue pages: the About is two sentences with a space between them, no line; the generator now writes exactly two (0158). Andrew's sample has a new cover (him singing live at The Hollow) and three small photos; his and Sand & Tan's Abouts rewritten to two sentences
+**Other sessions:** app.css .aline: 1em gap + rise, no hairline (stamped into nine pages). _fai.mjs tidyCopy: most 2, cap 400, an overflowing sentence is skipped, not a stop. Andrew's photos and both Abouts were CRM data edits (addPhoto by i.ytimg URL, edit bio), not code. Decision 0158; 0138-0157 belong to the scale-audit sessions.
+
 ### 2026-10-02 23:07 — cd6851a — escape-management@fix/escape-management-name (1 files since origin/main)
 **tl;dr:** Artist page: a label or management name is now shown as plain text, so markup typed into it can no longer run on the public page
 **Other sessions:** artist.html only: esc(P.management) in the links pill. Scale audit week one (session cdfdf5) has more coming: webhook.mjs, _feesplit.mjs, _auto.mjs, _lib.mjs readDoc/publicArtist, vote.html — see the sessions board row before touching those.

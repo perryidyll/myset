@@ -340,10 +340,12 @@ let ctx2 = mini([JSON.stringify({ tagline: { text: 'An electrifying indie folk d
       { s: 'w'.repeat(450) + '.', src: [0] }, { s: 'y'.repeat(350) + '.', src: [0] }, { s: 'z'.repeat(340) + '.', src: [0] }] })]);
 let copy = await A.writeCopy(FACTS2, [{ url: 'https://a.test/', kind: 'website', title: 'a' }], 'artist', ctx2, { name: 'Duo' });
 ok('a hype word sends ONE repair, with the complaint in it', calls2.length === 2 && /no hype words: remove "electrifying"/.test(calls2[1].messages[2].content), calls2.map((c) => c.messages.length));
-eq('a sentence whose number is not in its facts is dropped, one too long is dropped whole, the bio stops before 700',
-   copy.sentences.map((x) => x.s.slice(0, 24)), ['They play indie folk.', 'They formed in 2019.', 'y'.repeat(24)]);
-ok('and it is under 700', copy.text.length <= 700, copy.text.length);
-eq('every kept line says where it came from', copy.sentences.map((x) => x.src), [[0], [0], [0]]);
+eq('a sentence whose number is not in its facts is dropped, one too long is dropped whole, the bio stops at two (0158)',
+   copy.sentences.map((x) => x.s.slice(0, 24)), ['They play indie folk.', 'They formed in 2019.']);
+eq('every kept line says where it came from', copy.sentences.map((x) => x.src), [[0], [0]]);
+const two = A.tidyCopy({ tagline: {}, hook: {}, style: {}, bio: [{ s: 'x'.repeat(360) + '.', src: [0] }, { s: 'A second line that would run long past the cap here.', src: [0] }, { s: 'Then a short one.', src: [0] }] }, FACTS2, false);
+eq('a second sentence that would pass 400 characters is passed over for one that fits', two.sentences.map((x) => x.s.slice(0, 10)), ['x'.repeat(10), 'Then a sho']);
+ok('and the About stays under 400', two.text.length <= 400, two.text.length);
 calls2.length = 0;
 ctx2 = mini(['not json at all', 'still not json']);
 let err = await A.extractFacts([{ kind: 'website', url: 'https://a.test/', title: 'a', text: 'Some words about a band.' }], ctx2).catch((e) => e);
@@ -450,9 +452,8 @@ ok('the repair was asked for once, with the checker’s complaint', ai.calls.fil
    && /That did not pass the check/.test(ai.calls.filter((c) => /· FACTS/.test(c.body.system))[1].body.messages[2].content));
 eq('THE POINT: the unsourced sentence and the invented number never reach the bio', P.facts.copy.text.map((x) => x.s), [
   'The Tide Lines are Mia Hart on vocals and Joe Lin on guitar, an acoustic duo.',
-  'They formed on Koh Phangan in 2019 and play every Friday at Sunset Bar.',
-  'Their sets lean on indie folk with room for a singalong.']);
-ok('the bio is those three sentences, under 700', P.bio === P.facts.copy.text.map((x) => x.s).join(' ') && P.bio.length <= 700);
+  'They formed on Koh Phangan in 2019 and play every Friday at Sunset Bar.']);
+ok('the bio is those two sentences, under 400 (0158)', P.bio === P.facts.copy.text.map((x) => x.s).join(' ') && P.bio.length <= 400);
 eq('tagline, style and the hook', [P.tagline, P.style, P.msgs.hook], ['Acoustic duo playing indie folk and covers on Koh Phangan', 'Acoustic duo · indie folk · covers', 'Loved your live Wonderwall from Sunset Bar.']);
 ok('the gate: everything passed, no review needed', P.quality.score === 1 && P.quality.review === false, P.quality);
 ok('Remove will suppress all of it', [F.suppressIds(S.parseSeed(SEED))[0], 'the tide lines|koh phangan', CH.toLowerCase(), '@thetidelines', 'thetidelines.com'].every((x) => P.supIds.includes(x)), P.supIds);
