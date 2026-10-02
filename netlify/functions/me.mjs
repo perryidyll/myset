@@ -17,10 +17,10 @@ import { buildMe } from './_board.mjs';
    or the head-count fills with people who were never there.
 
    What it reads: the show record and this phone's shard — two strong reads on the
-   founding page. A slug artist adds the registry read `publicArtist` has always
-   made to turn the slug into an id (the one global document on the poll, and the
-   same one the old /api/show read), and a night with requests on adds the requests
-   document. test/cost.mjs holds the founding page to 3. */
+   founding page. A slug artist adds what `publicArtist` reads to turn the slug into
+   an id — nothing on a warm instance, the address's two small copies on a cold one,
+   the artist list only when they cannot say yes (decision 0176) — and a night with
+   requests on adds the requests document. test/cost.mjs holds the founding page to 3. */
 const main = async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);

@@ -26,7 +26,7 @@ verified: not yet — code read 2026-09-28 in the working tree (branch feat/samp
 
 **The numbers this loop runs on** — the days an act has to claim, the days the private copy is kept after the page comes down, the days the founder has to undo a claim, and the factory's default builds a day — are in overview §2.1 (the *A sample page* row, generated from `_sample.mjs`), and nowhere here.
 
-**Nothing on this path touches a room.** A sample is not in the live registry (INVARIANT 0gm), so every public door refuses it by construction and the registry every phone polls never grows by one. Every failure here degrades to a page that is simply not there.
+**Nothing on this path touches a room.** A sample is not in the live registry (INVARIANT 0gm), so every public door refuses it by construction and the artist list never grows by one (and has no small copy for it to answer from: decision 0176). Every failure here degrades to a page that is simply not there.
 
 **The link carries a label, not a secret** (decision 0101's second round, the founder's call, 2026-09-28: twelve random characters looked like spam). `myset.vip/<slug>#sample-profile` is the same on every page, so the address alone opens a sample and the address alone can claim it; what stands between a stranger and somebody else's page is the founder's push on every claim (s18) and the undo window on the console (s19, overview §2.1). The bare address without the label is the ordinary *No page here*. **Nothing on the page erases it:** there is no Remove — the act says no by a reply, a DM or in person (s20), and the founder's **Delete forever** does it (s21).
 
