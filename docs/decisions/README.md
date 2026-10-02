@@ -161,6 +161,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0163](0163-a-sample-s-tagline-is-written-in-the-magazine-voice-too.md) | A sample's tagline is written in the magazine voice too | 2026-10-03 | ui | decided | perry |
 | [0164](0164-a-sample-link-ends-in-a-query-not-a-hash.md) | A sample link ends in ?sample-profile, not #sample-profile | 2026-10-03 | ui | decided | perry-confirmed |
 | [0165](0165-a-sample-link-s-share-card-shows-the-sample-s-photo.md) | A sample link's share card shows the sample's own photo | 2026-10-03 | ui | decided | perry |
+| [0185](0185-the-vote-page-paints-the-board-first-and-asks-for.md) | The vote page paints the board first and asks for its own state only when something changed | 2026-10-03 | scale | decided | claude |
 
 ## By area
 
@@ -192,7 +193,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md) · [0123](0123-asking-a-venue-for-a-spot-is-a-conversation-in-messages.md) · [0124](0124-a-venue-s-phones-get-push-alerts-a-new-ask-to-play.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) · [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md) · [0160](0160-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) · [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md) · [0160](0160-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md) · [0185](0185-the-vote-page-paints-the-board-first-and-asks-for.md)
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 

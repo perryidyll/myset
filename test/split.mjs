@@ -256,6 +256,135 @@ eq('fanE votes for a song nobody else has', (await vote('fanE', lowSong)).status
   ok('the edge keeps a big room\'s board for the longer interval it is told to wait', /s-maxage=10\b/.test((await board()).headers['netlify-cdn-cache-control']));
 }
 
+console.log('\nA HEAD-COUNT STAMP TAKES THREE TURNS AT MOST, AND NEVER BREAKS THE CALL  (decision 0185)');
+/* An arrival wave: every phone's first personal call stamps presence with a write to
+   the shard its votes live in. Forty tries a phone, under contention, was seconds of
+   other people's turns. Every write to the fan shards is refused here, the way a
+   contended shard refuses them, and the call must still answer — after three tries. */
+{
+  const { PRESENCE_TRIES } = await import('../netlify/functions/_lib.mjs');
+  const { __failWrites } = await import('./blobs-fake.mjs');
+  eq('the cap is three', PRESENCE_TRIES, 3);
+  __failWrites(/^f\d+_/);
+  const t0 = Date.now();
+  const { r, log } = await ops(() => me('waveFan01'));
+  __failWrites(null);
+  const sets = log.filter((x) => /^set f\d+_/.test(x)).length;
+  eq('a fresh phone in a contended room: three writes, not forty', sets, 3);
+  ok('and the personal call still answers 200 with the fan\'s wallet', r.status === 200 && r.body.ok && !!r.body.credits, r);
+  ok('in well under a second, not the seconds forty tries took', Date.now() - t0 < 1500, Date.now() - t0);
+  const again = await ops(() => me('waveFan01'));
+  ok('the next personal call tries the stamp again, and it lands', again.log.some((x) => /^set f\d+_/.test(x)) && again.r.status === 200);
+}
+
+console.log('\nTHE PAGE PAINTS THE BOARD FIRST AND ASKS FOR ITSELF RARELY  (decision 0185)');
+/* load() lifted out of vote.html and run against stubs that log what it does, in
+   order. The stubs stand in for the network (timed), the drawing (paint) and the
+   element it dims; everything else is the page's own code. */
+{
+  const s = page.indexOf('const ME_EVERY='), e = page.indexOf('/* The board and this phone\'s half');
+  ok('vote.html still has the personal-call cadence before paint()', s > 0 && e > s);
+  const head = (page.match(/<script>\(\(\)=>\{try\{const p=location\.pathname[\s\S]*?<\/script>/) || [''])[0];
+  ok('the <head> starts the board and nothing else', /window\.__early=\{board:g\(/.test(head) && !/what=me/.test(head) && !/myset\.fan/.test(head), head.slice(0, 200));
+  const rig = () => {
+    const log = [];
+    const net = { board: () => ({ ok: true, showId: 's1', updatedAt: 1, songs: [], played: [] }), me: () => ({ ok: true, showId: 's1', lastAt: 0, votes: {}, credits: {} }) };
+    const reply = (body) => body === null ? Promise.reject(new Error('down'))
+      : Promise.resolve({ json: async () => body, headers: { get: () => '0' } });
+    const timed = (u) => { const k = /what=board/.test(u) ? 'board' : 'me'; log.push(k); return reply(net[k]()); };
+    const cls = new Set();
+    const app = { classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c) }, set innerHTML(v) { log.push('noboard'); } };
+    const make = new Function('timed', 'within', 'paint', 'hideIntro', '$', 'API', 'AQ', 'AQ1', 'FAN', 'window',
+      `let BOARD=null, ME=null, CAST_AT=0, FAILS=0, BOOTED=false;\n${page.slice(s, e)}\n` +
+      'return { load, get ME(){return ME;}, get FAILS(){return FAILS;}, due(){ME_DUE=true;}, age(ms){ME_AT-=ms;} };');
+    const p = make(timed, (x) => x, (fresh) => log.push('paint:' + fresh), () => {}, () => app, '/api', '', '', 'f1', {});
+    return { p, log, net, cls };
+  };
+  const { p, log, net, cls } = rig();
+  await p.load();
+  eq('first load: the board, painted, THEN the personal call, painted again', log.splice(0), ['board', 'paint:true', 'me', 'paint:false']);
+  await p.load();
+  eq('the next tick: the board alone — no personal call', log.splice(0), ['board', 'paint:true']);
+  net.board = () => ({ ok: true, showId: 's1', updatedAt: 2, songs: [], played: [] });
+  await p.load();
+  eq('the artist changed the show (updatedAt moved): the personal call comes with it', log.splice(0), ['board', 'paint:true', 'me', 'paint:false']);
+  await p.load();
+  eq('and not again for the same show', log.splice(0), ['board', 'paint:true']);
+  p.due(); await p.load();
+  eq('the phone acted (ME_DUE): the personal call comes with the next load', log.splice(0), ['board', 'paint:true', 'me', 'paint:false']);
+  p.age(59000); await p.load();
+  eq('59 s on, nothing has happened: still the board alone', log.splice(0), ['board', 'paint:true']);
+  p.age(1500); await p.load();
+  eq('past a minute: the safety call', log.splice(0), ['board', 'paint:true', 'me', 'paint:false']);
+  net.board = () => null; p.due(); await p.load();
+  eq('a board that did not arrive: the kept board is drawn and nobody is asked for more', log.splice(0), ['board', 'paint:false']);
+  eq('and the failure is counted (0143)', p.FAILS, 1);
+  net.board = () => ({ ok: true, showId: 's1', updatedAt: 2, songs: [], played: [] });
+  await p.load();
+  eq('the room answers again: the call that was owed is made', log.splice(0), ['board', 'paint:true', 'me', 'paint:false']);
+  net.me = () => null; p.due(); await p.load(); log.splice(0);
+  ok('a personal call that failed keeps the last one the phone had', !!p.ME && p.ME.ok);
+  p.age(14000); await p.load();
+  eq('…and is not retried on the next tick', log.splice(0), ['board', 'paint:true']);
+  p.age(1500); await p.load();
+  eq('but fifteen seconds on, not a minute', log.splice(0), ['board', 'paint:true', 'me', 'paint:false']);
+  cls.add('catching'); await p.load();
+  ok('a board that arrived takes the "catching up" dimming off', !cls.has('catching'));
+
+  const r2 = rig(); r2.net.board = () => null; await r2.p.load();
+  eq('a first load with no board says so and asks nothing else', r2.log, ['board', 'noboard']);
+
+  ok('every action that changes this phone\'s state asks for it on its next load: a vote',
+     /busy\.delete\(id\); ME_DUE=true; wakeUp\(true\); load\(\);/.test(page));
+  ok('a request, a vibe or a birthday', /ME_DUE=true; await load\(\);\n\s*\}catch\(e\)\{ toast\('Connection hiccup/.test(page));
+  ok('the leftover choice', /your votes are safe'\); \}\n\s*ME_DUE=true; load\(\);/.test(page));
+  ok('a payment coming back', /ME_DUE=true; load\(\)\.then\(\(\)=>\{ if\(forSong\) resumeVote\(forSong\); \}\);/.test(page));
+  ok('a pull', /MySetPull\(async\(\)=>\{ ME_DUE=true;/.test(page));
+  ok('until the first personal answer, the wallet is not guessed (the pill is a placeholder)',
+     /const meWait=!ME&&!ME_SEEN;/.test(page) && /\$\{meWait\?'<span class="sk"/.test(page));
+}
+
+console.log('\nTHE SCREEN COMING ON FETCHES A STALE BOARD AFTER A RANDOM 0–1.5 s, AND SAYS IT IS OLD MEANWHILE  (decision 0185)');
+{
+  const s = page.indexOf('let CATCHUP=null;');
+  const e = page.indexOf('/* PULL TO REFRESH');
+  ok('vote.html still has wake()', s > 0 && e > s);
+  const run = (boardAge, floor, rnd) => {
+    const log = [], timers = [], cls = new Set();
+    const app = { classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c) } };
+    const f = new Function('wakeUp', 'tick', '$', 'setTimeout', 'clearTimeout', 'Math', 'BOARD', 'BOARD_T', 'FLOOR',
+      `let ME_DUE=false;\n${page.slice(s, e)}\nreturn { wake, get due(){return ME_DUE;} };`);
+    const M = Object.create(Math); M.random = () => rnd;
+    const w = f((full) => log.push('wakeUp:' + full), () => log.push('tick'), () => app,
+      (fn, ms) => { timers.push(ms); fn(); return 1; }, () => {}, M, {}, Date.now() - boardAge, floor);
+    w.wake();
+    return { log, timers, cls, due: w.due };
+  };
+  const big = run(30000, 20000, 0.999);
+  eq('a big room, a board 30 s old: the ladder is woken AND a load comes early', big.log, ['wakeUp:true', 'tick']);
+  ok('after a random wait under 1.5 s', big.timers.length === 1 && big.timers[0] >= 0 && big.timers[0] < 1500, big.timers);
+  ok('the old board is marked as catching up until the new one lands', big.cls.has('catching'));
+  ok('and the personal call goes with it', big.due === true);
+  const zero = run(30000, 20000, 0);
+  eq('the wait is drawn per phone, from zero', zero.timers, [0]);
+  const freshish = run(1000, 20000, 0.5);
+  eq('a board younger than the floor: only the ladder (its next tick is soon enough)', [freshish.log, freshish.timers, freshish.cls.has('catching')], [['wakeUp:true'], [], false]);
+  ok('the screen coming on calls wake()', /addEventListener\('visibilitychange',\(\)=>\{ if\(!document\.hidden\) wake\(\); \}\)/.test(page));
+  ok('wakeUp keeps its 0143 backoff: a full wake brings FAILS back to one doubling',
+     /function wakeUp\(full\)\{[\s\S]{0,80}if\(full&&FAILS>1\) FAILS=1;/.test(page));
+  ok('and tick still runs one poll at a time', /if\(TICKING\)\{ schedule\(\); return; \}/.test(page));
+  ok('the dimming has a reduced-motion path', /prefers-reduced-motion:reduce\)\{#app \.now,#app \.strip,#app \.queue,#app \.list\{transition:none\}/.test(page));
+}
+
+console.log('\nTYPING IN SEARCH KEEPS THE KEYBOARD  (decision 0185)');
+/* render() rebuilds the search box on every letter. The handler must ask for the
+   focus back, and put the caret where it was — the poll does the same (paint()). */
+ok('the input handler marks the box as focused and remembers the caret before render()',
+   /qi\.addEventListener\('input',e=>\{FILTER=e\.target\.value;FOCUS=true;CARET=e\.target\.selectionStart;render\(\);FOCUS=false;\}\);/.test(page));
+ok('render() focuses the new box and puts the caret back',
+   /if\(FOCUS\)\{ qi\.focus\(\); const v=qi\.value, at=CARET==null\?v\.length:Math\.min\(CARET,v\.length\); qi\.setSelectionRange\(at,at\); \}/.test(page));
+ok('a poll landing mid-word keeps the caret too', /FOCUS=!!\(el&&el\.id==='q'\); CARET=FOCUS\?el\.selectionStart:null;/.test(page));
+
 console.log('\nBETWEEN SHOWS THE ROOM IS DARK ON BOTH HALVES');
 await A('status', { status: 'pre' });
 {
