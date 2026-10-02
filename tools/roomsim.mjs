@@ -28,10 +28,18 @@
    First written for the 2 October 2026 scale audit; test/contention.mjs runs a few
    rooms through it on every suite run. Re-run it by hand after any change to
    casDoc, the fan files or the vote path. */
-import { register } from 'node:module';
+import * as nodeModule from 'node:module';
 import { mock } from 'node:test';
 import { readdirSync } from 'node:fs';
-register(new URL('../test/hooks.mjs', import.meta.url));
+/* In-thread hooks where Node has them (22.15 and later). The older off-thread hooks
+   answer every dynamic import() through another thread, which takes real time, so
+   on a slow machine a request's work slid from one virtual millisecond to the next
+   and the same seed gave a different, slower night (GitHub's runner, Node 22). */
+{
+  const { redirect } = await import('../test/hooks.mjs');
+  if (nodeModule.registerHooks) nodeModule.registerHooks({ resolve: (spec, ctx, next) => { const url = redirect(spec); return url ? { url, shortCircuit: true } : next(spec, ctx); } });
+  else nodeModule.register(new URL('../test/hooks.mjs', import.meta.url));
+}
 
 const A = JSON.parse(process.argv[2] || '{}');
 const P = A.P ?? 5000;
