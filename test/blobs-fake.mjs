@@ -37,8 +37,10 @@ const note = (kind, key) => { if (ops) ops.push(kind + ' ' + String(key)); };
 /* Make every read take this long, so a test can interleave a write with a read
    that is already in flight — the shape of "a vote landed while the board was
    being rendered", which is invisible when reads answer in the same tick. */
-let readDelay = 0;
-export const __slowReads = (ms) => { readDelay = Math.max(0, Number(ms) || 0); };
+let readDelay = 0, slowRe = null;
+/* `re` narrows it to matching keys, so one caller can be held on its fan file after
+   it has read the show at full speed — the cast that set off before Play. */
+export const __slowReads = (ms, re = null) => { readDelay = Math.max(0, Number(ms) || 0); slowRe = re; };
 
 /* Make reads of matching keys THROW, the way the real client does when the store
    errors or throttles — so a test can prove a failed read is treated as a failure
@@ -75,7 +77,7 @@ export function getStore() {
         if (failReadHang) await new Promise(() => {});
         throw new Error('BlobsInternalError: Netlify Blobs has generated an internal error (500 status code)');
       }
-      if (readDelay) await new Promise((r) => setTimeout(r, readDelay));
+      if (readDelay && (!slowRe || slowRe.test(key))) await new Promise((r) => setTimeout(r, readDelay));
       let e = mem.get(key);
       if (lat) { await pause(lat.r, lat.rPerMB, e ? e.body.length : 0); e = mem.get(key); stats.gets++; stats.bytesR += e ? e.body.length : 0; }
       if (!e) return null;
