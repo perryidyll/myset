@@ -649,7 +649,7 @@ function sampleRoute(p,o){
    the first time it is wanted. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=72b23eb1'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
+  const j=document.createElement('script'); j.src='/sample.js?v=10397a11'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
   CLAIMAT=Date.now(); closeSheet();
