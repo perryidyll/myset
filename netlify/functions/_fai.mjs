@@ -353,7 +353,7 @@ Answer with ONE JSON object and nothing else:
 - src: the numbers of the FACTS each line rests on. Every line needs at least one.
 - tagline: at most 120 characters. What they play and where, concretely.
 - style: at most 60 characters, two or three short genre or format words joined by " · ", like "Acoustic covers · indie folk".
-- bio: two to four sentences, at most 700 characters in all, third person, warm and concrete.
+- bio: exactly two sentences, at most 360 characters in all, third person, warm and concrete. The first says who they are and what they play; the second, where they play or one specific thing they are known for.
 - hook: ONE sentence the founder could open a direct message with, true and specific to them, like a named cover they posted or a venue they play. "" if the facts hold nothing specific.
 - Only what the facts say: no invented venues, releases, awards, members, years, numbers or quotes. If the facts are thin, write less.
 - ${NO_HYPE}`;
@@ -365,7 +365,7 @@ Answer with ONE JSON object and nothing else:
 
 - src: the numbers of the FACTS each line rests on. Every line needs at least one.
 - tagline: at most 120 characters: what kind of place, where, and what goes on there.
-- about: two to five sentences, at most 900 characters in all, warm and concrete: the place, the music, what to expect.
+- about: exactly two sentences, at most 360 characters in all, warm and concrete. The first says what the place is and where; the second, the music and what to expect.
 - hook: ONE sentence the founder could open a message with, true and specific (a music night they run, something they are known for). "" if nothing specific.
 - Only what the facts say: no invented events, prices, awards, dates, numbers or quotes. If the facts are thin, write less.
 - ${NO_HYPE}`;
@@ -401,8 +401,11 @@ export function tidyCopy(o, facts, venue) {
     // never cut a sentence short: one too long for a short bio is dropped whole
     if (t && t.length <= 400 && grounded(t, f)) sentences.push({ s: /[.!?…]["”’)]?$/.test(t) ? t : `${t}.`, f, src: srcOf(f) });
   }
-  const cap = venue ? 900 : 700, most = venue ? 5 : 4, kept = [];
-  for (const s of sentences) { if (kept.length >= most || [...kept, s].map((x) => x.s).join(' ').length > cap) break; kept.push(s); }
+  /* Two sentences, a space between them on the page (decision 0158). One that would
+     take the About past the cap is passed over, so a long first line still leaves
+     room for a short second one. */
+  const cap = 400, most = 2, kept = [];
+  for (const s of sentences) { if (kept.length >= most) break; if ([...kept, s].map((x) => x.s).join(' ').length <= cap) kept.push(s); }
   const one = (x, max) => { const t = clean(x && x.text, 400), f = fIdx(x && x.src); return t && grounded(t, f) ? { text: cutWords(t, max), f, src: srcOf(f) } : { text: '', f: [], src: [] }; };
   const out = { tagline: one(o.tagline, 120), hook: one(o.hook, 240), sentences: kept, text: kept.map((x) => x.s).join(' ') };
   if (!venue) {

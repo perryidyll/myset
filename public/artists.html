@@ -288,15 +288,13 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
    reached the only two pages that have locks — verified in a browser on
    2026-09-03, after they had already been written and believed. */
 
-/* An About, one sentence at a time (decision 0135): a hairline in the ink colour
-   between sentences, drawn in from the left as the card arrives. */
-.aline{display:block;padding:12px 0}
-.aline:first-child{padding-top:0}
-.aline:last-child{padding-bottom:0}
-.aline+.aline{border-top:1px solid transparent;background:linear-gradient(var(--ink),var(--ink)) top left/0 1px no-repeat;animation:aline .6s cubic-bezier(.22,1,.36,1) calc(.15s + var(--i)*.08s) forwards}
-@keyframes aline{to{background-size:100% 1px}}
-@supports (animation-timeline:view()){.aline+.aline{animation-timeline:view();animation-range:entry 20% cover 35%;animation-delay:0s}}
-@media (prefers-reduced-motion:reduce){.aline+.aline{animation:none;background-size:100% 1px}}
+/* An About, one sentence at a time (decisions 0135, 0158): a space between the two
+   sentences, and the second rises in as the card arrives. */
+.aline{display:block}
+.aline+.aline{margin-top:1em;animation:aline .7s cubic-bezier(.22,1,.36,1) calc(.15s + var(--i)*.1s) both}
+@keyframes aline{from{opacity:0;transform:translateY(8px)}}
+@supports (animation-timeline:view()){.aline+.aline{animation-timeline:view();animation-range:entry 10% cover 30%;animation-delay:0s}}
+@media (prefers-reduced-motion:reduce){.aline+.aline{animation:none}}
 </style>
 <style>
 body{padding-bottom:42px}
@@ -360,7 +358,7 @@ body{padding-bottom:42px}
 </div>
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
-<script src="/fan.js?v=423330ff"></script>
+<script src="/fan.js?v=15f13758"></script>
 <script>
 let ALL=[], MAPCFG=null, ONLY_UPCOMING=false, ONLY_MUSIC=false, ONLY_SIGNED=false, GMAPS_PROMISE=null, LIVE_MAP=null, INFO=null, MAP_MARKERS=new Map(), USER_MARKER=null, USER_ACCURACY=null;
 const unique=(values)=>[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b));
