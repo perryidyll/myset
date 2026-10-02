@@ -11,16 +11,26 @@ export default async (req) => {
   try { marker = ((await req.clone().json()) || {}).next_run || null; } catch { marker = null; }
   try {
     const r = await runMirror({
+      /* A sample page is a real account that is not on the list yet (0101): its
+         documents sit under the same keys, and only `samplereg` knows it exists.
+         Until 2026-10-02 the walk read the two registries alone, so no sample had
+         a second home (0146). */
       owners: async () => {
         const { readArtists } = await import('./_auth.mjs');
         const { readVenues } = await import('./_venues.mjs');
-        const [a, v] = await Promise.all([readArtists(), readVenues()]);
-        return [...Object.keys(a.byId || {}), ...Object.keys(v.byId || {}).map((vid) => `v:${vid}`)];
+        const { readSampleReg } = await import('./_sample.mjs');
+        const [a, v, s] = await Promise.all([readArtists(), readVenues(), readSampleReg()]);
+        const samples = Object.keys(s.byId || {}).map((o) => (o.startsWith('v_') ? `v:${o.slice(2)}` : o));
+        return [...new Set([...Object.keys(a.byId || {}), ...Object.keys(v.byId || {}).map((vid) => `v:${vid}`), ...samples])];
       },
       keysOf: async (owner) => {
         if (owner.startsWith('v:')) { const { keysForVenue } = await import('./_venueaccount.mjs'); return keysForVenue(owner.slice(2)); }
         const { keysFor } = await import('./_account.mjs');
-        return keysFor(owner);
+        const { cityKeysOf } = await import('./_featured.mjs');
+        /* A city's featured slots belong to the city, so they are not in keysFor
+           (deleting one artist must not delete them); they are copied with every
+           artist who bought one, which names them without a list(). */
+        return [...(await keysFor(owner)), ...(await cityKeysOf(owner).catch(() => []))];
       },
     });
     if (r.off) { console.log('mirrorcron: R2 is off — nothing copied'); return new Response('off', { status: 200 }); }

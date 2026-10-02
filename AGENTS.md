@@ -99,8 +99,11 @@ node tools/overview.mjs            # regenerate the master overview's numbers
 node tools/overview.mjs --tests    # run the suite and stamp the assertion count
 node tools/sheetcheck.mjs          # bottom-sheet touch behaviour, real touch events
 node tools/uicheck.mjs             # rendered layout in a real browser
+node tools/roomsim.mjs '{"P":5000,"burst":1500,"burstSec":20}'   # a big room on a virtual clock (a model: see its header)
 node tools/mock.mjs                # look at every page against a fake API on localhost:8787 — touches nothing live
 python3 tools/prod.py              # read-only health report of the LIVE site
+python3 tools/backup.py --coverage # is every document in the store also in the off-site copy?
+python3 tools/backup.py --from-r2  # read the off-site copy back, into the folder --restore reads
 node --import ./test/register.mjs tools/localhost.mjs   # the whole site on localhost:8950 with the REAL functions on an in-memory store (writes work); open /dev
 ```
 
@@ -111,6 +114,10 @@ tag, so every write after the first fails as busy. Use the test suite, or
 `tools/localhost.mjs` — the real functions through the suite's module hook, so the
 store is in memory with working etags, Stripe is the fake, and nothing touches
 production; it seeds a Bar Star artist and `/dev` signs the browser in.
+
+**After any change to `casDoc`, the fan files or the vote path**, run `tools/roomsim.mjs` by hand at the sizes that matter as well: the suite's `test/contention.mjs` holds the shape (nothing lost, nothing dropped), not every size (INVARIANT 0ht).
+
+**A new kind of document needs one line in `FAMILIES`** (`netlify/functions/_mirror.mjs`): who copies it off-site, or why nobody does. The suite's last step fails on a key no line matches (INVARIANT 0hs).
 
 **A green suite proves nothing about a page.** Look at it in a real browser at phone
 width. Several defects a month are invisible to the tests and obvious on screen.
