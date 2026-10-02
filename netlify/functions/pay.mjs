@@ -226,6 +226,12 @@ const main = async (req) => {
     if ((requestDoc.list || []).some((r) =>
       r.fan === fan && r.kind === 'song' && r.status === 'pending' && r.showId === show.showId))
       return bad('You’ve already got a request in — wait for that one first', 409);
+    /* THE QUEUE IS FULL BEFORE THE CARD IS ASKED (decision 0182). createRequest
+       refuses past MAX_PENDING, but only after Checkout has authorized the card — the
+       hold was cancelled, and the fan had been shown a button that led nowhere. */
+    const { MAX_PENDING } = await import('./_requests.mjs');
+    if ((requestDoc.list || []).filter((r) => r.status === 'pending' && r.showId === show.showId).length >= MAX_PENDING)
+      return bad('There are a lot of requests in already — try again in a bit', 429);
     line = {
       quantity: 1,
       price_data: {

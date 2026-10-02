@@ -724,11 +724,26 @@ export function unspentPaid(fan, show, fanId) {
   if (extra <= 0) return 0;
   return Math.max(0, extra - paidUsed(fan, show, fanId));
 }
+/* HOW MANY GRANT RECEIPTS A FAN RECORD KEEPS (decision 0180). `gr` is the proof that
+   a paid session's votes reached this fan, and it is what makes a second delivery
+   attempt a no-op. It was 20 in _pay.mjs and here, 40 in grantPaidSongVotes — and
+   the 20 trim dropped song-vote receipts too. One number now. */
+export const GR_KEEP = 40;
+
 export async function carryFans(aid, show) {
+  /* THE RECEIPTS OUTLIVE THE RECORD (decision 0180). A record with nothing to carry
+     is deleted below, and its `gr` receipts with it. If a paid session's
+     "delivered" flip had been lost, that marker still said undelivered — and with
+     the receipt gone, the next delivery attempt (the bell, the Studio's sweep)
+     granted the pack a second time. So before a record goes, every receipt it holds
+     is written into the meta marker it proves: a receipt on the fan IS delivery. */
+  const proofs = Array.from({ length: SHARDS }, () => []);
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        proofs[n] = [];
         for (const id of Object.keys(bag)) {
+          for (const sid of bag[id].gr || []) proofs[n].push(sid);
           /* A fan who chose "let the artist keep it" pledged, rather than being
              debited on the spot — see gift.mjs. THIS is the real end of the show, so
              this is where the pledge is honoured. A restart in between quietly
@@ -737,13 +752,23 @@ export async function carryFans(aid, show) {
           const carry = Math.max(0, unspentPaid(bag[id], show, id) - pledged);
           const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show, id)) : 0);
           // `gr` rides along: it is what makes a paid grant idempotent (_pay.mjs)
-          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-20) };
+          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-GR_KEEP) };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;
-      }, null).catch(() => {})
+      }, null).catch(() => { proofs[n] = []; })
     )
   );
+  const seen = new Set(proofs.flat());
+  if (!seen.size) return;
+  await mutateMeta(aid, (m) => {
+    let changed = false;
+    for (const sid of seen) {
+      const p = m.paid[sid];
+      if (p && p.delivered === false) { p.delivered = true; p.deliveredAt = Date.now(); p.settledBy = 'carry'; changed = true; }
+    }
+    return changed;
+  }).catch((e) => console.error(`carryFans: could not settle grant receipts for ${aid}:`, String((e && e.message) || e)));
 }
 
 /* Deleting a song from the library used to strand every credit held on it:
@@ -1067,7 +1092,7 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
     me.ts[songId] ||= Date.now();
     if (marker) {
       me.gr.push(marker);
-      if (me.gr.length > 40) me.gr = me.gr.slice(-40);
+      if (me.gr.length > GR_KEEP) me.gr = me.gr.slice(-GR_KEEP);
     }
     target = held + n;
     return true;
