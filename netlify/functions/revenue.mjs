@@ -93,12 +93,23 @@ const main = async (req) => {
   }
 
   const meta = await readMeta(aid);
+  /* NET OF WHAT WENT BACK (decision 0194, after 0177). A refund or a chargeback never
+     changes a Checkout Session — it stays `paid` at its full price — so the payment's
+     marker is where the loss is written: `lost` (cents no longer held), `refunded`
+     (cents, Stripe's running total) and `dispute` ({ status }). `amount` and every
+     total are what MySet still holds; `gross` keeps the original charge in view. */
   const payments = paidSessions.map((s) => {
     const md = s.metadata || {};
+    const mk = meta.paid[s.id] || {};
+    const gross = s.amount_total || 0;
+    const lost = Math.min(gross, Math.max(0, Number(mk.lost) || 0));
     return {
       id: s.id,
       at: (s.created || 0) * 1000,
-      amount: (s.amount_total || 0) / 100,
+      amount: (gross - lost) / 100,
+      gross: gross / 100,
+      lost, refunded: Math.max(0, Number(mk.refunded) || 0),
+      dispute: (mk.dispute && mk.dispute.status) || '',
       currency: (s.currency || 'usd').toUpperCase(),
       kind: md.kind || 'unknown',
       votes: parseInt(md.votes, 10) || 0,

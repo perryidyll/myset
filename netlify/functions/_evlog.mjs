@@ -72,15 +72,19 @@ export function moneyEvents(meta, showId, from, to) {
   const m = meta || {};
   const inWin = (at) => Number(at) >= (from || 0) && Number(at) <= (to || Infinity);
   const ev = [];
-  for (const t of m.tips || []) if (inWin(t.at)) ev.push({ t: t.at, k: 'tip', a: Math.round(Number(t.amount) * 100) || 0 });
+  /* Net of what went back (decision 0194): tip rows, markers and order rows carry
+     `lost`, the cents a refund or a chargeback took (0177). Gone in full is not money. */
+  const net = (x) => Math.max(0, (Math.round(Number(x.amount) * 100) || 0) - (Number(x.lost) || 0));
+  const gone = (x) => (Number(x.lost) || 0) > 0 && net(x) <= 0;
+  for (const t of m.tips || []) if (inWin(t.at) && !gone(t)) ev.push({ t: t.at, k: 'tip', a: net(t) });
   for (const [sid, p] of Object.entries(m.paid || {})) {
-    if (!p || p.kind === 'tip' || p.kind === 'merch') continue;
+    if (!p || p.kind === 'tip' || p.kind === 'merch' || gone(p)) continue;
     if (!(p.show ? p.show === showId : inWin(p.at))) continue;
     const k = (p.kind === 'votes' || p.kind === 'song_votes') ? 'pack' : String(p.kind || 'paid').slice(0, 16);
-    ev.push({ t: p.at, k, a: Math.round(Number(p.amount) * 100) || 0, n: p.granted || 0, s: p.song || '', sid: String(sid).slice(0, 24) });
+    ev.push({ t: p.at, k, a: net(p), n: p.granted || 0, s: p.song || '', sid: String(sid).slice(0, 24) });
   }
   for (const g of m.gifts || []) if (g.showId ? g.showId === showId : inWin(g.at)) ev.push({ t: g.at, k: 'gift', n: g.votes || 0 });
-  for (const o of m.orders || []) if (inWin(o.at)) ev.push({ t: o.at, k: 'order', a: Math.round(Number(o.amount) * 100) || 0 });
+  for (const o of m.orders || []) if (inWin(o.at) && !gone(o)) ev.push({ t: o.at, k: 'order', a: net(o) });
   return ev.filter((e) => Number(e.t) > 0);
 }
 
