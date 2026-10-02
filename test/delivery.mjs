@@ -227,7 +227,7 @@ console.log('\nTHE SWEEP DOES ONLY WHAT IS OWED  (decision 0181)');
 
 console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (decision 0193)');
 /* `meta.paid` kept every marker for ever and every payment rewrote all of it. A
-   delivered marker older than ninety days now moves to `paidarc_<aid>_<YYYY>`, and
+   delivered marker older than 130 days (past Stripe's 120-day dispute window) now moves to `paidarc_<aid>_<YYYY>`, and
    the dangerous case is the one PAY-6 named: the fan record (and its receipt) is
    long gone, so if the claim check did not look in the archive, any later delivery
    attempt would grant the pack again. */
@@ -237,7 +237,7 @@ console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (deci
   const AID = 'perry-idyll';
   const DAY = 86400e3;
   const NOW = Date.now();
-  const oldAt = NOW - 100 * DAY;                      // past the ninety days
+  const oldAt = NOW - 140 * DAY;                      // past the 130 days
   const Y = new Date(oldAt).getUTCFullYear();
   const oldSess = (id, fan, votes) => ({ id, payment_status: 'paid', amount_total: 500, created: Math.floor(oldAt / 1000),
     metadata: { fan, kind: 'votes', votes: String(votes), artist: AID } });
@@ -276,7 +276,7 @@ console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (deci
   eq('and sits in paidarc_<aid>_<year>, byte for byte', JSON.stringify((await arcDoc()).paid.cs_arc_old), before);
   eq('the archive is shaped { v:1, paid }', (await arcDoc()).v, 1);
   ok('THE RULE: an UNDELIVERED marker never moves, however old', !!m.cs_arc_owed && !(await arcDoc()).paid.cs_arc_owed);
-  ok('a delivered marker inside ninety days stays', !!m.cs_arc_young && !(await arcDoc()).paid.cs_arc_young);
+  ok('a delivered marker inside 130 days stays', !!m.cs_arc_young && !(await arcDoc()).paid.cs_arc_young);
   ok('a marker dated before MySet’s first year stays (no key could find it)', !!m.cs_arc_2025);
   eq('a second pass moves nothing', (await archivePaid(AID, { now: NOW })).moved, 0);
   eq('the limit is honoured (oldest first, none here)', (await archivePaid(AID, { now: NOW + 365 * DAY, limit: 0 })).moved, 0);
@@ -343,7 +343,7 @@ console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (deci
   ok('and moves what is due', ring1.moved >= 1 && !!(await arcDoc()).paid.cs_arc_bell && !(await readMeta(AID)).paid.cs_arc_bell, ring1);
   const ring2 = await archiveDue({ now: NOW, deadline: 0 });
   ok('with no time left it still does one chunk, so a pass always moves', ring2.looked >= 1, ring2);
-  eq('PAID_KEEP_DAYS is ninety', PAID_KEEP_MS, 90 * DAY);
+  eq('PAID_KEEP_DAYS is 130 — a dispute (up to 120 days) always finds its marker in meta', PAID_KEEP_MS, 130 * DAY);
 }
 
 delete process.env.STRIPE_WEBHOOK_SECRET;

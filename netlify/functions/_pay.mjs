@@ -383,15 +383,17 @@ export async function redeemSession(aid, session, fallbackFan = '') {
    archive, or in both — never neither. An undelivered marker never moves, however
    old: it is work still owed, and every delivery path looks for it in meta.
 
-   Ninety days is far past everything that retries a payment by itself (Stripe and
-   the bell, three days each); the Studio's sweep looks back 180 days, and it and
+   A hundred and thirty days is past everything that can still change a marker:
+   Stripe and the bell retry for three days, and a cardholder may dispute a charge
+   for up to 120 days — the refund and dispute handlers (0177) write to the marker in
+   meta, so it must still be there. The Studio's sweep looks back 180 days, and it and
    every claim check consult the archive for any session older than
    PAID_ARC_MARGIN_MS, ten days inside the move, so clocks that disagree a little
    cannot open a gap. Every key is computable: the years run from PAID_FIRST_YEAR
    (MySet's first) to now — never `list()` (INVARIANT 1). */
-export const PAID_KEEP_DAYS = 90;
+export const PAID_KEEP_DAYS = 130;
 export const PAID_KEEP_MS = PAID_KEEP_DAYS * 86400e3;
-export const PAID_ARC_MARGIN_MS = 80 * 86400e3;
+export const PAID_ARC_MARGIN_MS = 120 * 86400e3;
 export const PAID_FIRST_YEAR = 2026;
 export const PAID_ARC_LIMIT = 200;
 export const PAIDARC = (owner, year) => `paidarc_${owner}_${year}`;

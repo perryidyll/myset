@@ -545,7 +545,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
 | Checkouts a device may open in a row / per minute after that (`PAY_BURST`, `PAY_PER_MIN`, decision 0111) | 40 / 10 |
 | …and a whole network — sized so a packed bar on one wifi never meets it (`PAY_NET_BURST`, `PAY_NET_PER_MIN`) | 300 / 120 |
-| A delivered payment marker stays in `meta_<aid>` / every claim check also reads its year's archive for a session older than (`PAID_KEEP_DAYS`, `PAID_ARC_MARGIN_MS`, decision 0193) | 90 days / 80 days |
+| A delivered payment marker stays in `meta_<aid>` / every claim check also reads its year's archive for a session older than (`PAID_KEEP_DAYS`, `PAID_ARC_MARGIN_MS`, decision 0193) | 130 days / 120 days |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (`NET_CODES_PER_HOUR`) | 60 |
 | Phones one network may put on one night's RSVP count (`RSVP_PER_NETWORK`) | 400 |
 | Ratings one network may leave for one artist in a day (`FEEDBACK_PER_NETWORK_PER_DAY`) | 150 |
