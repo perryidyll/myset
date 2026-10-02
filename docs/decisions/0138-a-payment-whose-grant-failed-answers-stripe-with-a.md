@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [5c, 7b, 0hm]
-commits: []
+commits: [0387145]
 tests: [test/delivery.mjs]
 files: [netlify/functions/webhook.mjs, netlify/functions/_pay.mjs, netlify/functions/autocron.mjs]
 ---

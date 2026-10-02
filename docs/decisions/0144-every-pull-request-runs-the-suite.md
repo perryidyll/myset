@@ -8,7 +8,7 @@ area: ops
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [4dc1301]
 tests: []
 files: [.github/workflows/tests.yml, AGENTS.md]
 ---
@@ -47,7 +47,7 @@ The founder's word (2026-10-02): run the suite on every pull request.
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen** | A GitHub Actions workflow runs `sh test/run.sh` on every pull request and reports a check named `suite`. The branch ruleset requires it once it has proved itself. | Nothing: Actions minutes are free on a public repository | One workflow file | GitHub Actions being down blocks a merge — the ruleset's admin bypass is the way round |
+| **A — chosen** | A GitHub Actions workflow runs `sh test/run.sh` on every pull request and reports a check named `suite`. The branch ruleset requires it once it has proved itself. | Nothing: Actions minutes are free on a public repository | One workflow file | Once the check is required, GitHub Actions being down blocks a merge — the ruleset has no bypass actors, so the way round is to lift the requirement in the ruleset |
 | B | Run the suite in Netlify's build | A slower, billed build; a failed production build after the merge, not before | A build command | Finds out too late |
 | C | A pre-push hook | Nothing | A hook each checkout must install | Skipped by any checkout that did not |
 | D — do nothing | | Nothing | None | A red suite ships |
@@ -68,7 +68,10 @@ author's, and costs nothing.
   reads to skip the production build. AGENTS.md § Deploying says so.
 - **Required, in a second step.** The ruleset (`main is production`, 23031933) gains
   "require status check `suite`" after the workflow has passed on real pull
-  requests, so a fault in the workflow itself cannot lock `main`.
+  requests, so a fault in the workflow itself cannot lock `main`. As of 2026-10-03
+  it is **not** required: the ruleset read back that day carries only `deletion`,
+  `non_fast_forward` and `pull_request`, with no bypass actors. Making it required
+  is a founder decision on the desk.
 
 ## What this makes harder
 
