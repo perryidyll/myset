@@ -8,7 +8,7 @@ area: pages
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [5c0f812]
 tests: []
 files: [public/fan.js, public/app.css, public/venue.html, public/artist.html]
 ---
