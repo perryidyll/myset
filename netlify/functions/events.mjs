@@ -1,10 +1,10 @@
 import { guard } from './_errlog.mjs';
-import { json, bad, jsonCached, publicArtist } from './_lib.mjs';
-import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf } from './_events.mjs';
+import { json, bad, jsonCached, publicArtist, inTurn, own } from './_lib.mjs';
+import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf, placeGigs, upcomingAt } from './_events.mjs';
 import { readRsvp, rsvpCounts, occKey, HORIZON_DAYS } from './_rsvp.mjs';
 import { localDate, addDays, tzOffsetMs } from './_time.mjs';
-import { artistById } from './_auth.mjs';
-import { venueById } from './_venues.mjs';
+import { readArtists } from './_auth.mjs';
+import { readVenues } from './_venues.mjs';
 import { MARK } from './_canary.mjs';
 
 const WINDOW_DAYS = 7;
@@ -22,13 +22,26 @@ const main = async (req) => {
   const url = new URL(req.url);
 
   /* ---- the picker ---- */
+  /* ONE READ FOR THE WHOLE FRONT DOOR (decision 0174). Each city's count is worked
+     out from the rules the index keeps beside each owner — that city's gigs only, an
+     owner's gigs elsewhere are another city's count. An owner the index has no
+     rules for yet is read the old way, side by side; after the first heal there are
+     none. Until 2026-10-03 this read forty calendars a city, one after another. */
   if (url.searchParams.get('places')) {
     const idx = await readCityIndex();
+    const now = Date.now();
+    const unknown = new Set();
+    for (const [country, cities] of Object.entries(idx.countries || {})) for (const [city, ids] of Object.entries(cities)) for (const id of ids) if (!placeGigs(idx, country, city, id)) unknown.add(id);
+    const cal = new Map((await inTurn([...unknown], async (id) => [id, await readEvents(id)])));
     const countries = [];
     for (const [country, cities] of Object.entries(idx.countries || {})) {
       const list = [];
       for (const [city, ids] of Object.entries(cities)) {
-        const n = await countUpcoming(ids);
+        let n = 0;
+        for (const id of ids) {
+          const g = placeGigs(idx, country, city, id);
+          n += g ? upcomingAt(g, country, city, now, WINDOW_DAYS).length : countIn(cal.get(id), country, city, now);
+        }
         // never send someone to a city with nothing on — but keep it listed,
         // with the count, so the emptiness is visible before they commit
         list.push({ city, gigs: n,
@@ -89,16 +102,23 @@ const main = async (req) => {
   /* Two kinds of thing are on tonight: a gig an ARTIST listed, and an event the
      VENUE itself listed (quiz night, a DJ, the football). Both come out of the
      same recurrence engine and go into the same feed, tagged so the page can
-     tell them apart. Each owner is one parallel hop: their events, who they are,
-     and their RSVP counts. */
+     tell them apart. Each owner is one parallel hop: their events and their RSVP
+     counts.
+     ONLY THE OWNERS WITH SOMETHING ON (decision 0174): the index's rules say who
+     has a night in this window, so nobody else's calendar is read; an owner it
+     has no rules for is read anyway. The owners go side by side, a few at a time,
+     and who they are comes from each registry read ONCE — it was one read of the
+     whole registry per owner. */
+  const want = ids.filter((id) => { const g = placeGigs(idx, country, city, id); return !g || upcomingAt(g, country, city, now, days).length; });
+  const [areg, vreg] = await Promise.all([want.some((x) => !isVenueOwner(x)) ? readArtists() : null, want.some(isVenueOwner) ? readVenues() : null]);
+  const got = await inTurn(want, async (id) => {
+    const [events, rs] = await Promise.all([readEvents(id), readRsvp(id)]);
+    return { id, events, rs };
+  });
   const rows = [];
-  for (const id of ids) {
+  for (const { id, events, rs } of got) {
     const venueOwned = isVenueOwner(id);
-    const [events, who, rs] = await Promise.all([
-      readEvents(id),
-      venueOwned ? venueById(venueIdOf(id)) : artistById(id),
-      readRsvp(id),
-    ]);
+    const who = venueOwned ? own(vreg.byId, venueIdOf(id)) : own(areg.byId, id);
     if (!who) continue;
     const counts = rsvpCounts(rs);
     const tz = guessTz(events);
@@ -205,18 +225,13 @@ function dayLabel(date, today) {
   return WEEKDAY[new Date(Date.UTC(Y, M - 1, D)).getUTCDay()];
 }
 
-/** How many gigs these artists have in the window — for the picker's counts. */
-async function countUpcoming(ids) {
-  let n = 0;
-  const now = Date.now();
-  for (const aid of ids.slice(0, 40)) {
-    const events = await readEvents(aid);
-    const tz = guessTz(events);
-    const from = localDate(now, tz);
-    n += occurrencesFor(events, addDays(from, -1), addDays(from, WINDOW_DAYS))
-      .filter((o) => o.endsAt > now).length;
-  }
-  return n;
+/** One owner's gigs in this city in the window, from their calendar — the picker's
+ *  count for an owner the index has no rules for yet. */
+function countIn(events, country, city, now) {
+  if (!events) return 0;
+  const from = localDate(now, guessTz(events));
+  return occurrencesFor(events, addDays(from, -1), addDays(from, WINDOW_DAYS))
+    .filter((o) => o.endsAt > now && o.city === city && o.country === country).length;
 }
 /* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
 export default guard('events', main);

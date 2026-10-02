@@ -25,6 +25,12 @@ export const __dump = () => new Map(mem);
    supposed to survive one. Netlify Blobs really does this under concurrency. */
 let failRe = null;
 export const __failWrites = (re) => { failRe = re; };
+/* A run that dies part-way through deleting (decision 0173): after `n` more
+   deletes every delete throws, until this is called again with null. `jitter`
+   makes each delete land a few milliseconds late, by an amount fixed by its key,
+   so deletes sent side by side land out of order as real ones do. */
+let delsLeft = null, delJitter = 0;
+export const __failDeletesAfter = (n, { jitter = 0 } = {}) => { delsLeft = n == null ? null : Math.max(0, n); delJitter = n == null ? 0 : jitter; };
 
 /* An operation log, so a test can count what an endpoint actually costs instead of
    reasoning about it. Reads on the hot path are the thing this project keeps getting
@@ -116,7 +122,12 @@ export function getStore() {
       const e = mem.get(key);
       return e ? { etag: e.etag, metadata: e.metadata || {} } : null;
     },
-    async delete(key) { note('del', key); mem.delete(key); },
+    async delete(key) {
+      note('del', key);
+      if (delJitter) await new Promise((r) => setTimeout(r, [...String(key)].reduce((n, c) => n + c.charCodeAt(0), 0) % delJitter));
+      if (delsLeft !== null) { if (delsLeft <= 0) throw new Error('killed'); delsLeft--; }
+      mem.delete(key);
+    },
     async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
   };
 }

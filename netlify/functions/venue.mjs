@@ -1,10 +1,10 @@
 import { guard } from './_errlog.mjs';
-import { json, bad, jsonCached } from './_lib.mjs';
+import { json, bad, jsonCached, inTurn, own } from './_lib.mjs';
 import { venueBySlug, venueById, getVenueProfile, shapeVenue, sameVenue } from './_venues.mjs';
-import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
+import { readEvents, occurrencesFor, readCityIndex, placeGigs } from './_events.mjs';
 import { readRsvp, rsvpCounts, occKey } from './_rsvp.mjs';
 import { localDate, addDays } from './_time.mjs';
-import { artistById } from './_auth.mjs';
+import { readArtists } from './_auth.mjs';
 import { readVouches, MIN_VOUCHES } from './_verify.mjs';
 import { MARK } from './_canary.mjs';
 import { readGigOk, gigStatus, gigKey } from './_gigok.mjs';
@@ -20,7 +20,7 @@ import { readGigOk, gigStatus, gigKey } from './_gigok.mjs';
    its place leaves this page. */
 
 const HORIZON = 60;              // days ahead
-const MAX_ARTISTS = 60;          // per city, per page view
+const MAX_ARTISTS = 60;          // per city, per page view: owners the index has no rules for, read the old way
 
 const main = async (req) => {
   const url = new URL(req.url);
@@ -86,14 +86,24 @@ async function ownEvents(vid, venue) {
 /* Every artist gig rule that names this venue in its city, with each one's upcoming
    nights. Shared by the public page (gigsAt) and the Venue Studio's approvals
    (gigRules), so both see exactly the same shows. */
+/* ONLY THE ARTISTS WHO NAME THIS VENUE (decision 0174). The city index keeps each
+   artist's rules there, venue name included, so the calendars read are those of
+   the artists with a rule at this place — not the first sixty in the city, which
+   silently dropped the sixty-first. An artist the index has no rules for yet is
+   read the old way, up to MAX_ARTISTS. Side by side, a few at a time, and the
+   registry read once. */
 async function listings(venue, vid) {
   if (!venue.country || !venue.city || !venue.name) return [];
   const [idx, ok] = await Promise.all([readCityIndex(), readGigOk(vid)]);
-  const ids = (((idx.countries || {})[venue.country] || {})[venue.city] || []).filter((x) => !String(x).startsWith('v_')).slice(0, MAX_ARTISTS);
+  const inCity = (((idx.countries || {})[venue.country] || {})[venue.city] || []).filter((x) => !String(x).startsWith('v_'));
+  const known = inCity.filter((aid) => { const g = placeGigs(idx, venue.country, venue.city, aid); return g && g.r.some((r) => sameVenue(r.venue, venue.name)); });
+  const ids = [...known, ...inCity.filter((aid) => !placeGigs(idx, venue.country, venue.city, aid)).slice(0, MAX_ARTISTS)];
   const now = Date.now();
   const out = [];
-  for (const aid of ids) {
-    const [events, who, rs] = await Promise.all([readEvents(aid), artistById(aid), readRsvp(aid)]);
+  const reg = ids.length ? await readArtists() : { byId: {} };
+  const got = await inTurn(ids, async (aid) => { const [events, rs] = await Promise.all([readEvents(aid), readRsvp(aid)]); return { aid, events, rs }; });
+  for (const { aid, events, rs } of got) {
+    const who = own(reg.byId, aid) || null;
     if (!who) continue;
     const tz = ((events.list || []).find((x) => x.tz) || {}).tz || 'UTC';
     const from = localDate(now, tz);

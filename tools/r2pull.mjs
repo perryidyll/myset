@@ -19,7 +19,12 @@
 
    Run through backup.py, which hands over the four R2_ variables from Netlify
    without printing them. By hand: R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID and
-   R2_SECRET_ACCESS_KEY in the environment, then `node tools/r2pull.mjs <folder>`. */
+   R2_SECRET_ACCESS_KEY in the environment, then `node tools/r2pull.mjs <folder>`.
+
+   `--date YYYY-MM-DD` reads that day's DATED copies instead (decision 0175,
+   `snap/<day>/<key>`): the version of each document the mirror copied that day,
+   because it had changed. Not a whole store — the documents that changed that
+   day, as they were — which is what a bad deploy's day-after needs. */
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,11 +36,11 @@ const stampNow = () => new Date().toISOString().replace(/[-:]/g, '').replace(/\.
 const unxml = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 const fname = (key) => key.replace(/\//g, '%2F');          // the same name backup.py gives a key on disk
 
-/** One page of the bucket's listing under `backup/`. */
-async function page(token) {
+/** One page of the bucket's listing under `prefix`. */
+async function page(token, prefix = PREFIX) {
   const env = process.env;
   const host = `${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  const query = { 'list-type': '2', prefix: PREFIX, ...(token ? { 'continuation-token': token } : {}) };
+  const query = { 'list-type': '2', prefix, ...(token ? { 'continuation-token': token } : {}) };
   const stamp = stampNow();
   const headers = { 'x-amz-content-sha256': EMPTY_SHA, 'x-amz-date': stamp };
   const path = `/${env.R2_BUCKET}`;
@@ -52,25 +57,26 @@ async function page(token) {
   return { keys, next: more && next ? unxml(next) : null };
 }
 
-/** Every object under `backup/`, written to `out` in backup.py's folder shape.
- *  Returns the manifest. */
-export async function pull(out) {
+/** Every object under `backup/` — or, given `day`, under `snap/<day>/` — written
+ *  to `out` in backup.py's folder shape. Returns the manifest. */
+export async function pull(out, { day = null } = {}) {
+  const prefix = day ? `snap/${day}/` : PREFIX;
   const taken = new Date().toISOString();
   mkdirSync(join(out, 'keys'), { recursive: true, mode: 0o700 });
   const all = [];
   for (let token = null, first = true; first || token; first = false) {
-    const p = await page(token);
+    const p = await page(token, prefix);
     all.push(...p.keys);
     token = p.next;
   }
-  const keys = all.filter((k) => k.startsWith(PREFIX) && k.length > PREFIX.length).map((k) => k.slice(PREFIX.length)).sort();
+  const keys = all.filter((k) => k.startsWith(prefix) && k.length > prefix.length).map((k) => k.slice(prefix.length)).sort();
   const rows = [], failed = [];
   let i = 0;
   const worker = async () => {
     while (i < keys.length) {
       const k = keys[i++];
       try {
-        const got = await r2Get(PREFIX + k);
+        const got = await r2Get(prefix + k);
         if (!got) { failed.push(k); continue; }
         writeFileSync(join(out, 'keys', fname(k)), got.bytes, { mode: 0o600 });
         rows.push({ key: k, bytes: got.bytes.length, sha256: createHash('sha256').update(got.bytes).digest('hex'), type: got.type });
@@ -79,16 +85,18 @@ export async function pull(out) {
   };
   await Promise.all(Array.from({ length: 8 }, worker));
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
-  const manifest = { v: 1, store: 'r2:' + PREFIX, taken, keys: keys.length, copied: rows.length, failed, rows };
+  const manifest = { v: 1, store: 'r2:' + prefix, taken, keys: keys.length, copied: rows.length, failed, rows };
   writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 1));
   return manifest;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const out = process.argv[2];
-  if (!out) { console.error('usage: node tools/r2pull.mjs <folder>'); process.exit(2); }
+  const at = process.argv.indexOf('--date');
+  const day = at > 0 ? process.argv[at + 1] : null;
+  if (!out || (at > 0 && !/^\d{4}-\d{2}-\d{2}$/.test(day || ''))) { console.error('usage: node tools/r2pull.mjs <folder> [--date YYYY-MM-DD]'); process.exit(2); }
   if (!r2Enabled()) { console.error('the four R2_ variables are not set — run this through tools/backup.py --from-r2'); process.exit(2); }
-  const m = await pull(out);
+  const m = await pull(out, { day });
   console.log(`pulled ${m.copied} of ${m.keys} keys, ${(m.rows.reduce((n, r) => n + r.bytes, 0) / 1e6).toFixed(1)} MB, from R2 → ${out}`);
   if (m.failed.length) console.log('FAILED to read:', m.failed.join(', '));
   process.exit(m.failed.length ? 1 : 0);

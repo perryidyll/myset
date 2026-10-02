@@ -76,6 +76,8 @@ If you are about to violate one, stop and say so rather than working around it.
 
 0hs. **No kind of document without a second home, or a stated reason.** `FAMILIES` in `_mirror.mjs` has one line for every kind of key the app writes: an owner's (named by `keysFor()` / `keysForVenue()`), a global (in `GLOBALS`, or named by `globalKeys()` off an index document — a CRM contact off `crm`, a sample's snapshot off `samplearc`, a thumbnail off the media dashboard's posts, a city's featured slots off the city index, the error log's last 48 hours off the clock), or never copied, with the reason on the line. Sample pages are owners too: the walk reads `samplereg` beside the two registries. A new kind of document gets its line in the same change, and an owner's document its place in the key list — `test/keyfamilies.mjs` reads every key the whole suite wrote and fails on one no line matches. The copy on R2 can be read back (`tools/backup.py --from-r2`, into the folder `--restore` reads), and `tools/backup.py --coverage` names every key in the store the mirror has never copied. Found 2026-10-02: a dozen kinds — the CRM, every sample page, the costs book — had been written for weeks with no copy off Netlify, and nothing said so. Decision `0146`.
 
+0io. **A changed document's copy is also kept under the day it crossed, for `SNAP_DAYS`, and leaves without a listing.** When `mirrorOwner` copies a document that changed, it writes `backup/<key>` AND `snap/<YYYY-MM-DD>/<key>`; a failed dated write fails the key, so the next pass copies both again. Each day's keys are written to `mirrorsnap_<day>` before the manifest moves, so no dated copy is ever unnamed; the state keeps the days that have any (`snapDays`); a ring with nothing to copy deletes the days past the window from their own lists, never by listing the bucket (the functions never list live data; R2 is listed only from a laptop, 0146). `SNAP_DAYS` is the one number — 90 until the founder chooses. Dated copies live under `snap/`, never `backup/`, so the plain pull is unchanged; `tools/r2pull.mjs --date` and `backup.py --from-r2 --date` bring one day home. `test/snapshots.mjs`. Decision `0175`.
+
 0ht. **A change to `casDoc`, the fan files or the vote path is run through a traffic jam.** `test/contention.mjs` drives the real handlers through `tools/roomsim.mjs` on a virtual clock, against a store where a write is judged when it lands: a vote the fan was told landed is on the board, a vote that could not land was refused and never dropped, and nobody waits past the function limit at 5,000 phones and 75 votes a second. The times are a model (42 ms reads, 80 ms writes — the real write time is unmeasured, P3-005); the shape is not. A seeded run repeats to the byte. Decision `0145`.
 
 ## Money
@@ -374,6 +376,8 @@ If you are about to violate one, stop and say so rather than working around it.
 0i. **The city index is written when gigs change, never read with `list()`.**
     `reindexCities` removes the artist from every city then re-adds the ones they
     actually have gigs in, so deleting a gig cleans up after itself.
+
+0in. **The front door, a city's feed and a venue page never walk every artist.** `reindexCities` keeps, in the same compare-and-set that puts an owner in a city, that owner's rules there (`gigs[country][city][owner]`: date, time, zone, length, repeat, skipped nights, venue, plus the owner's own zone and `at`). The picker is one read and counts each city's gigs from those rules over the window the feed draws; a feed reads the calendars of only the owners with a night in its window, and each registry once; a venue page reads only the artists with a rule `sameVenue` names. An owner with no rules on the index (written before) is read the old way, so nothing goes missing. No page writes the index. A lost write is healed by `healCityIndex`, rung by `citycron`: once a day, every owner on the two registries from their own calendar, one write a ring, never overwriting rules a save wrote after the heal read (`at`), never putting back an account on its way out (0dh). A new reader of a city's gigs uses `placeGigs` / `upcomingAt`, not a walk. `test/citycounts.mjs`. Decision `0174`.
 
 0j. **Never invent gig data.** A listed gig sends a real person to a real bar on
     a real night. Placeholder venues were once loaded to test the feed and had to
@@ -1598,6 +1602,12 @@ If you are about to violate one, stop and say so rather than working around it.
 
     A silent truncation is how a spreadsheet starts lying.
 
+    · **And the next run starts where this one stopped** (decision 0173). Past the
+      cap every run read the same first 400, so the 401st artist never reached the
+      sheet: a cap that dropped. `cursor` in the sync state names the first artist
+      a run did not take; a run also stops taking artists after `WALK_MS`, so it
+      writes what it has instead of being killed with nothing written.
+
 0bw2. **ONE SYNC AT A TIME.** The 03:20 cron and Perry tapping "Sync now" a second
     later would both walk the store and both append — the same night twice in a
     tab the Guide calls safe to chart. `runningSince` in the sync doc is the lock,
@@ -2031,8 +2041,9 @@ If you are about to violate one, stop and say so rather than working around it.
     billing is cancelled, the calendar is un-indexed. Sessions are NOT killed and
     `rev` is NOT bumped — soft delete locks the account DOWN, never the owner OUT.
     Everything but undo, export, the plan and the portal answers 423. The purge is
-    one account per cron ring, hourly watermark, after the show sweep; the
-    `delqueue` entry is removed LAST, so purge is re-runnable by construction.
+    one account per cron ring, hourly watermark, before the show sweep and inside
+    `PURGE_BUDGET_MS` (0im); the `delqueue` entry is removed LAST, so purge is
+    re-runnable by construction.
     The calendar STAYS un-indexed for the whole window: the daily `heal()` skips a
     marked row (it re-pointed every row from its calendar, which the window keeps,
     and the same ring's sweep started a deleted account's gig — found 2026-09-27),
@@ -2040,6 +2051,8 @@ If you are about to violate one, stop and say so rather than working around it.
     entry that got back. Undo re-indexes. `sweepNotes` drops a first-night letter
     for a marked account rather than send it. `test/autoshow.mjs` and
     `test/firstgig.mjs` "AN ACCOUNT ON ITS WAY OUT"; decision 0098.
+
+0im. **A purge deletes what an index names before the index, and the registry row last.** `keysFor` and `keysForVenue` name a document before any key read off it, and collect the documents they read (`namers`): the index, the id list, the library, the profile, the feed, the pending clips, the diary, the inbox, each night's log head, the version, post and inbox archives. `eraseKeys` walks the list from the END: documents nothing is read off go side by side, an index goes alone once everything below it is gone, and a delete that fails stops the walk before the next index. A clip's bytes leave R2 inside the walk and a refusal stops it too (`dropClipKey` throws), so no pending list is deleted while it holds a clip R2 kept. Killed anywhere, every document left is still named, and the next ring finishes. `purgeDue` gives it `PURGE_BUDGET_MS` and keeps `cur[owner]` on `delqueue` — set before the first delete, then the key each ring reached — and the next ring carries on below that key. Undo is refused once `cur[owner]` exists; until then the thirty days are untouched (0dh). A new key family read off a document adds that document to `namers`. `test/background.mjs` kills the walk after every possible delete with deletes landing out of order. Decision `0173`.
     A public door that takes a slug goes through `publicArtist` — the `/:slug`
     share card (`artistpage.mjs`) resolved it alone and kept a deleted account's
     name and portrait on link previews (`test/sharecard.mjs`). The founder's sheet
@@ -2662,9 +2675,10 @@ If you are about to violate one, stop and say so rather than working around it.
     never a 500 or a hang — every call has a timeout, and the failure is logged
     at most once a minute per instance so an outage cannot pile CAS writes onto
     the serving path. Hiding, sweeping, deleting a post, an artist or a venue
-    take the bytes off R2 (`dropClip`, `dropClipKeys`) — AND A DELETE R2 REFUSES
+    take the bytes off R2 (`dropClip`, `dropClipKey`) — AND A DELETE R2 REFUSES
     IS NOT FORGOTTEN: the clip goes back on the pending list and the sweep ring
-    keeps the owner until the list is empty, so the next ring tries again;
+    keeps the owner until the list is empty, so the next ring tries again (a
+    purge instead stops its walk before the list that names the clip, 0im);
     without that a hide during an outage would leave 75MB nothing could ever
     find. NEVER REMOVE THE FOUR VARIABLES WHILE CLIPS ARE ON R2: with them gone
     every clip already there is a 404 and every later delete skips it. Rotate a
