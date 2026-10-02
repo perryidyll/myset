@@ -169,14 +169,12 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0159](0159-a-sample-s-cover-is-chosen-twice.md) | A sample's cover is chosen twice — the best four side by side — and live videos past the top three give frames | 2026-10-02 | factory | decided | perry |
 | [0160](0160-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md) | Two rate rules at the edge, sized so a room never meets them | 2026-10-03 | scale | decided | perry-confirmed |
 | [0161](0161-a-sample-s-about-is-written-in-a-magazine-voice.md) | A sample's About is written in a magazine voice, with a wink of humour | 2026-10-03 | ui | decided | perry |
-<<<<<<< HEAD
 | [0162](0162-an-artist-sample-ends-with-the-founder-s-page-as-a-live-example.md) | An artist sample ends with a link to the founder's own page, as a live example | 2026-10-03 | ui | decided | perry |
 | [0163](0163-a-sample-s-tagline-is-written-in-the-magazine-voice-too.md) | A sample's tagline is written in the magazine voice too | 2026-10-03 | ui | decided | perry |
 | [0164](0164-a-sample-link-ends-in-a-query-not-a-hash.md) | A sample link ends in ?sample-profile, not #sample-profile | 2026-10-03 | ui | decided | perry-confirmed |
 | [0165](0165-a-sample-link-s-share-card-shows-the-sample-s-photo.md) | A sample link's share card shows the sample's own photo | 2026-10-03 | ui | decided | perry |
-=======
 | [0173](0173-background-jobs-keep-up.md) | Background jobs keep up — a purge deletes leaves first and carries on, the nightly copy skips what cannot change and rings four times as often, the sheet sync starts where it stopped; the register's fold is left for its own decision | 2026-10-03 | storage | proposed | agent-recommended |
->>>>>>> 3e7860f (Background jobs keep up: a purge deletes leaves first and carries on; the nightly copy skips what cannot change; the sheet sync starts where it stopped (0173))
+| [0174](0174-the-city-index-carries-its-gigs.md) | The city index carries each owner's gigs in that city — the front door is one read, a feed reads only who is on, a venue page only the artists who name it; a daily bell heals a lost write | 2026-10-03 | storage | proposed | agent-recommended |
 
 ## By area
 
@@ -212,11 +210,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
-<<<<<<< HEAD
-**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md)
-=======
-**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) · [0173](0173-background-jobs-keep-up.md)
->>>>>>> 3e7860f (Background jobs keep up: a purge deletes leaves first and carries on; the nightly copy skips what cannot change; the sheet sync starts where it stopped (0173))
+**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) · [0173](0173-background-jobs-keep-up.md) · [0174](0174-the-city-index-carries-its-gigs.md)
 
 **studio, money** — [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md)
 

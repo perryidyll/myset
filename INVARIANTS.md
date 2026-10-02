@@ -375,6 +375,8 @@ If you are about to violate one, stop and say so rather than working around it.
     `reindexCities` removes the artist from every city then re-adds the ones they
     actually have gigs in, so deleting a gig cleans up after itself.
 
+0in. **The front door, a city's feed and a venue page never walk every artist.** `reindexCities` keeps, in the same compare-and-set that puts an owner in a city, that owner's rules there (`gigs[country][city][owner]`: date, time, zone, length, repeat, skipped nights, venue, plus the owner's own zone and `at`). The picker is one read and counts each city's gigs from those rules over the window the feed draws; a feed reads the calendars of only the owners with a night in its window, and each registry once; a venue page reads only the artists with a rule `sameVenue` names. An owner with no rules on the index (written before) is read the old way, so nothing goes missing. No page writes the index. A lost write is healed by `healCityIndex`, rung by `citycron`: once a day, every owner on the two registries from their own calendar, one write a ring, never overwriting rules a save wrote after the heal read (`at`), never putting back an account on its way out (0dh). A new reader of a city's gigs uses `placeGigs` / `upcomingAt`, not a walk. `test/citycounts.mjs`. Decision `0174`.
+
 0j. **Never invent gig data.** A listed gig sends a real person to a real bar on
     a real night. Placeholder venues were once loaded to test the feed and had to
     be deleted before they could be seen.
