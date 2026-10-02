@@ -68,12 +68,15 @@ DERIVED FOR THE SPLIT (measured pieces, arithmetic on top — say so when quotin
                                                      (42 ms) plus overhead. NOT measured
                                                      in production yet — see P3-001 notes
     show record                6,287 bytes           measured, 40 songs
-    one fan's record         101 + ~240 per cast     MEASURED 2026-09-11 on the real write
-                                                     path: 101 bytes present-only, 412 after
-                                                     one cast, 864 after three, 2,010 after
-                                                     eight. The cast receipts kept for
-                                                     idempotency (INVARIANT 15h, up to 20)
-                                                     are most of it. The room-ceiling report
+    one fan's record         103 + ~128 per cast     MEASURED 2026-10-03 on the real write
+                                                     path, after decision 0148 shortened the
+                                                     cast receipts: 103 bytes present-only,
+                                                     312 after one cast, 565 after three,
+                                                     1,088 after eight (six songs). It was
+                                                     101 / 412 / 864 / 2,010 (2026-09-11),
+                                                     the receipts most of it. Receipts kept
+                                                     the whole half hour: the heaviest honest
+                                                     reading. The room-ceiling report
                                                      assumed 152 — right for a phone that
                                                      watched, wrong for one that voted
 
@@ -109,8 +112,8 @@ ME_BYTES     = 430
 ME_MS        = 50            # ESTIMATED, not measured — two parallel 42 ms reads + overhead
 SHOW_DOC     = 6287          # bytes the store moves for the show record
 REPORT_FAN   = 152           # bytes per fan record the room-ceiling report assumed
-REC_BASE     = 101           # measured: a phone that only watched
-REC_PER_CAST = 240           # measured: what each cast adds (a fit to 412/864/2010 at 1/3/8)
+REC_BASE     = 103           # measured: a phone that only watched
+REC_PER_CAST = 128           # measured: what each cast adds (a fit to 312/565/1088 at 1/3/8, decision 0148; was 240)
 SHARDS       = 12            # a personal poll reads ONE of these
 KNOWN_OK_MBS = 50.0          # the band MySet is known to serve; where the ceiling is drawn
 # MEASURED 2026-09-11 on draft deploys and then on production: Netlify's DURABLE cache
@@ -309,9 +312,9 @@ def ceiling_walk(hours=3.0):
         print()
     print("  The per-phone cost is still O(people) — a personal poll reads one shard, and the shard")
     print("  holds a twelfth of the room — so the shape is still a curve; it is a twelfth as steep.")
-    print("  And the bag grows with VOTES as well as people: the cast receipts kept on a record for")
-    print("  idempotency are most of its weight. Trimming them is the cheapest next lever (P3-013);")
-    print("  a per-fan document, or the open line, is what makes the curve flat.")
+    print("  And the bag grows with VOTES as well as people. The cast receipts that were most of a")
+    print("  voter's record are short since decision 0148; the vote rows are most of it now. More")
+    print("  fan files, a per-fan document, or the open line is what makes the curve flat.")
     print()
 
 # ---- what the same gig would cost somewhere else -----------------------------
