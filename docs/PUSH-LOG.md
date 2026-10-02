@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:02 — 0fc2913 — scale-money@fix/money-path (22 files since origin/main)
+**tl;dr:** Payments are harder to lose or double: a lost 'delivered' mark is caught and fixed by the scheduler, song votes bought for a replay that already started go to the fan's wallet, a full request queue is said before the card, a paused Stripe account still finds its payments, the Money tab's sweep does only what's owed, plan billing stops leaking, and every fan Stripe call has a 10 s clock (0180–0184, 0188)
+**Other sessions:** NOT MERGED — waits on the founder's word. _lib.mjs: GR_KEEP=40 (one receipt cap), carryFans settles gr receipts into meta before deleting (INVARIANT 0ia — anything that deletes a fan record must too). _pay.mjs markDelivered (verified flip → noteOwed). stripeFor scopes by c.acct even when charges are paused (0ic; every caller must only READ). STRIPE_OPTS in _connect.mjs. _billing: plan written before lastSyncAt; handleBillingEvent throws (webhook 500). confirm answers asCredits.
+
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
 **Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.

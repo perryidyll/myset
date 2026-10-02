@@ -381,5 +381,22 @@ console.log('\nA VENUE HAS BOOKS TOO');
   ok('the venue\'s CSV door answers the same way', /json/.test(ncsv.headers.get('content-type') || '') && (await jget(ncsv)).enabled === false);
 }
 
+console.log('\nA PAUSED ACCOUNT IS STILL WHERE ITS MONEY IS  (decision 0183)');
+/* Stripe can switch charges off on an artist's account mid-show (a verification
+   threshold). Reads used to fall back to the platform account the moment that
+   happened: buyers who had just paid could not confirm and the night archived $0. */
+{
+  const { stripeFor } = await import('../netlify/functions/_connect.mjs');
+  await mutateConnect('paused-artist', (c) => { c.acct = 'acct_paused'; c.chargesEnabled = false; return true; });
+  const p = await stripeFor('paused-artist');
+  eq('THE FIX: reads stay on the artist’s own account', p.opts.stripeAccount + '|' + p.acct, 'acct_paused|acct_paused');
+  const none = await stripeFor('never-connected');
+  eq('an artist with no account gets the platform client with no scope', String(none.opts.stripeAccount) + '|' + none.acct, 'undefined|');
+  await mutateConnect(DEFAULT_ARTIST, (c) => { c.acct = 'acct_founder_onboarding'; c.chargesEnabled = false; return true; });
+  const f = await stripeFor(DEFAULT_ARTIST);
+  eq('the founder’s sessions live on the platform until his own account can charge', f.opts.stripeAccount, undefined);
+  await mutateConnect(DEFAULT_ARTIST, (c) => { delete c.acct; c.chargesEnabled = false; return true; });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

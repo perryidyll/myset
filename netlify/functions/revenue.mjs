@@ -7,6 +7,8 @@ import { redeemSession } from './_pay.mjs';
    only ever be a cache of it. GET lists what Stripe actually charged and flags
    anything the app failed to grant. POST redeems those, so a payment can never be
    silently kept without the buyer getting what they bought. */
+export const SWEEP_BUDGET_MS = 12000;   // well inside a synchronous function's 60 s, with Stripe's own paging before it
+
 const main = async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
@@ -66,13 +68,28 @@ const main = async (req) => {
   };
   const paidSessions = sessions.filter((s) => s.payment_status === 'paid' && isOurs(s));
 
+  /* THE SWEEP DOES ONLY WHAT IS OWED, ON A CLOCK (decision 0181). It redeemed every
+     paid session in the window, one after another, each starting with a full read
+     of the payments document — 500 sessions on a big night is past a function's
+     time limit, so the sweep died before it reached the one payment that needed
+     it. Now one read up front picks out the sessions with no delivered marker,
+     newest first, and the loop stops at a deadline; `left` tells the Studio to press
+     again. The bell retries what the webhook could not deliver (0138), so this is
+     the artist's backstop, not the first road. */
   if (req.method === 'POST') {
+    const held = await readMeta(aid);
+    const owed = paidSessions.filter((s) => !(held.paid[s.id] && held.paid[s.id].delivered !== false))
+      .sort((a, b) => (b.created || 0) - (a.created || 0));
+    const deadline = Date.now() + SWEEP_BUDGET_MS;
     const results = [];
-    for (const s of paidSessions) {
+    let looked = 0;
+    for (const s of owed) {
+      if (Date.now() > deadline) break;
+      looked += 1;
       const r = await redeemSession(aid, s);
       if (r.ok && !r.already) results.push({ id: s.id, kind: r.kind, amount: r.amount, granted: r.granted });
     }
-    return json({ ok: true, recovered: results.length, results });
+    return json({ ok: true, recovered: results.length, results, left: owed.length - looked });
   }
 
   const meta = await readMeta(aid);

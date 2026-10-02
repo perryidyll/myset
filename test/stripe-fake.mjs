@@ -7,7 +7,7 @@
    argument would let both of those bugs through.
 
    Billing (2026-09-04): customers, products, prices by lookup key, coupons,
-   subscriptions (retrieve / update / cancel), subscription-mode checkout sessions
+   subscriptions (retrieve / list / update / cancel), subscription-mode checkout sessions
    and the portal — enough to drive _billing.mjs end to end. */
 const state = {
   accounts: new Map(),          // acct_x -> account object
@@ -45,7 +45,8 @@ const note = (method, args, opts) => {
 const NOW = () => Math.floor(Date.now() / 1000);
 
 export default class Stripe {
-  constructor(key) { this.key = key; }
+  // the client's own options (timeout, retries) are kept so a test can check the clock (0188)
+  constructor(key, opts) { this.key = key; this.opts = opts || {}; state.clientOpts = this.opts; }
   get accounts() {
     return {
       create: async (params, opts) => {
@@ -132,6 +133,15 @@ export default class Stripe {
         if (params.coupon) s.discount = { coupon: state.coupons.get(params.coupon) || { id: params.coupon } };
         if (params.metadata) s.metadata = { ...(s.metadata || {}), ...params.metadata };
         return shape(s); },
+      /* By customer, as Stripe answers it: `status: 'all'` is everything, a status
+         is that status, and no status leaves out the cancelled ones. startCheckout
+         asks this before it opens a second subscription (decision 0184). */
+      list: async (params, opts) => { note('subscriptions.list', params, opts);
+        const st = (params || {}).status;
+        return { data: [...state.subs.values()]
+          .filter((s) => s.customer === params.customer
+                      && (st === 'all' || (st ? s.status === st : s.status !== 'canceled')))
+          .slice(0, params.limit || 10).map(shape) }; },
       cancel: async (id, opts) => { note('subscriptions.cancel', { id }, opts);
         const s = state.subs.get(id); if (!s) throw new Error('No such subscription'); s.status = 'canceled'; return shape(s); },
     };
@@ -259,7 +269,7 @@ export default class Stripe {
           const subId = `sub_test${state.nextSub++}`;
           const priceId = ((params.line_items || [])[0] || {}).price;
           state.subs.set(subId, { id: subId, status: 'active', customer: params.customer,
-            current_period_end: NOW() + 30 * 86400, cancel_at_period_end: false,
+            current_period_start: NOW(), current_period_end: NOW() + 30 * 86400, cancel_at_period_end: false,
             items: { data: [{ id: `si_${subId}_0`, price: priceId }] },
             metadata: (params.subscription_data || {}).metadata || {},
             discount: (params.discounts || [])[0] ? { coupon: state.coupons.get(params.discounts[0].coupon) } : null });

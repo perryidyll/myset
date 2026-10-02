@@ -206,5 +206,46 @@ const thaiAdded = await A('askAccept', { id: thaiRow.id });
 ok('acceptance gives it a non-empty votable song id',
   thaiAdded.ok && thaiAdded.songId && thaiAdded.stage.songs.some((s) => s.id === thaiAdded.songId), thaiAdded);
 
+console.log('\nSONG VOTES THE ROOM CAN NO LONGER GIVE BECOME WALLET VOTES (0182)');
+{
+  await A('play', { song: 'alpha' });
+  await A('play', { song: 'bravo' });           // alpha has been played and is not on now: it may be bought for a replay
+  const late = await PAY({ fan: 'latefan', kind: 'song_votes', song: 'alpha', amount: 3, attempt: 'late-one' });
+  ok('a $3 replay checkout opens while alpha is up for a replay', late.ok && !!late.id, late);
+  await A('play', { song: 'alpha' });          // the replay starts while the card form is still open
+  const done = await hit(confirm, `https://x/api/confirm?session_id=${late.id}&fan=latefan`);
+  eq('THE FIX: the reply says they became wallet votes', [done.kind, done.granted, done.asCredits], ['song_votes', 3, true]);
+  eq('the three are in the fan’s wallet', (await PUB('latefan')).credits.extra, 3);
+  const a = (await A('window', { open: true })).stage.songs.find((s) => s.id === 'alpha');
+  eq('and none landed on the song that is already playing', a.paidVotes || 0, 0);
+  const again = await hit(confirm, `https://x/api/confirm?session_id=${late.id}&fan=latefan`);
+  eq('a second return trip grants nothing more', [again.already, (await PUB('latefan')).credits.extra], [true, 3]);
+}
+
+console.log('\nA FAN’S STRIPE CALL HAS A CLOCK (0188)');
+{
+  await PAY({ fan: 'clockfan', kind: 'tip', amount: 2, attempt: 'clock-one' });
+  ok('the buy button’s client gives up on Stripe within fifteen seconds, not eighty',
+     __stripe.clientOpts && __stripe.clientOpts.timeout > 0 && __stripe.clientOpts.timeout <= 15000, __stripe.clientOpts);
+}
+
+console.log('\nA FULL REQUEST QUEUE IS SAID BEFORE THE CARD IS ASKED (0182)');
+{
+  const { MAX_PENDING } = await import('../netlify/functions/_requests.mjs');
+  const { mutateRequests } = await import('../netlify/functions/_requests.mjs');
+  const sh = await getShow(DEFAULT_ARTIST);
+  await mutateRequests(DEFAULT_ARTIST, (d) => {
+    d.list ||= [];
+    for (let i = 0; i < MAX_PENDING; i++)
+      d.list.push({ id: `full-${i}`, fan: `queue-${i}`, kind: 'song', status: 'pending', showId: sh.showId, title: `Song ${i}`, at: Date.now() });
+    return true;
+  });
+  const made = () => __stripe.calls.filter((c) => /checkout\.sessions\.create/.test(c.method || c)).length;
+  const before = made();
+  const full = await PAY({ fan: 'toolate', kind: 'request_hold', title: 'One More', artist: 'Band', amount: 5, attempt: 'full-one' });
+  eq('THE FIX: the fan is told the queue is full', [full.status, full.error], [429, 'There are a lot of requests in already — try again in a bit']);
+  eq('and no card authorization was opened', made() - before, 0);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
