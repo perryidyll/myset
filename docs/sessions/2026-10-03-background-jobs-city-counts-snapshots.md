@@ -56,6 +56,22 @@ Not built tonight: it touches every number on a page the founder checked by hand
 | `featured`, `gigok`, `rsvp`, `fandoor`, `e2e`, `artists` | green |
 | `sh test/run.sh` | exit 0, 5,269 ✓, 0 ✗ |
 
+## What was built — decision 0175 (its own commit; waits on the founder)
+
+- **A changed document's copy is also kept under the day it crossed**: `snap/<YYYY-MM-DD>/<key>`, for `SNAP_DAYS = 90`, the desk's recommended answer, since the founder has not chosen between 30, 90 and none.
+- Each day's keys are listed in `mirrorsnap_<day>` (its own `FAMILIES` line, `skip`). A ring with nothing to copy deletes the days past the window from those lists and never lists the bucket.
+- `tools/r2pull.mjs --date` and `backup.py --from-r2 --date` bring one day home.
+- **Cost** from the 2 October pull (258 keys, 1.5 MB): at worst 135 MB over 90 days, inside R2's 10 GB-month free tier (shared with the clips).
+
+## Verified — 0175
+
+| Check | Result |
+| --- | --- |
+| `node --import ./test/register.mjs test/snapshots.mjs` | 19 ✓, 0 ✗ |
+| Knock-outs | no dated PUT, no expiry, no day list — each red, each restored |
+| `test/foundations.mjs` | 103 ✓ (R2 counts scoped to `backup/`) |
+| `sh test/run.sh` | exit 0, 5,288 ✓, 0 ✗. One run before it failed twice in foundations' "A VERSION BEFORE EVERY OVERWRITE" (untouched code); green on the rerun and three runs alone — worth a look as a flake |
+
 ## Not checked
 
 - Anything against production: Netlify's real delete latency, the real function limits, the real bill for the five-minute bell, Google's real API past the cap.
@@ -71,4 +87,5 @@ Not built tonight: it touches every number on a page the founder checked by hand
 - The picker now counts each city's own gigs. An owner with gigs in two towns used to be counted in full in both.
 - The heal rings hourly from a new bell, `citycron`, and finishes a pass a day. Its budget is 5 s.
 - `cityindex` grows about tenfold per owner and city; splitting it by country is the way out if it gets too big.
+- Dated copies are built at 90 days, in their own commit (0175). Thirty is one number; none is dropping the commit.
 - The founder's console erase of a sample page (`eraseData` in `_sample.mjs`) still deletes in list order. It was not in the audit's row; it is one request on a small account, but it has the same flaw.
