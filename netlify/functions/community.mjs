@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import { json, jsonCached, bad, publicArtist, getShow, cleanFanId, clientIp, requireArtist, DEFAULT_ARTIST } from './_lib.mjs';
 import { cleanSlug } from './_auth.mjs';
-import { getProfile, firstOf } from './_profile.mjs';
+import { getProfile, firstOf, readHolds, heldOn } from './_profile.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { readDiary } from './_diary.mjs';
 import { readHistIndex } from './_history.mjs';
@@ -59,7 +59,8 @@ import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
    Reads, for an artist page: the registry (twice — once to resolve the slug, once
    for the plan and the tick), the profile, the show (for the money gate and the
    live status), the diary (the count and three titles for its card — 0085), the
-   history index, the posts, and the likes when a device is named. Counted in
+   history index, the posts, the likes when a device is named, and the held stock
+   (`mhold_<owner>`, 0195) when an item or a size is counted. Counted in
    test/community.mjs. The audience poll is not involved. */
 
 async function resolveOwner(req) {
@@ -92,6 +93,27 @@ async function resolveOwner(req) {
     live: show.status === 'live', showId: show.showId || '',
     diary: shown.length, diaryPeek: shown.slice(0, 3).map((x) => ({ title: x.title, img: x.img || '' })),
   };
+}
+
+/* STOCK NET OF CHECKOUTS IN PROGRESS (decision 0195, the contract in 0178). A buyer on
+   Stripe's page holds what they are paying for (`mhold_<owner>`); the page must not
+   offer what the server will refuse at the tap (rule 3). So every counted item's and
+   size's count goes out less what live holds have on it, and `held` says how much of
+   what was there is held — the page says "check back" rather than "sold out for good"
+   when the holds are all that stand between a fan and the last one. `held` is never
+   more than the count: a hold on stock a hold-less payment already took (the refund
+   path) is not coming back. Reads only — the holds are written by pay.mjs alone. */
+const counted = (list) => (list || []).some((m) => m && (m.stock != null || (m.variants || []).some((v) => v && v.stock != null)));
+export function netOfHolds(list, holds, now = Date.now()) {
+  if (!holds || !Object.keys(holds).length) return list;
+  const net = (x, h) => { const n = Math.min(h, x.stock); return n > 0 ? { ...x, stock: x.stock - n, held: n } : x; };
+  return (list || []).map((m) => {
+    if (!m) return m;
+    let o = m.stock != null ? net(m, heldOn(holds, m, 'i', now)) : m;
+    if (Array.isArray(m.variants) && m.variants.some((v) => v && v.stock != null))
+      o = { ...o, variants: m.variants.map((v) => (v && v.stock != null ? net(v, heldOn(holds, m, 'v:' + String(v.label).toLowerCase(), now)) : v)) };
+    return o;
+  });
 }
 
 /* THE PERSONAL CALL (decision 0093): the marks the shared read cannot carry. Reads the
@@ -131,12 +153,16 @@ const main = async (req) => {
 
   if (req.method === 'GET') {
     const fan = fanQ;
-    const [posts, likes, nights] = await Promise.all([
+    const [posts, likes, nights, holds] = await Promise.all([
       readPosts(o.owner),
       fan ? readLikes(o.owner) : null,
       o.kind === 'artist' ? pickableNights(o.id) : [],
+      /* the held stock (0195): read only when something is counted — an uncounted item is
+         never held — and a read that fails counts as no holds: the tap still refuses (0178) */
+      counted(o.merch) ? readHolds(o.owner).catch(() => ({})) : null,
     ]);
     const shows = nights.map((n) => ({ showId: n.key, label: n.label }));
+    if (holds) o.merch = netOfHolds(o.merch, holds);
     const { fan: _f, ...pub } = o;
     /* With no device named this is THE SHARED READ (decision 0093): nothing on it is
        personal — canPost is true for everyone, the marks on every post are off — so the
