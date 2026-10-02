@@ -105,6 +105,9 @@ echo
 echo "── a read that failed is not an empty document ──"
 node --import ./test/register.mjs test/storefail.mjs
 echo
+echo "── somebody is told when production breaks ──"
+node --import ./test/register.mjs test/watch.mjs
+echo
 echo "── what an endpoint costs ──"
 node --import ./test/register.mjs test/cost.mjs
 echo
