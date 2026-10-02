@@ -855,6 +855,56 @@ let FAILS=0;
 const ME_EVERY=60000, ME_RETRY=15000;
 let ME_DUE=true, ME_AT=0, ME_MISS=false, ME_SEEN=false, STAGE=null, BOARD_T=0;
 const meDue=()=>ME_DUE||Date.now()-ME_AT>=(ME_MISS?ME_RETRY:ME_EVERY);
+/* EVERY SONG THE ROOM CAN VOTE FOR, FETCHED ONCE (decision 0192; the server half is
+   0150). Past a few hundred phones the board carries only the top of the chart, and
+   this page could list and search only what the board carried: a song nobody had
+   voted for yet could not be found. A server that names its song list (`songsV` on
+   the board) also answers `what=songs` — every votable song, kept at the edge under
+   that version — and `lean=1`, the board with only the tallies. So once this page
+   holds the list the board names, it polls the lean board and draws the songs from
+   the list, and the list is asked for again only when `songsV` moves (an artist
+   action, never a vote).
+
+   NOTHING BELOW `load()` HAD TO CHANGE: `fromList` turns a tally plus the list back
+   into a board of today's shape, cut nowhere (`board` and `tail` empty), and that is
+   what is drawn. A server that names no version gets exactly the page it always had.
+   A list that cannot be had, or a tally naming a song the list lacks, is not drawn
+   from: the page asks for the full board — today's page — and tries the list again
+   when the version moves, or after a minute (`LIST_MISS`). The room can still vote. */
+let LIST=null, LIST_MISS=null;
+const tallyOf=b=>{ const row=s=>[s.id,s.votes,s.firstAt||null];
+  return [...(b.songs||[]).filter(s=>s.votes>0).map(row),...(b.tail||[]),...(b.played||[]).filter(s=>s.votes>0).map(row)]; };
+function fromList(b,L){
+  if(!L||L.v!==b.songsV) return null;
+  const tally=Array.isArray(b.tally)?b.tally:tallyOf(b);
+  const to={}, was={}, pv={}, seen=new Set(), songs=[];
+  for(const s of L.songs) to[s.id]=s; for(const s of L.played) was[s.id]=s;
+  for(const [id,votes,firstAt] of tally){
+    if(to[id]&&!seen.has(id)){ songs.push({...to[id],votes,firstAt:firstAt||null}); seen.add(id); }
+    else if(was[id]&&!pv[id]) pv[id]={votes,firstAt:firstAt||null};
+    else return null;                           // a song this list does not have: not this list
+  }
+  for(const s of L.songs) if(!seen.has(s.id)) songs.push({...s,votes:0,firstAt:null});
+  const {tally:_t,...rest}=b;
+  return {...rest, songs, played:L.played.map(s=>({...s,...(pv[s.id]||{votes:0,firstAt:null})})),
+    tail:null, tags:L.tags||[], board:null};
+}
+async function listed(b){
+  const v=b.songsV;
+  if(!(LIST&&LIST.v===v)){
+    if(LIST_MISS&&LIST_MISS.v===v&&Date.now()-LIST_MISS.at<ME_EVERY) return null;
+    const L=await timed(`${API}/fan?what=songs${AQ}&v=${encodeURIComponent(v)}`,null,5000).then(r=>r.json()).catch(()=>null);
+    /* The body's `v` is the truth about what is in it: a list newer than this board is
+       kept (the next board will name it) but not drawn under this one. */
+    if(L&&L.ok&&typeof L.v==='string'&&Array.isArray(L.songs)&&Array.isArray(L.played)) LIST=L;
+    if(!(LIST&&LIST.v===v)){ LIST_MISS={v,at:Date.now()}; return null; }
+  }
+  const d=fromList(b,LIST);
+  if(!d){ LIST=null; LIST_MISS={v,at:Date.now()}; }
+  return d;
+}
+const boardURL=lean=>`${API}/fan?what=board${AQ1.replace('?','&')}${lean?'&lean=1':''}`;
+const boardOf=p=>p.then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null);
 async function load(){
   /* The board fetch is NOT `cache:'no-store'` on purpose: that mode makes the
      browser send `Cache-Control: no-cache`, which some edges honour as "skip the
@@ -862,8 +912,15 @@ async function load(){
      must-revalidate` already stops the browser keeping a copy. The `Age` header is
      how old the edge's copy is, and the countdown is corrected by it. */
   const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
-  const b=await (E.board?within(E.board,10000):timed(`${API}/fan?what=board${AQ1.replace('?','&')}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null);
-  const fresh=!!(b&&b.d&&b.d.ok);
+  // the lean board only while this page holds the list the last board named (0192)
+  const lean=!E.board&&!!(LIST&&BOARD&&BOARD.songsV===LIST.v);
+  let b=await boardOf(E.board?within(E.board,10000):timed(boardURL(lean)));
+  if(b&&b.d&&b.d.ok&&typeof b.d.songsV==='string'){
+    const d=(LIST&&LIST.v===b.d.songsV)||Array.isArray(b.d.tally)?await listed(b.d):null;
+    if(d) b.d=d;
+    else if(!Array.isArray(b.d.songs)) b=await boardOf(timed(boardURL(false)));   // tallies with no list: today's board
+  }
+  const fresh=!!(b&&b.d&&b.d.ok&&!b.d.tally);
   if(fresh){ BOARD=b.d; BOARD.age=b.age; BOARD_T=Date.now()-b.age*1000;
     $('#app').classList.remove('catching');               // see wake()
     // the artist changed the show: what is true of this phone may have changed with it
@@ -887,6 +944,10 @@ async function load(){
      the wallet fills in a moment later. A load whose board did not arrive does not ask
      either — the room is not answering (0143) — and ME_DUE waits for the next one. */
   paint(fresh);
+  /* A full board that names a list this page does not hold yet (the first load: the
+     <head> starts today's board): drawn as it came, then again from the list. */
+  if(fresh&&typeof BOARD.songsV==='string'&&!(LIST&&LIST.v===BOARD.songsV)){
+    const d=await listed(BOARD); if(d){ BOARD=d; paint(false); } }
   if(!fresh||!meDue()) return;
   ME_DUE=false; ME_AT=Date.now();
   const m=await timed(`${API}/fan?what=me&fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
