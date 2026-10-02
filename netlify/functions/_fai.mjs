@@ -382,12 +382,12 @@ export async function judgePhotos(cands, ctx, { kind = 'artist', name = '', note
 const NO_HYPE = 'No hype: never electrifying, unforgettable, mesmerising, legendary, world-class, iconic, epic, incredible, amazing, captivating, breathtaking, stunning, magical.';
 const COPY_SYSTEM = `MYSET FACTORY · COPY
 
-You write the short copy for ONE live-music act's sample page on MySet, from the numbered FACTS only. Specific and true: the tagline and style plain, the bio with a magazine's personality.
+You write the short copy for ONE live-music act's sample page on MySet, from the numbered FACTS only. Specific and true: the style plain, the tagline and the bio with a magazine's personality.
 Answer with ONE JSON object and nothing else:
 {"tagline":{"text":"","src":[]},"style":{"text":"","src":[]},"bio":[{"s":"","src":[]}],"hook":{"text":"","src":[]}}
 
 - src: the numbers of the FACTS each line rests on. Every line needs at least one.
-- tagline: at most 120 characters. What they play and where, concretely.
+- tagline: at most 120 characters, in the same magazine voice as the bio: what they play and where, concretely, with a little colour, like "Porch-light folk from Brooklyn, with a banjo, a harmonica and a weakness for key changes." (the voice, never the words). The colour comes from a fact, never an invented one.
 - style: at most 60 characters, two or three short genre or format words joined by " · ", like "Acoustic covers · indie folk".
 - bio: exactly two sentences, at most 360 characters in all, third person, in the voice of a music magazine featuring them: lively, a little playful, with one wink of humour, built on concrete facts. The first says who they are and what they play, with some colour; the second, where they play or one specific thing they are known for, and it may land as a playful invitation. The voice, never the words or the shape (vary both from page to page): "Maya Ruiz writes porch-light folk for anyone who has ever cried at a wedding: a Brooklyn songwriter armed with a banjo, a harmonica and a weakness for key changes. Thursdays at The Low Road end in a singalong, whether the room planned on one or not." The humour is in how a fact is said, never an invented fact.
 - hook: ONE sentence the founder could open a direct message with, true and specific to them, like a named cover they posted or a venue they play. "" if the facts hold nothing specific.
@@ -395,12 +395,12 @@ Answer with ONE JSON object and nothing else:
 - ${NO_HYPE}`;
 const VENUE_COPY_SYSTEM = `MYSET FACTORY · COPY
 
-You write the short copy for ONE venue's sample page on MySet, from the numbered FACTS only. Specific and true: the tagline plain, the about with a magazine's personality.
+You write the short copy for ONE venue's sample page on MySet, from the numbered FACTS only. Specific and true: the tagline and the about with a magazine's personality.
 Answer with ONE JSON object and nothing else:
 {"tagline":{"text":"","src":[]},"about":[{"s":"","src":[]}],"hook":{"text":"","src":[]}}
 
 - src: the numbers of the FACTS each line rests on. Every line needs at least one.
-- tagline: at most 120 characters: what kind of place, where, and what goes on there.
+- tagline: at most 120 characters, in the same magazine voice as the about: what kind of place, where, and what goes on there, with a little colour from a fact, never an invented one.
 - about: exactly two sentences, at most 360 characters in all, in the voice of a magazine's going-out pick: lively, a little playful, with one wink of humour, built on concrete facts. The first says what the place is and where, with some colour; the second, the music and what to expect, and it may land as a playful invitation. The humour is in how a fact is said, never an invented fact.
 - hook: ONE sentence the founder could open a message with, true and specific (a music night they run, something they are known for). "" if nothing specific.
 - Only what the facts say: no invented events, prices, awards, dates, numbers or quotes. If the facts are thin, write less.

@@ -518,6 +518,7 @@ eq('address, phone, coordinates and the map link', [V.address, V.phone, V.lat, V
 ok('OpenStreetMap is credited in the sources', V.sources.some((x) => x.kind === 'osm' && /OpenStreetMap contributors/.test(x.title)));
 ok('the founder’s photo is the cover; a venue has no portrait', V.photos.cover && V.photos.cover.from === 'founder' && !V.photos.avatar);
 ok('a venue’s about is asked for in the same magazine voice (0161)', (ai.copySys || []).some((x) => /about: exactly two sentences/.test(x) && /magazine/.test(x) && /wink of humour/.test(x) && /never an invented fact/.test(x) && /Only what the facts say/.test(x) && /exactly two sentences/.test(x)));
+ok('the tagline is asked for in the magazine voice too, for acts and venues, still from a fact (0163)', ['bio', 'about'].every((k) => (ai.copySys || []).some((x) => new RegExp(k + ': exactly two sentences').test(x) && /tagline: at most 120 characters, in the same magazine voice/.test(x) && /never an invented one/.test(x) && /the style plain|the tagline and the about/.test(x))));
 ok('about, not bio; and it passes', V.about === 'Sunset Bar is a bar with outdoor seating. It puts on live music.' && !V.quality.review, V.quality);
 
 console.log('\nTHE WORKER  only with the key, and a job moves through its states');

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 02:18 — e4b23a5 — tagline-voice@HEAD (0 files since origin/main)
+**tl;dr:** New sample pages get a tagline in the same magazine voice as the About (the one-liner under the name)
+**Other sessions:** 0163: _fai.mjs COPY_SYSTEM + VENUE_COPY_SYSTEM tagline lines; style line stays plain; 120-char cap and facts-only unchanged.
+
 ### 2026-10-03 02:18 — 95f09a6 — sample-link@fix/sample-link-query (0 files since origin/main)
 **tl;dr:** Sample links now end in ?sample-profile, so they open from Instagram DMs (Instagram dropped the #, and the page said 'No page here')
 **Other sessions:** 0164: _sample.mjs linkFor + _crm.mjs build ?sample-profile; preview is ?pv=1&sample-profile (factory.mjs, hq.mjs). Pages read both forms; links sent before today still end in #.
