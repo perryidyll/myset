@@ -1,4 +1,5 @@
 import { healCityIndex } from './_events.mjs';
+import { healLookups } from './_lookup.mjs';
 
 /* THE CITY INDEX'S HEAL — the bell for `healCityIndex` in _events.mjs (decision
    0174). The front door, a city's feed and a venue page read the gigs the index
@@ -11,19 +12,24 @@ import { healCityIndex } from './_events.mjs';
    a pass too big for one ring carries on at the next. Same discipline as the other
    bells: logged, never thrown (a thrown scheduled function is retried), the
    scheduler's marker logged, not enforced. If this file ever grows logic of its
-   own, that is the bug. */
+   own, that is the bug.
+
+   The artist list's small copies are healed from the same bell (decision 0176,
+   `healLookups` in _lookup.mjs): a pass at most every HEAL_GAP_MS, its own budget, run
+   beside the city's and caught on its own, so either can fail without the other. */
 
 export default async (req) => {
   let marker = null;
   try { marker = ((await req.clone().json()) || {}).next_run || null; } catch { marker = null; }
-  try {
-    const r = await healCityIndex();
-    console.log('citycron:', JSON.stringify(r), marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
+  const [city, copies] = await Promise.allSettled([healCityIndex(), healLookups()]);
+  if (copies.status === 'fulfilled') { if (!copies.value.idle) console.log('citycron copies:', JSON.stringify(copies.value)); }
+  else console.error('citycron copies failed:', String((copies.reason && copies.reason.message) || copies.reason));
+  if (city.status === 'fulfilled') {
+    console.log('citycron:', JSON.stringify(city.value), marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
     return new Response('ok', { status: 200 });
-  } catch (e) {
-    console.error('citycron failed:', String((e && e.message) || e));
-    return new Response('failed', { status: 200 });
   }
+  console.error('citycron failed:', String((city.reason && city.reason.message) || city.reason));
+  return new Response('failed', { status: 200 });
 };
 
 export const config = { schedule: '35 * * * *' };

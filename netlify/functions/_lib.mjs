@@ -1700,7 +1700,8 @@ export async function publicArtist(req) {
      resolves and checks the deletion mark from the SAME single read that
      artistBySlug would have done on its own. */
   if (!slug) return DEFAULT_ARTIST;
-  const { readArtistsPublic, cleanSlug } = await import('./_auth.mjs');
+  const { readArtistsPublic, publicCopyAt, cleanSlug } = await import('./_auth.mjs');
+  const { publicSlug } = await import('./_lookup.mjs');
   const want = cleanSlug(slug);
   /* Own properties only: `?a=constructor` used to resolve to Object's constructor,
      a truthy function, and the endpoints then worked on a phantom room keyed by its
@@ -1709,10 +1710,18 @@ export async function publicArtist(req) {
     const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
     return aid && !(own(reg.byId, aid) || {}).del ? aid : null;
   };
-  /* The instance's copy, up to a minute old, answers a YES (decision 0141). A NO is
-     asked of the store itself — so on a warm instance a room's polls cost no
-     registry read at all, and a page made a moment ago still opens at once. */
-  return find(await readArtistsPublic()) || find(await readArtistsPublic({ fresh: true }));
+  /* The address's own two small copies answer first (decision 0176): a few hundred
+     bytes, where the list is a few hundred kilobytes at a thousand artists. Only when
+     they cannot say yes — missing, unreadable, disagreeing, or the artist leaving — is
+     the list asked: the instance's copy of it, up to a minute old, for a YES (decision
+     0141), and a NO from the store itself, so a page made a moment ago still opens at
+     once. A yes is kept a minute on a warm instance, so a room's polls cost no read. */
+  return publicSlug(want, async () => {
+    const asked = Date.now();
+    const yes = find(await readArtistsPublic());
+    if (yes || publicCopyAt() >= asked) return yes;        // a copy read just now is the store's answer
+    return find(await readArtistsPublic({ fresh: true }));
+  });
 }
 /** Is this account on its way out? The Studio needs to know; the public does not. */
 export async function deletionOf(aid) {
