@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts } from './_lib.mjs';
+import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts, tipGone, netOf } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence, occKey } from './_events.mjs';
@@ -95,8 +95,8 @@ export const REAL_NIGHT = { minutes: 60, votes: 5 };
 /** Money the night took, from `meta` (tips and every paid checkout since it began). */
 export function nightPaid(meta, since) {
   const rows = [...((meta && meta.tips) || []), ...Object.values((meta && meta.paid) || {})]
-    .filter((p) => p && Number(p.at) >= since);
-  return { count: rows.length, total: Math.round(rows.reduce((a, p) => a + (Number(p.amount) || 0), 0) * 100) / 100 };
+    .filter((p) => p && Number(p.at) >= since && !tipGone(p));       // net of refunds (0179)
+  return { count: rows.length, total: Math.round(rows.reduce((a, p) => a + netOf(p), 0) * 100) / 100 };
 }
 /** What discarding this night means on the free plan: null when it is simply given
  *  back (a test, a paid plan, the founder, a night that is not the counted one), else

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 04:22 — ca1c555 — scale-p2-net@fix/net-of-lost-readers (89 files since origin/main)
+**tl;dr:** A refunded tip or pack no longer counts in the discard warning, the Money tab's all-time tips or the sheet's counts (0179)
+**Other sessions:** STACKED on week one's #239. _lib.mjs exports netOf(row) (amount - lost/100) and tipGone(row); every reader that sums or counts money rows uses them (INVARIANT 0iq). Decisions 0145-0156 and 0173-0179 are now all used by c8fc2f.
+
 ### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
 **tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
 **Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
