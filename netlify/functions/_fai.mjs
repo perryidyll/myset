@@ -285,10 +285,12 @@ function checkPhotos(o, ids) {
    Nothing that is not the act, nothing with text across it, never the same shot twice
    (one frame per video, and whatever the judge marked a duplicate). */
 const FROM_RANK = { youtube: 0, website: 1, instagram: 2, founder: 2 };
-export function pickPhotos(judged, { kind = 'artist', again = true } = {}) {
-  const J = (judged || []).filter((j) => j && j.isAct && !j.dup && j.textOverlay < 0.3);
-  const rank = (a, b) => (FROM_RANK[a.from] ?? 3) - (FROM_RANK[b.from] ?? 3) || b.quality - a.quality;
-  const wide = (j) => j.width >= j.height * 1.2;
+const usable = (judged) => (judged || []).filter((j) => j && j.isAct && !j.dup && j.textOverlay < 0.3);
+const rankFrom = (a, b) => (FROM_RANK[a.from] ?? 3) - (FROM_RANK[b.from] ?? 3) || b.quality - a.quality;
+/** Every picture that could be the cover, best first — the picker takes the first,
+ *  the cover review (decision 0159) looks at the first four side by side. */
+export function coverChoices(judged, { kind = 'artist' } = {}) {
+  const J = usable(judged), rank = rankFrom, wide = (j) => j.width >= j.height * 1.2;
   /* A venue's site rarely has a 1000-px hero the judge calls a cover, and a venue page
      without one opened on an empty gradient (Sand & Tan, 2026-10-01). So a venue takes
      the best wide photo it has, down to 800 px, before it goes without. */
@@ -296,10 +298,15 @@ export function pickPhotos(judged, { kind = 'artist', again = true } = {}) {
      music video's story frame (Andrew's first page, 2026-10-02: two actors on a
      dock). Playing beats posing; then the founder's source order. */
   const tier = (j) => (j.kind === 'performing' || j.kind === 'group' ? 0 : 1);
-  const cover = (kind === 'venue' ? J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)[0]
-    : J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j) && ['performing', 'group', 'portrait'].includes(j.kind)).sort((a, b) => tier(a) - tier(b) || rank(a, b))[0])
-    || (kind === 'venue' && J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank)[0])
-    || null;
+  const good = kind === 'venue' ? J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)
+    : J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j) && ['performing', 'group', 'portrait'].includes(j.kind)).sort((a, b) => tier(a) - tier(b) || rank(a, b));
+  return good.length || kind !== 'venue' ? good : J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank);
+}
+/** `cover`, when given, is the cover already chosen (a judged picture, or null for none):
+ *  the cover review's answer, so the portrait and the small photos are picked around it. */
+export function pickPhotos(judged, { kind = 'artist', again = true, cover: chosen } = {}) {
+  const J = usable(judged), rank = rankFrom;
+  const cover = chosen !== undefined ? chosen : coverChoices(judged, { kind })[0] || null;
   let avatar = null;
   if (kind !== 'venue') {                                   // a venue page has no portrait
     const ok = J.filter((j) => j !== cover && j.avatarOk && j.quality >= 0.6 && j.people >= 1 && Math.min(j.width, j.height) >= 400
@@ -319,6 +326,35 @@ export function pickPhotos(judged, { kind = 'artist', again = true } = {}) {
     extras.push(j); used.add(j.group); kinds.add(j.kind);
   }
   return { cover, avatar, extras };
+}
+/* THE COVER REVIEW (decision 0159). The judge scores each picture on its own; the
+   cover is the one picture the act sees first, so the best few are looked at again,
+   side by side, and the one that would make the act proudest at the top of their own
+   page wins. "none" leaves the page without a cover, and the gate sends it to review:
+   a page with no cover is better than one with a cover that embarrasses the act. */
+const COVER_SYSTEM = `MYSET FACTORY · COVER
+
+You pick the cover photo for ONE live-music act's (or venue's) sample page on MySet: the wide picture across the top, the first thing they see when they open the page built for them. The pictures follow, each after a line naming its id; every one already passed a first check.
+Answer with ONE JSON object and nothing else:
+{"best":"y2","why":"singing on stage, face sharp, warm light"}
+
+- best: the id of the picture that would make them proudest to see at the top of their own page. For an act: the act clearly playing live, or a proper band or promo photo; their face visible and in focus; good light; a clean frame that still works cropped wide. For a venue: the place at its most inviting: the room, the stage or the view.
+- A real live moment beats a posed shot. A sharp, well-lit photo beats a dramatic but murky one. A person who is not plainly the act (an actor in a music video) never wins.
+- "none" only when every picture would embarrass them: blurry, dark, not them, or a scene from a story video.
+- why: at most twelve words.`;
+/** `choices` from coverChoices. Returns the picture to use as the cover, or null for none. */
+export async function reviewCover(choices, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
+  const top = (choices || []).slice(0, 4);
+  if (top.length < 2) return top[0] || null;
+  const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${top.length} candidate covers follow.${notesBlock(notes)}` }];
+  for (const c of top) {
+    content.push({ type: 'text', text: `Image id=${c.id} · from ${c.from} · ${c.width}x${c.height}${c.note ? ' · ' + c.note : ''}` });
+    content.push({ type: 'image', source: { type: 'base64', media_type: c.type, data: Buffer.from(c.bytes).toString('base64') } });
+  }
+  const ids = top.map((c) => c.id);
+  const got = await askJSON({ call: 'cover', model: modelSmart(ctx), system: COVER_SYSTEM, content, maxTokens: 400, ctx,
+    check: (o) => (isObj(o) && (ids.includes(String(o.best)) || o.best === 'none') ? { ok: true, value: String(o.best) } : { ok: false, why: [`"best" must be one of ${ids.join(', ')}, or "none"`] }) });
+  return got === 'none' ? null : top.find((c) => c.id === got);
 }
 /** `cands`: [{id, from, group, bytes, type, width, height, src, note}]. Ten a call.
  *  Returns { judged: cands with the verdict merged in, picks }. */

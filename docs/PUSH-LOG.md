@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
+**tl;dr:** Sample page builds: the cover is now chosen twice: the best four candidates go back to the model side by side and it picks the one the act would be proudest of; live videos beyond the top three now give frames too (0159)
+**Other sessions:** _fai.mjs: coverChoices(), reviewCover() (COVER_SYSTEM, call 'cover'), pickPhotos({cover}) picks the rest around a given cover. _factory.mjs: LIVE_TITLE, up to 2 live-titled videos past the top 3; choosePhotos runs the review unless late, a failure keeps the picker's choice (errors.cover). 0158 commits set to cb2272f.
+
 ### 2026-10-02 23:49 — d8a3e56 — photo-roles@ux/about-two-sentences (0 files since origin/main)
 **tl;dr:** Artist and venue pages: the About is two sentences with a space between them, no line; the generator now writes exactly two (0158). Andrew's sample has a new cover (him singing live at The Hollow) and three small photos; his and Sand & Tan's Abouts rewritten to two sentences
 **Other sessions:** app.css .aline: 1em gap + rise, no hairline (stamped into nine pages). _fai.mjs tidyCopy: most 2, cap 400, an overflowing sentence is skipped, not a stop. Andrew's photos and both Abouts were CRM data edits (addPhoto by i.ytimg URL, edit bio), not code. Decision 0158; 0138-0157 belong to the scale-audit sessions.

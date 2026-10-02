@@ -4,7 +4,7 @@ import { parseMedia } from './_embeds.mjs';
 import { safeLink } from './_profile.mjs';
 import { parseSeed, classifyUrl, youtube, ytThumbs, readSite, musicBrainz, itunesArtist, nominatim,
          fetchImage, ldSummary, clean, norm, ctxOf, regionName, LINK_KINDS } from './_fsrc.mjs';
-import { discover, extractFacts, judgePhotos, pickPhotos, writeCopy, estimateCost, modelFast, modelSmart } from './_fai.mjs';
+import { discover, extractFacts, judgePhotos, pickPhotos, coverChoices, reviewCover, writeCopy, estimateCost, modelFast, modelSmart } from './_fai.mjs';
 
 /* THE SAMPLE FACTORY (decision 0101): one seed line in — "The Tide Lines | @thetidelines
    | thetidelines.com | Koh Phangan" — and out comes one sample page's worth of content,
@@ -353,10 +353,15 @@ function sourceTexts(st) {
 
 /* ---------- photos: YouTube first, then the website, then what the founder added ---------- */
 const img = (r) => ({ bytes: r.bytes, type: r.type, width: r.width, height: r.height });
+const LIVE_TITLE = /\blive\b|\bsession\b|\bconcert\b|\bunplugged\b|\bgig\b| @ /i;
 async function ytCandidates(st, ctx) {
   if (!(st.yt && st.yt.ok)) return [];
   const jobs = [];
-  for (const v of st.yt.videos.slice(0, 3)) for (const t of ytThumbs(v.id).slice(0, 3)) jobs.push({ ...t, vid: v.id, note: `from the video "${clean(v.title, 60)}"` });
+  /* The three best-ranked videos, and up to two more whose title says they were filmed
+     live (decision 0159): an older live clip with few views is often the one frame of
+     the act actually on a stage (Andrew's "Live @ The Hollow", ranked out of sight). */
+  const top = st.yt.videos.slice(0, 3), live = st.yt.videos.slice(3).filter((v) => LIVE_TITLE.test(v.title || '')).slice(0, 2);
+  for (const v of [...top, ...live]) for (const t of ytThumbs(v.id).slice(0, 3)) jobs.push({ ...t, vid: v.id, note: `from the video "${clean(v.title, 60)}"` });
   if (st.yt.channel.avatar) jobs.push({ url: st.yt.channel.avatar, variant: 'avatar', note: 'the channel picture' });
   return mapLimit(jobs, 4, async (t) => {
     let r = await fetchImage(t.url, ctx), variant = t.variant;
@@ -402,6 +407,13 @@ async function choosePhotos(st, ctx, { late }) {
     try { judged.push(...(await judgePhotos(cands, ctx, { kind: st.kind, name: st.name, notes: st.seed.notes })).judged); }
     catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.photos = clean(e.message, 160); continue; }
     picks = pickPhotos(judged, { kind: st.kind });
+  }
+  /* the cover review (0159): the best few covers again, side by side; a failed review
+     keeps the picker's choice, it never costs the page */
+  const options = coverChoices(judged, { kind: st.kind });
+  if (options.length > 1 && !late()) {
+    try { picks = pickPhotos(judged, { kind: st.kind, cover: await reviewCover(options, ctx, { kind: st.kind, name: st.name, notes: st.seed.notes }) }); }
+    catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.cover = clean(e.message, 160); }
   }
   return { judged, picks };
 }

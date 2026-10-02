@@ -146,6 +146,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0136](0136-crm-shows-a-sample-s-photos-where-the-page-shows-them.md) | CRM shows a sample's photos where the page shows them, takes notes for the generator, and a rebuild keeps what was set by hand | 2026-10-02 | ui | decided | perry |
 | [0137](0137-a-sample-s-welcome-opens-every-time-its-link-does.md) | A sample's welcome opens every time its link does, an artist's cover is the act playing, and the strip holds three | 2026-10-02 | ui | decided | perry |
 | [0158](0158-an-about-is-two-sentences-with-a-space-between.md) | An About is two sentences, with a space between them and no line | 2026-10-02 | ui | decided | perry |
+| [0159](0159-a-sample-s-cover-is-chosen-twice.md) | A sample's cover is chosen twice — the best four side by side — and live videos past the top three give frames | 2026-10-02 | factory | decided | perry |
 
 ## By area
 
@@ -154,6 +155,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 **crm** — [0126](0126-a-page-crm-asked-for-is-never-adopted-twice.md)
 
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
+
+**factory** — [0159](0159-a-sample-s-cover-is-chosen-twice.md)
 
 **general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) · [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md)
 

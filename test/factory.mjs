@@ -75,6 +75,7 @@ const VIDS = {
   vlogday0003: { title: 'Tour vlog day 3', views: 90000, days: 30, dur: 'PT10M' },
   shortjam001: { title: 'sunset jam #shorts', views: 300000, days: 10, dur: 'PT30S' },
   riptide0001: { title: 'Acoustic session: Riptide', views: 800, days: 20, dur: 'PT3M' },
+  hollowlive1: { title: 'Pinch - Live @ The Hollow 2016', views: 300, days: 3000, dur: 'PT4M' },
 };
 const CHANNEL = { id: CH, snippet: { title: 'The Tide Lines', description: 'Acoustic duo. Covers and originals from Koh Phangan.', customUrl: '@thetidelines', country: 'TH',
   thumbnails: { default: { url: 'https://yt3.ggpht.com/avatar-tide=s88' }, high: { url: 'https://yt3.ggpht.com/avatar-tide=s800' } } },
@@ -180,6 +181,11 @@ function claude(body, headers) {
     }
     return reply(JSON.stringify({ photos: items.map(({ id: i, tag }) => ({ id: i, ...(VERDICT[tag] || VERDICT._) })) }));
   }
+  if (sys.includes('· COVER')) {
+    const ids = [...user.matchAll(/Image id=(\w+)/g)].map((m) => m[1]);
+    ai.covers = (ai.covers || []).concat([ids]);
+    return reply(JSON.stringify({ best: ai.coverPick === 'none' ? 'none' : ids[ai.coverPick || 0], why: 'canned' }));
+  }
   if (sys.includes('· COPY')) {
     const f = (re) => at(re);
     if (user.startsWith('VENUE')) return reply(JSON.stringify({ tagline: { text: 'A bar with live music and outdoor seating', src: [f('venue_type'), f('music_nights'), f('amenity')] },
@@ -205,7 +211,7 @@ function youtubeApi(u) {
     contentDetails: { duration: VIDS[id].dur }, statistics: { viewCount: String(VIDS[id].views) }, status: { embeddable: true } });
   const pi = (id) => ({ contentDetails: { videoId: id } });
   if (what === 'channels') return json({ items: p.get('forHandle') === '@thetidelines' || p.get('id') === CH ? [CHANNEL] : [] });
-  if (what === 'playlistItems') return json(p.get('pageToken') === 'P2' ? { items: ['shortjam001', 'riptide0001'].map(pi) } : { items: ['wonderwall1', 'tidesong001', 'vlogday0003'].map(pi), nextPageToken: 'P2' });
+  if (what === 'playlistItems') return json(p.get('pageToken') === 'P2' ? { items: ['shortjam001', 'riptide0001', 'hollowlive1'].map(pi) } : { items: ['wonderwall1', 'tidesong001', 'vlogday0003'].map(pi), nextPageToken: 'P2' });
   if (what === 'videos') return json({ items: p.get('id').split(',').filter((id) => VIDS[id]).map(video) });
   return json({ items: [] });                                  // search.list and anything else: asserted never called
 }
@@ -322,7 +328,7 @@ eq('an artist’s page looks for none', S.parsePage(mhtml, 'https://x.test/', 'a
 
 console.log('\nYOUTUBE  the Data API, never search.list, never a youtube.com page');
 const yt = await S.youtube(S.parseSeed('https://youtube.com/@thetidelines'), { ...net, ytKey: 'test-youtube-key' });
-eq('ranked: views and recency, music up, the vlog down, the Short out', yt.videos.map((x) => x.id), ['wonderwall1', 'tidesong001', 'riptide0001', 'vlogday0003']);
+eq('ranked: views and recency, music up, the vlog down, the Short out', yt.videos.map((x) => x.id), ['wonderwall1', 'tidesong001', 'riptide0001', 'vlogday0003', 'hollowlive1']);
 eq('one channel, two pages of uploads, one videos.list for all five: four quota units', yt.units, 4);
 eq('the channel: avatar at its largest, the banner at 1920', [yt.channel.avatar, yt.channel.banner], ['https://yt3.ggpht.com/avatar-tide=s800', 'https://yt3.googleusercontent.com/banner-tide=w1920']);
 ok('search.list was never called', !hit('/youtube/v3/search'));
@@ -377,6 +383,18 @@ eq('and a story frame is not one of the small photos either', A.pickPhotos([shot
 const three = A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('y1', 'youtube', 'yt:a', 'performing'), shot('y2', 'youtube', 'yt:a', 'performing', 0.7), shot('y3', 'youtube', 'yt:a', 'portrait', 0.65), shot('w1', 'website', 'web:1', 'portrait')]);
 eq('three small photos when three are there: a second frame of a video fills the strip', three.extras.map((j) => j.id).join(), 'c,w1,y2');
 eq('but never a shot the judge called a duplicate', A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('y1', 'youtube', 'yt:a', 'performing'), shot('y2', 'youtube', 'yt:a', 'performing', 0.7, 1280, 720, { dup: 'y1' })]).extras.map((j) => j.id).join(), 'c');
+/* 0159: the cover review — the best few covers looked at again, side by side. */
+const covs = [shot('a', 'youtube', 'yt:a', 'performing', 0.9), shot('b', 'youtube', 'yt:b', 'performing', 0.85), shot('c', 'website', 'web:1', 'group', 0.8), shot('d', 'website', 'web:2', 'portrait', 0.9), shot('e', 'website', 'web:3', 'performing', 0.75)].map((j) => ({ ...j, bytes: Buffer.from('jpeg'), type: 'image/jpeg' }));
+eq('the cover choices are the picker\'s order: playing first, then source, then quality', A.coverChoices(covs).map((j) => j.id).join(), 'a,b,c,e,d');
+const seen0 = [];
+const pickB = mini([(b) => { seen0.push(b); return json({ content: [{ type: 'text', text: '{"best":"b","why":"canned"}' }], stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 10 } }); }]);
+const rb = await A.reviewCover(A.coverChoices(covs), pickB, { name: 'X' });
+eq('the review sees four at most, and its choice is the cover', [seen0[0].messages[0].content.filter((x) => x.type === 'image').length, rb.id], [4, 'b']);
+const around = A.pickPhotos(covs, { cover: rb });
+ok('and the portrait and small photos are picked around it', around.cover.id === 'b' && !around.extras.includes(rb) && around.avatar !== rb, around.extras.map((j) => j.id));
+eq('"none" leaves the page without a cover, for the founder to look at', await A.reviewCover(covs, mini([JSON.stringify({ best: 'none', why: 'all dark' })])), null);
+eq('one choice needs no review: no call is made', (await A.reviewCover([covs[0]], mini([])).then((j) => j.id)), 'a');
+eq('an id it was not shown is refused, and a second bad answer is an error the factory catches', await A.reviewCover(covs, mini(['{"best":"zz"}', '{"best":"zz"}'])).catch((e) => e.code), 'bad-json');
 /* A venue whose site has no 1000-px hero still gets a cover (2026-10-01, Sand & Tan opened on a gradient). */
 const vsite = [{ id: 'v1', from: 'website', group: 'w1', isAct: true, coverOk: false, quality: 0.8, textOverlay: 0, width: 900, height: 600, kind: 'room' },
   { id: 'v2', from: 'website', group: 'w2', isAct: true, coverOk: false, quality: 0.9, textOverlay: 0, width: 700, height: 900, kind: 'food' }];
@@ -442,6 +460,8 @@ eq('YouTube first: the cover is a thumbnail, the portrait another video’s fram
 eq('three extras: another video, then the website’s — one frame per video', [ph.p0 && ph.p0.src.yt && ph.p0.src.yt.id, ph.p1 && ph.p1.from, ph.p2 && ph.p2.src.url],
    ['riptide0001', 'website', 'https://thetidelines.com/wp-content/uploads/hero-1600x1067.jpg']);
 ok('the too-big website picture came in as its smaller WordPress copy', ph.p2 && ph.p2.width === 1600);
+ok('a live video ranked past the top three is looked at for frames; the fourth, not live, is not (0159)', hit('/vi/hollowlive1/maxresdefault') && !hit('/vi/vlogday0003/maxres'));
+ok('the cover review ran once, on two to four covers', (ai.covers || []).length >= 1 && ai.covers.every((ids) => ids.length >= 2 && ids.length <= 4), ai.covers);
 ok('every photo is real bytes under 900 KB, with a focus point', Object.values(ph).every((x) => Buffer.isBuffer(x.bytes) && x.bytes.length <= 900 * 1024 && /^\d+% \d+%$/.test(x.focus)));
 ok('the logo and the title-covered pictures were judged and left out', P.provenance.judged.some((j) => j.kind === 'logo') && !Object.values(P.provenance.photos).some((x) => /avatar|banner/.test(x)));
 eq('the founder’s note is source 0, labelled as what it is', P.sources[0], { url: '', kind: 'seed', title: 'The founder’s note' });
