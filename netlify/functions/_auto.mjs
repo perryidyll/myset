@@ -58,32 +58,69 @@ export const HEAL_BATCH = 300;
  * index existed, and any entry a lost write dropped, would never be found. So once
  * a day the cron walks the registry (one global read) and re-points every artist
  * from their own calendar (one read each), in batches with a cursor so a big
- * registry is covered over consecutive days rather than dropped (0bw). Never
+ * registry is covered over consecutive rings rather than dropped (0bw). Never
  * `list()` (1). Returns how many it looked at.
+ *
+ * ON A DEADLINE, A CHUNK AT A TIME (decision 0140). This read one calendar and wrote
+ * the index once per artist, in series, with no clock and the cursor saved only at
+ * the end: 164 ms an artist on the audit's timings, so past a hundred artists or so
+ * the platform killed the ring before the cursor was written, and every ring after
+ * it started from the same place and died the same way — with the sweep waiting
+ * behind it. Now HEAL_CHUNK calendars are read together and land in ONE write that
+ * also moves the cursor, and `deadline` (a real clock time) is checked between
+ * chunks. A ring that runs out of time has still saved everything it did.
+ *
+ * A chunk must not put back an entry somebody changed while its calendars were
+ * being read (a gig saved, a start refused): the index is read before the
+ * calendars, and an entry that no longer matches that reading is left alone — the
+ * other writer's is newer.
  */
-export async function heal({ now = Date.now(), limit = HEAL_BATCH } = {}) {
+export const HEAL_CHUNK = 10;
+export async function heal({ now = Date.now(), limit = HEAL_BATCH, deadline = Infinity } = {}) {
   const reg = await readArtists();
   const ids = Object.keys(reg.byId || {}).filter((id) => !isVenueOwner(id)).sort();
-  const sched = await readSched();
-  const start = ids.length ? (Number(sched.healCursor) || 0) % ids.length : 0;
+  const first = await readSched();
+  const start = ids.length ? (Number(first.healCursor) || 0) % ids.length : 0;
   const slice = ids.slice(start, start + limit);
-  for (const aid of slice) {
-    /* AN ACCOUNT ON ITS WAY OUT STAYS OFF (0dh, decision 0098). Day one took it off
-       this index, but its calendar is kept for the thirty days — so re-pointing it
-       from there put a deleted account's gigs back, and the sweep in the same ring
-       started them. Undo re-indexes it (cancelDeletion); from then on it is walked
-       like anybody else. */
-    if ((reg.byId[aid] || {}).del) continue;
-    try { await reindexSched(aid, await readEvents(aid), now); }
-    catch (e) { console.error(`autocron heal: ${aid} failed:`, String((e && e.message) || e)); }
+  let looked = 0, complete = false;
+  for (let i = 0; i < slice.length || i === 0; i += HEAL_CHUNK) {
+    if (i > 0 && Date.now() > deadline) break;
+    const chunk = slice.slice(i, i + HEAL_CHUNK);
+    const before = i === 0 ? first : await readSched();
+    const found = {};
+    await Promise.all(chunk.map(async (aid) => {
+      /* AN ACCOUNT ON ITS WAY OUT STAYS OFF (0dh, decision 0098). Day one took it off
+         this index, but its calendar is kept for the thirty days — so re-pointing it
+         from there put a deleted account's gigs back, and the sweep in the same ring
+         started them. Undo re-indexes it (cancelDeletion); from then on it is walked
+         like anybody else. */
+      if ((reg.byId[aid] || {}).del) return;
+      try { found[aid] = nextWindow(await readEvents(aid), now); }
+      catch (e) { console.error(`autocron heal: ${aid} failed:`, String((e && e.message) || e)); }
+    }));
+    const next = start + i + chunk.length;
+    const done = next >= ids.length;
+    let wrote = false;
+    await casDoc(SCHED, emptySched, (d) => {
+      d.byArtist ||= {};
+      for (const [aid, w] of Object.entries(found)) {
+        const is = d.byArtist[aid];
+        if (JSON.stringify(is || null) !== JSON.stringify(before.byArtist[aid] || null)) continue;
+        if (!w) delete d.byArtist[aid];
+        // the same night keeps its marks: a refused start (`skip`), a night already under way (`on`)
+        else d.byArtist[aid] = (is && is.k === w.k) ? { ...w, ...(is.skip ? { skip: is.skip } : {}), ...(is.on ? { on: is.on } : {}) } : w;
+      }
+      d.healCursor = done ? 0 : next;
+      if (done) d.healedAt = now;                  // a full pass is what counts as healed
+      wrote = true;
+      return true;
+    }).catch(() => { wrote = false; });
+    if (!wrote) break;                             // the cursor did not move: the next ring takes this chunk again
+    looked += chunk.length;
+    complete = done;
+    if (done) break;
   }
-  const next = start + slice.length;
-  await casDoc(SCHED, emptySched, (d) => {
-    d.healCursor = next >= ids.length ? 0 : next;
-    if (next >= ids.length) d.healedAt = now;        // a full pass is what counts as healed
-    return true;
-  }).catch(() => {});
-  return { looked: slice.length, of: ids.length, complete: next >= ids.length };
+  return { looked, of: ids.length, complete };
 }
 export async function readSched() {
   const { data } = await readDoc(SCHED, null);
@@ -109,7 +146,9 @@ export async function reindexSched(aid, events, now = Date.now()) {
 
 /**
  * Look at one artist and do whatever is due. Pure decision + one lifecycle call.
- * Returns { did: 'start'|'end'|null, key, why, refused }.
+ * Returns { did: 'start'|'end'|null, key, why, refused, settled }.
+ * `settled` says tonight's start is decided for good — the show is on, or was on and
+ * the artist ended it — so the sweep need not ask again until the end is due.
  */
 export async function autoTick(aid, { now = Date.now() } = {}) {
   if (isVenueOwner(aid)) return { did: null, why: 'venue' };
@@ -134,17 +173,17 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
        starts early is never interrupted. */
     if (show.status === 'live') {
       if ((show.startedAt || 0) >= occ.startsAt - 2 * 3600e3)
-        return { did: null, key, why: 'already live' };
+        return { did: null, key, settled: true, why: 'already live' };
       await endShow(aid, { by: 'schedule' });
       console.log('autocron: filed a show left running from a previous gig for', aid);
     }
     if (show.autoStart === false) return { did: null, key, why: 'auto-start is off for this artist' };
-    if (show.autoKey === key) return { did: null, key, why: 'this gig was already started once' };
+    if (show.autoKey === key) return { did: null, key, settled: true, why: 'this gig was already started once' };
     /* The artist started a show for this night by hand and then ended it. That was
        a decision; the schedule does not overrule it. (A show that ended before the
        gig's window is last night's — that one gets replaced.) */
     if (show.status === 'ended' && (show.startedAt || 0) >= occ.startsAt - 2 * 3600e3)
-      return { did: null, key, why: 'the artist ended tonight’s show themselves' };
+      return { did: null, key, settled: true, why: 'the artist ended tonight’s show themselves' };
     // an empty voting page is a broken gig (16). Not marked refused: the moment
     // they switch a song on, the next tick starts it (two reads a tick, one artist)
     if (!(show.songs || []).some((s) => s && s.active !== false))
@@ -159,7 +198,7 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
     if (await deletionOf(aid)) return { did: null, key, why: 'the account is being deleted', drop: true };
     const r = await startShow(aid, { fresh: true, by: 'schedule', occKey: key, eventId: occ.eventId });
     if (r.err) return { did: null, key, why: r.err[0], refused: true };
-    return { did: 'start', key, note: r.note };
+    return { did: 'start', key, settled: true, note: r.note };
   }
 
   if (now >= occ.endsAt + END_GRACE_MS && show.status === 'live') {
@@ -181,43 +220,78 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
   return { did: null, key, why: 'nothing due' };
 }
 
+/* Start after `after` in a list sorted by id, and wrap. With a bounded ring this
+   is what stops the same first few from being the only ones ever looked at. */
+const rotate = (rows, after) => {
+  const from = after ? rows.findIndex(([aid]) => aid > after) : 0;
+  return from > 0 ? rows.slice(from).concat(rows.slice(0, from)) : rows;
+};
+const byId = (a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+export const SWEEP_POOL = 5;
+
 /**
  * One pass over the index: act on every artist with something due, then
  * re-point their entry at the next window. Bounded per run — the rest is picked
  * up next tick, never dropped (INVARIANT 0bw). Errors per artist are loud and do
  * not stop the others (0bw3).
+ *
+ * THREE THINGS THAT KEEP "BOUNDED" FROM MEANING "NEVER" (decision 0140):
+ *   · A NIGHT UNDER WAY IS NOT DUE. A gig that had started stayed in the list for
+ *     its whole length — every ring re-read its calendar and its show to learn it
+ *     was "already live" — and with `limit` at 40 the forty-first gig in progress
+ *     was never looked at: it did not start itself and it did not end itself.
+ *     autoTick now says `settled`, the entry is marked `on` for that night, and it
+ *     is due again only when its end is.
+ *   · THE LIST ROTATES. What is due is walked in id order starting after the last
+ *     artist the previous ring reached (`sweepAfter`), so a ring that runs out of
+ *     room or time leaves the rest first in line, not last for ever.
+ *   · A CLOCK, NOT ONLY A COUNT. `deadline` is a real time; no artist is begun
+ *     after it. A start can take seconds (it files the previous night), so a count
+ *     alone could not keep a ring inside the platform's limit.
+ * Artists are independent, so SWEEP_POOL of them are worked at once.
  */
-export async function sweep({ now = Date.now(), limit = 40, log = () => {} } = {}) {
+export async function sweep({ now = Date.now(), limit = 40, deadline = Infinity, log = () => {} } = {}) {
   const sched = await readSched();
-  const due = Object.entries(sched.byArtist)
-    .filter(([, w]) => w && ((now >= w.s && now < w.e && w.skip !== w.k) || now >= w.e + END_GRACE_MS))
-    .slice(0, limit);
+  const all = Object.entries(sched.byArtist)
+    .filter(([, w]) => w && ((now >= w.s && now < w.e && w.skip !== w.k && w.on !== w.k) || now >= w.e + END_GRACE_MS))
+    .sort(byId);
+  const due = rotate(all, String(sched.sweepAfter || '')).slice(0, limit);
   const results = [];
   const updates = {};
-  for (const [aid, w] of due) {
-    try {
-      const r = await autoTick(aid, { now });
-      results.push({ aid, ...r });
-      log(`autocron: ${aid} — ${r.did || 'nothing'}${r.why ? ' (' + r.why + ')' : ''}`);
-      // `keep` leaves the entry pointing at tonight so the next ring tries again;
-      // `drop` takes it out — an account on its way out has nothing due (0dh)
-      const next = r.keep ? w : r.drop ? null : nextWindow(await readEvents(aid), now);
-      if (next && r.refused && next.k === w.k) next.skip = w.k;
-      updates[aid] = next;
-    } catch (e) {
-      console.error(`autocron: ${aid} failed:`, String((e && e.message) || e));
-      results.push({ aid, did: null, why: 'error' });
-      // leave the entry alone so the next tick tries again
+  let taken = 0;
+  const worker = async () => {
+    while (taken < due.length) {
+      if (taken > 0 && Date.now() > deadline) return;
+      const [aid, w] = due[taken++];
+      try {
+        const r = await autoTick(aid, { now });
+        results.push({ aid, ...r });
+        log(`autocron: ${aid} — ${r.did || 'nothing'}${r.why ? ' (' + r.why + ')' : ''}`);
+        // `keep` leaves the entry pointing at tonight so the next ring tries again;
+        // `drop` takes it out — an account on its way out has nothing due (0dh)
+        const next = r.keep ? w : r.drop ? null : nextWindow(await readEvents(aid), now);
+        if (next && r.refused && next.k === w.k) next.skip = w.k;
+        if (next && r.settled && next.k === w.k) next.on = w.k;
+        updates[aid] = next;
+      } catch (e) {
+        console.error(`autocron: ${aid} failed:`, String((e && e.message) || e));
+        results.push({ aid, did: null, why: 'error' });
+        // leave the entry alone so the next tick tries again
+      }
     }
-  }
-  if (Object.keys(updates).length) {
+  };
+  await Promise.all(Array.from({ length: Math.min(SWEEP_POOL, due.length) }, worker));
+  // where the next ring starts: after the last one begun, or from the top once everything due was reached
+  const after = taken < all.length && taken > 0 ? due[taken - 1][0] : '';
+  if (Object.keys(updates).length || after !== String(sched.sweepAfter || '')) {
     await casDoc(SCHED, emptySched, (d) => {
       d.byArtist ||= {};
       for (const [aid, w] of Object.entries(updates)) { if (w) d.byArtist[aid] = w; else delete d.byArtist[aid]; }
+      if (after) d.sweepAfter = after; else delete d.sweepAfter;
       return true;
     }).catch(() => {});
   }
-  return { checked: due.length, deferred: Math.max(0, Object.keys(sched.byArtist).length - due.length), results };
+  return { checked: taken, waiting: all.length - taken, deferred: Math.max(0, Object.keys(sched.byArtist).length - due.length), results };
 }
 
 /* THE MORNING-AFTER NOTE (2026-09-15). endShow queues one on the first night an
@@ -275,25 +349,46 @@ export async function sweepNotes({ now = Date.now(), limit = 20, log = () => {} 
   return { checked: due.length, sent };
 }
 
-/** End any live show with no artist action or audience vote for three hours. */
-export async function sweepIdle({ now = Date.now(), limit = 40, log = () => {} } = {}) {
+/**
+ * End any live show with no artist action or audience vote for three hours.
+ *
+ * `live[aid]` is the last time this show was KNOWN to be active — the start, until
+ * a ring looks and finds something later. A show that was active less than three
+ * hours ago by that mark cannot be idle, so it costs no reads at all; one that is
+ * looked at and found busy has its mark moved up, so it is not read again (thirteen
+ * documents) every two minutes for the rest of a long night. What is left is walked
+ * like the sweep: in id order from where the last ring stopped (`idleAfter`), and
+ * not past `deadline` — this was the first forty entries of the map, every ring,
+ * so the forty-first live show could never be ended (decision 0140).
+ */
+export async function sweepIdle({ now = Date.now(), limit = 40, deadline = Infinity, log = () => {} } = {}) {
   const sched = await readSched();
-  const entries = Object.entries(sched.live || {}).slice(0, limit);
-  const remove = [];
-  let ended = 0;
-  for (const [aid, started] of entries) {
+  const all = Object.entries(sched.live || {})
+    .filter(([, at]) => now - (Number(at) || 0) >= SHOW_IDLE_MS).sort(byId);
+  const entries = rotate(all, String(sched.idleAfter || '')).slice(0, limit);
+  const remove = [], seen = {};
+  let ended = 0, taken = 0;
+  for (const [aid, at] of entries) {
+    if (taken > 0 && Date.now() > deadline) break;
+    taken += 1;
     try {
       const [show, fans] = await Promise.all([getShow(aid), readFans(aid)]);
       if (show.status !== 'live') { remove.push(aid); continue; }
       const fanAt = Math.max(0, ...Object.values(fans || {}).map((f) => Number(f.lastAt) || 0));
-      const last = Math.max(Number(started) || 0, Number(show.updatedAt) || 0, fanAt);
-      if (now - last < SHOW_IDLE_MS) continue;
+      const last = Math.max(Number(at) || 0, Number(show.updatedAt) || 0, fanAt);
+      if (now - last < SHOW_IDLE_MS) { seen[aid] = last; continue; }
       await endShow(aid, { by: 'inactivity' });
       remove.push(aid); ended += 1; log(`autocron: ${aid} — ended after three idle hours`);
     } catch (e) { console.error(`autocron idle: ${aid} failed:`, String((e && e.message) || e)); }
   }
-  if (remove.length) await casDoc(SCHED, emptySched, (d) => {
-    d.live ||= {}; for (const aid of remove) delete d.live[aid]; return true;
+  const after = taken < all.length && taken > 0 ? entries[taken - 1][0] : '';
+  if (remove.length || Object.keys(seen).length || after !== String(sched.idleAfter || '')) await casDoc(SCHED, emptySched, (d) => {
+    d.live ||= {};
+    for (const aid of remove) delete d.live[aid];
+    // only ever forward, and only for a show still marked live: a fresh Start writes its own mark
+    for (const [aid, last] of Object.entries(seen)) if (d.live[aid] && Number(d.live[aid]) < last) d.live[aid] = last;
+    if (after) d.idleAfter = after; else delete d.idleAfter;
+    return true;
   }).catch(() => {});
-  return { checked: entries.length, ended };
+  return { checked: taken, ended };
 }

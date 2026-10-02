@@ -25,6 +25,12 @@ import { casDoc } from './_lib.mjs';
 
 const MIN_GAP = 60e3;
 const RUN_LOCK_MS = 4 * 60e3;
+/* HOW LONG A RING MAY KEEP STARTING WORK (decision 0140). Netlify's documents give a
+   scheduled function thirty seconds; the one kill this repo has measured came at
+   twelve (decision 0069). So nothing new is begun after seven, which leaves the
+   unit of work in hand — one show starting, one chunk of the daily pass — room to
+   finish inside the smaller figure. */
+export const RING_BUDGET_MS = 7000;
 
 export default async (req) => {
   let marker = null;
@@ -34,9 +40,13 @@ export default async (req) => {
   /* KEEP THE FAN DOOR AWAKE (decision 0049). One GET to /api/fan?what=warm every
      fourth minute — this rings every second minute, so every other ring — is
      ~11k calls a month, and it means the first fan of a quiet evening does not
-     pay the ~1.5s a sleeping function costs to wake. Awaited, so the runtime
-     cannot freeze it mid-flight; eight seconds is the most it may take; logged,
-     never thrown. */
+     pay the ~1.5s a sleeping function costs to wake. Eight seconds is the most it
+     may take; logged, never thrown.
+     ALONGSIDE THE RING, NOT BEFORE IT (0140). These were awaited first, so a slow
+     wake could spend eight seconds before a single show was looked at. They are
+     started here and awaited at the end, which still keeps the runtime from
+     freezing them mid-flight. */
+  let warming = Promise.resolve();
   if (new Date(now).getUTCMinutes() % 4 === 0) {
     const site = process.env.URL || 'https://myset.vip';
     /* The Studio's two first reads are their own functions, and they sleep too:
@@ -46,9 +56,14 @@ export default async (req) => {
     const warm = (path, label) => fetch(`${site}${path}`, { signal: AbortSignal.timeout(8000) })
       .then((r) => console.log(`autocron: warmed ${label} (${r.status})`))
       .catch((e) => console.log(`autocron: warm ping of ${label} failed: ${e && e.message}`));
-    await Promise.all([warm('/api/fan?what=warm', 'the fan door'), warm('/api/stage', 'stage'), warm('/api/admin', 'admin')]);
+    warming = Promise.all([warm('/api/fan?what=warm', 'the fan door'), warm('/api/stage', 'stage'), warm('/api/admin', 'admin')]);
   }
+  try { return await ring(now, marker); }
+  finally { await warming; }
+};
 
+async function ring(now, marker) {
+  const deadline = now + RING_BUDGET_MS;
   const state = await readSched().catch(() => emptySched());
   const since = now - (Number(state.lastRunAt) || 0);
   if (since < MIN_GAP) {
@@ -69,53 +84,65 @@ export default async (req) => {
   }).catch(() => {});
   if (!mine) { console.log('autocron: lost the lock'); return new Response('busy', { status: 200 }); }
 
+  /* THE ORDER IS THE POINT (decision 0140). What a room is waiting on goes first:
+     shows starting and ending, then a fan's payment that is still owed. The
+     housekeeping — the daily pass over every artist, the purge, the clip sweep —
+     comes after and only with the time that is left. The daily pass used to run
+     first, with no clock, so on the day it grew too long the platform killed the
+     ring before it reached a single show, and killed the next one the same way.
+     Each step is caught on its own: one failing is logged and the rest still run. */
+  const step = async (name, fn) => {
+    try { return await fn(); }
+    catch (e) { console.error(`autocron: ${name} failed:`, String((e && e.message) || e)); return null; }
+  };
+  const left = () => Date.now() < deadline;
   try {
+    const log = (l) => console.log(l);
+    const r = await step('sweep', () => sweep({ now, deadline, log }));
+    const idle = await step('idle sweep', () => sweepIdle({ now, deadline, log }));
+    /* PAYMENTS A WEBHOOK COULD NOT DELIVER (decision 0138). One small read a ring;
+       the rows, the bounds and the retry all live in _pay.mjs. */
+    const owed = await step('redelivery', async () => (await import('./_pay.mjs')).redeliverOwed({ now, deadline, log }));
+    if (owed && owed.checked) console.log(`autocron: ${owed.delivered} owed payment(s) delivered, ${owed.owed} still owed`);
+    const notes = await step('first-night notes', () => sweepNotes({ now, log }));
+
     // once a day, re-point every artist from their own calendar — see heal()
-    if (now - (Number(state.healedAt) || 0) > HEAL_EVERY_MS) {
-      const h = await heal({ now });
-      console.log(`autocron: heal looked at ${h.looked} of ${h.of}${h.complete ? '' : ' (continues next ring)'}`);
+    if (left() && now - (Number(state.healedAt) || 0) > HEAL_EVERY_MS) {
+      const h = await step('heal', () => heal({ now, deadline }));
+      if (h) console.log(`autocron: heal looked at ${h.looked} of ${h.of}${h.complete ? '' : ' (continues next ring)'}`);
     }
     /* ACCOUNTS THAT ASKED TO LEAVE, THIRTY DAYS AGO. One per ring, on an hourly
        watermark, so this costs 24 reads a day rather than 720 and can never eat a
        ring that a show was waiting on. A purge date does not need two-minute
        precision. */
-    if (now - (Number(state.purgedAt) || 0) > 3600e3) {
+    if (left() && now - (Number(state.purgedAt) || 0) > 3600e3) {
       await casDoc(SCHED, emptySched, (d) => { d.purgedAt = now; return true; }).catch(() => {});
-      try {
+      await step('purge', async () => {
         const { purgeDue } = await import('./_account.mjs');
         const p = await purgeDue(now, 1);
         if (p.purged.length) console.log('autocron: purged', p.purged.join(','));
-      } catch (e) { console.error('autocron: purge failed', String((e && e.message) || e)); }
+      });
     }
     /* CLIPS UPLOADED AND NEVER POSTED. Two hours old, one owner a ring, on the
        same hourly watermark as the purge — a 3MB blob nothing points at is worth
        collecting, and nothing about it is urgent. */
-    if (now - (Number(state.vidsweptAt) || 0) > 3600e3) {
+    if (left() && now - (Number(state.vidsweptAt) || 0) > 3600e3) {
       await casDoc(SCHED, emptySched, (d) => { d.vidsweptAt = now; return true; }).catch(() => {});
-      try {
+      await step('clip sweep', async () => {
         const { sweepQueue } = await import('./_video.mjs');
         const v = await sweepQueue(now, 1);
         if (v.deleted) console.log(`autocron: dropped ${v.deleted} unposted clip(s)`);
-      } catch (e) { console.error('autocron: clip sweep failed', String((e && e.message) || e)); }
+      });
     }
-    const r = await sweep({ now, log: (l) => console.log(l) });
-    const idle = await sweepIdle({ now, log: (l) => console.log(l) });
-    /* PAYMENTS A WEBHOOK COULD NOT DELIVER (decision 0138). One small read a ring;
-       the rows, the bounds and the retry all live in _pay.mjs. */
-    const { redeliverOwed } = await import('./_pay.mjs');
-    const owed = await redeliverOwed({ now, log: (l) => console.log(l) });
-    if (owed.checked) console.log(`autocron: ${owed.delivered} owed payment(s) delivered, ${owed.owed} still owed`);
-    const notes = await sweepNotes({ now, log: (l) => console.log(l) });
+    if (!r) return new Response('failed', { status: 200 });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
-                `${idle.ended} idle ended`, notes.sent ? `${notes.sent} first-night note(s) sent` : '',
+                r.waiting ? `${r.waiting} waiting for the next ring` : '',
+                `${idle ? idle.ended : '?'} idle ended`, notes && notes.sent ? `${notes.sent} first-night note(s) sent` : '',
                 marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
     return new Response('ok', { status: 200 });
-  } catch (e) {
-    console.error('autocron failed:', String((e && e.message) || e));
-    return new Response('failed', { status: 200 });
   } finally {
     await casDoc(SCHED, emptySched, (d) => { d.runningSince = 0; return true; }).catch(() => {});
   }
-};
+}
 
 export const config = { schedule: '*/2 * * * *' };

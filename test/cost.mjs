@@ -40,7 +40,7 @@ const count = async (fn) => {
        INVARIANT 9d13 built goes blind exactly when a new global is added. It
        missed `sheetsync` on the day it shipped — off every hot path, so no
        ceiling moved, but the check that would have TOLD us was silent. */
-    globals: log.filter((l) => / (artists|promos|flags|cityindex|acctindex|idqueue|sheetsync|gigsched|delqueue|vidqueue|register|register_work|registersync|register_[0-9-]+)$/.test(l)).length,
+    globals: log.filter((l) => / (artists|promos|flags|cityindex|acctindex|idqueue|sheetsync|gigsched|delqueue|vidqueue|payowed|register|register_work|registersync|register_[0-9-]+)$/.test(l)).length,
   };
 };
 const under = (name, got, ceiling) =>
@@ -142,6 +142,38 @@ console.log('\nTHE BUSINESS DASHBOARD  (once per Money-tab open, decision 0065)'
   ok('and it writes nothing', tab.writes === 0, tab);
   const report = await count(() => B({ action: 'bizGet', nights: true }));
   under('reads for the report page (with nights)', report.reads, 7);
+}
+
+console.log('\nA SLUG ARTIST’S ROOM  the artist list is read once a minute per instance, not once a request  (decision 0141)');
+{
+  const { createArtist, mutateArtists, __flushArtists } = await import('../netlify/functions/_auth.mjs');
+  const { publicArtist, casDoc } = await import('../netlify/functions/_lib.mjs');
+  const kit = await createArtist({ email: 'kit@example.com', name: 'Kit', slug: 'kit' });
+  const ask = (slug) => publicArtist(new Request('https://x/api/me?a=' + slug));
+  const eq = (name, got, want) => ok(name, JSON.stringify(got) === JSON.stringify(want), { got, want });
+  eq('a page made a moment ago opens at once', await ask('kit'), kit.artistId);
+  const warm = await count(() => hit(meFn, 'https://x/api/me?a=kit&fan=f9'));
+  ok(`THE FIX: a warm poll for a slug artist reads no global document — ${warm.globals}`, warm.globals === 0, warm);
+  const v2 = await count(() => ask('kit'));
+  eq('nor does resolving the slug on its own', v2.reads, 0);
+  const miss = await count(() => ask('nobody-by-this-name'));
+  eq('a slug the copy does not know is asked of the store, once', miss.reads, 1);
+  eq('and is still nobody', await ask('nobody-by-this-name'), null);
+  const pat = await createArtist({ email: 'pat@example.com', name: 'Pat', slug: 'pat' });
+  eq('a sign-up in this instance is seen at once', await ask('pat'), pat.artistId);
+  /* Another instance writes — which this one cannot see happen. Written straight to
+     the store here, the way a different warm instance's write arrives. */
+  const far = (fn) => casDoc('artists', () => ({}), (a) => { fn(a); return true; });
+  await far((a) => { a.byId['far-one'] = { slug: 'far', name: 'Far', plan: 'free' }; a.bySlug.far = 'far-one'; });
+  eq('a sign-up on ANOTHER instance opens at once too: a no is never taken from the copy', await ask('far'), 'far-one');
+  await far((a) => { a.byId[kit.artistId].del = { at: Date.now() }; });
+  eq('a page that left on another instance may answer for up to a minute here', await ask('kit'), kit.artistId);
+  __flushArtists();
+  eq('and is gone once the copy is refreshed', await ask('kit'), null);
+  await far((a) => { delete a.byId[kit.artistId].del; });
+  eq('an undone deletion is back at once: the copy’s no is checked against the store', await ask('kit'), kit.artistId);
+  await mutateArtists((a) => { a.byId[pat.artistId].del = { at: Date.now() }; return true; });
+  eq('and a deletion made on THIS instance is dark at once', await ask('pat'), null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

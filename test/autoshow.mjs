@@ -436,5 +436,113 @@ console.log('\nAN ACCOUNT ON ITS WAY OUT  stays off the schedule, and never star
   eq('and she is taken off the schedule, not moved to her next night', (await readSched()).byArtist[left.artistId], undefined);
 }
 
+console.log('\nUNDER LOAD  the ring looks at who is waiting, not at who is already on  (decision 0140)');
+{
+  const { heal, HEAL_CHUNK } = await import('../netlify/functions/_auto.mjs');
+  const D3 = T0 + 20 * 86400000;                     // a night nothing above touches
+  const mk = async (slug, song = true) => {
+    const a = await createArtist({ email: `${slug}@example.com`, name: slug, slug });
+    const t = await signToken(`${slug}@example.com`, revOf(await readArtists(), a.artistId));
+    if (song) await AS(t, 'addSong', { title: 'One', artist: 'T' });
+    await AS(t, 'eventSave', { event: { id: 'g' + slug, venue: 'The Corner', city: 'Koh Phangan', country: 'Thailand',
+      tz: 'UTC', date: ymd(D3), time: hm(D3), endTime: hm(D3 + 2 * H) } });
+    return { ...a, t };
+  };
+  const on = await mk('load-on');
+  let sw3 = await sweep({ now: D3 + 60e3 });
+  eq('a gig that is due starts', (sw3.results.find((x) => x.aid === on.artistId) || {}).did, 'start');
+  eq('and its entry is marked as under way', (await readSched()).byArtist[on.artistId].on, (await readSched()).byArtist[on.artistId].k);
+  const again = await count(() => sweep({ now: D3 + 3 * 60e3 }));
+  under('THE FIX: the next ring does not read it again — reads', again.reads, 1);
+  sw3 = await sweep({ now: D3 + 5 * 60e3 });
+  ok('it is not in the list at all while the night is on', !sw3.results.some((x) => x.aid === on.artistId), sw3.results);
+  sw3 = await sweep({ now: D3 + 2 * H + END_GRACE_MS + 60e3 });
+  eq('but it is due again when its end is, and is ended', (sw3.results.find((x) => x.aid === on.artistId) || {}).did, 'end');
+  ok('a calendar edit keeps nothing stale: the mark is for one night only',
+     (await readSched()).byArtist[on.artistId] === undefined || (await readSched()).byArtist[on.artistId].on === undefined, (await readSched()).byArtist[on.artistId]);
+
+  /* Three acts whose gig is on and who have no song switched on stay due all night
+     (the moment they switch one on, it starts). With room for one a ring, each ring
+     must reach a different one. */
+  const w1 = await mk('wait-a', false), w2 = await mk('wait-b', false), w3 = await mk('wait-c', false);
+  const waiting = new Set([w1.artistId, w2.artistId, w3.artistId]);
+  const reached = [];
+  for (let i = 0; i < 3; i++) {
+    const one = await sweep({ now: D3 + (10 + 2 * i) * 60e3, limit: 1 });
+    reached.push(...one.results.map((x) => x.aid).filter((id) => waiting.has(id)));
+    if (i === 0) eq('a ring with room for one says how many are left waiting', one.waiting, 2);
+  }
+  eq('THE FIX: three rings with room for one reach three different acts', new Set(reached).size, 3);
+  const late = await sweep({ now: D3 + 20 * 60e3, deadline: Date.now() - 1 });
+  eq('a ring that is out of time still does one', late.checked, 1);
+  eq('and leaves the rest for the next', late.waiting, 2);
+  ok('which starts where this one stopped', !!(await readSched()).sweepAfter, (await readSched()).sweepAfter);
+  const full = await sweep({ now: D3 + 22 * 60e3 });
+  eq('a ring with time reaches all three', full.checked, 3);
+  eq('and the place-marker is cleared', (await readSched()).sweepAfter, undefined);
+
+  console.log('\nTHE DAILY PASS  in chunks, on a clock, saving its place');
+  for (let i = 0; i < HEAL_CHUNK + 2; i++) await createArtist({ email: `heal${i}@example.com`, name: `Heal ${i}`, slug: `heal-${i}` });
+  const total = Object.keys((await readArtists()).byId).length;
+  ok('there are more artists than one chunk', total > HEAL_CHUNK, total);
+  await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { d.healedAt = 0; d.healCursor = 0; delete d.byArtist[w1.artistId]; return true; });
+  const mark = (await readSched()).byArtist[w2.artistId];
+  await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { d.byArtist[w2.artistId].skip = mark.k; return true; });
+  const h1 = await heal({ now: D3 - H, deadline: Date.now() - 1 });
+  eq('out of time, the pass still does one chunk', h1.looked, HEAL_CHUNK);
+  eq('and is not complete', h1.complete, false);
+  eq('THE FIX: its place is saved with the chunk, not at the end', (await readSched()).healCursor, HEAL_CHUNK);
+  eq('and the day is not stamped as healed', (await readSched()).healedAt, 0);
+  const cost = await count(() => heal({ now: D3 - H, limit: HEAL_CHUNK, deadline: Date.now() - 1 }));
+  under('a chunk of ten calendars lands in one write — writes', cost.writes, 1);
+  let guard = 0, hN;
+  do { hN = await heal({ now: D3 - H }); } while (!hN.complete && ++guard < 10);
+  ok('with time, the pass finishes', hN.complete, hN);
+  ok('and stamps the day', (await readSched()).healedAt > 0);
+  eq('the cursor is back at the start', (await readSched()).healCursor, 0);
+  ok('a calendar the index had lost is found again', !!(await readSched()).byArtist[w1.artistId], Object.keys((await readSched()).byArtist));
+  eq('and a mark on the same night is kept', (await readSched()).byArtist[w2.artistId].skip, mark.k);
+
+  console.log('\nIDLE SHOWS  a show that cannot be idle yet costs nothing');
+  const young = await mk('idle-young');
+  ok('a show starts by hand', (await AS(young.t, 'status', { status: 'live' })).ok);
+  const startedAt = (await readSched()).live[young.artistId];
+  ok('it is on the live list', startedAt > 0, (await readSched()).live);
+  const y = await count(() => sweepIdle({ now: startedAt + 60 * 60e3 }));
+  under('an hour in, the idle sweep reads only the index — reads', y.reads, 1);
+  // three hours after it started, but a fan voted twenty minutes ago
+  const { mutateFan } = await import('../netlify/functions/_lib.mjs');
+  const voteAt = startedAt + SHOW_IDLE_MS - 20 * 60e3;
+  await mutateFan(young.artistId, 'fan1', (me) => { me.lastAt = voteAt; return true; });
+  let iz = await sweepIdle({ now: startedAt + SHOW_IDLE_MS + 1000 });
+  eq('three hours in and still busy, it is not ended', (await getShow(young.artistId)).status, 'live');
+  ok('THE FIX: and its mark moves up to the last sign of life', (await readSched()).live[young.artistId] >= voteAt, (await readSched()).live[young.artistId]);
+  const y2 = await count(() => sweepIdle({ now: startedAt + SHOW_IDLE_MS + 5 * 60e3 }));
+  under('so the next ring does not read it again — reads', y2.reads, 1);
+  iz = await sweepIdle({ now: (await readSched()).live[young.artistId] + SHOW_IDLE_MS + 1000 });
+  eq('three hours after that last sign, it is ended', (await getShow(young.artistId)).status, 'ended');
+  eq('and off the live list', (await readSched()).live[young.artistId], undefined);
+
+  console.log('\nTHE RING  shows first, housekeeping with the time that is left');
+  /* The daily pass is due AND a gig is due. The ring must reach the gig even if the
+     pass cannot run: here the registry read is made to fail, which used to throw
+     out of the ring before the sweep was reached. */
+  const first = await mk('ring-first');
+  await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { d.lastRunAt = 0; d.runningSince = 0; d.healedAt = 0; return true; });
+  const realNow = Date.now;
+  Date.now = () => D3 + 60e3 + (realNow() % 1000);      // the ring reads the clock itself
+  __opsStart();
+  let rr;
+  try { rr = await cron.default(new Request('https://x/.netlify/functions/autocron', { method: 'POST' })); }
+  finally { Date.now = realNow; }
+  const opsLog = __opsStop();
+  eq('the ring runs', await rr.text(), 'ok');
+  eq('the gig that was due started', (await getShow(first.artistId)).status, 'live');
+  const iShow = opsLog.findIndex((l) => l === 'set show_' + first.artistId);
+  const healed = (await readArtists()).bySlug['heal-0'];
+  const iHeal = opsLog.findIndex((l) => l === 'get ev_' + healed);      // only the daily pass reads this one
+  ok('THE FIX: its show was written before the daily pass read anybody else’s calendar', iShow >= 0 && iHeal > iShow, { iShow, iHeal });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

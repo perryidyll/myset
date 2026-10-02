@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:50 — ae7ea42 — scale-week1@fix/scheduler-under-load (20 files since origin/main)
+**tl;dr:** Shows keep starting and ending themselves as MySet grows: the scheduler now does shows first and its daily housekeeping on a time limit, and a room's phones no longer make the server re-read the whole artist list on every poll (0140, 0141)
+**Other sessions:** _auto.mjs: heal({deadline}) works in HEAL_CHUNK=10 calendars per write and saves healCursor per chunk; sweep/sweepIdle take {deadline}, rotate via sched.sweepAfter / sched.idleAfter, run SWEEP_POOL=5 at once; autoTick returns settled, and an index entry may carry on:<k> (keep skip AND on when rewriting an entry for the same night; reindexSched keeps skip, drops on). live[aid] is now 'last known sign of life', not the start time. autocron.mjs: RING_BUDGET_MS=7000, order = sweep, idle, owed payments, notes, THEN heal/purge/clips. _auth.mjs: readArtistsPublic() (60 s per-instance copy) + __flushArtists; publicArtist uses it and re-asks the store for any no. Never use the copy for sign-in or pricing (INVARIANT 0hp).
+
 ### 2026-10-03 02:25 — b32291a — sample-og@ux/sample-share-card (0 files since origin/main)
 **tl;dr:** A sample link pasted into Instagram/WhatsApp/iMessage now shows that artist's photo and name on its preview card, like a real artist's
 **Other sessions:** 0165: artistpage.mjs sampleCard() — only when the URL carries ?sample-profile and the slug is no account; bare address unchanged (0101). Venue pages still have no share card.

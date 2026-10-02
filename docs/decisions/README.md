@@ -147,6 +147,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0137](0137-a-sample-s-welcome-opens-every-time-its-link-does.md) | A sample's welcome opens every time its link does, an artist's cover is the act playing, and the strip holds three | 2026-10-02 | ui | decided | perry |
 | [0138](0138-a-payment-whose-grant-failed-answers-stripe-with-a.md) | A payment whose grant failed answers Stripe with an error and is retried by the bell | 2026-10-02 | money | decided | perry-confirmed |
 | [0139](0139-the-card-fee-correction-runs-only-for-a-plan-that.md) | The card-fee correction runs only for a plan that shares the fee | 2026-10-02 | money | decided | perry-confirmed |
+| [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) | The bell does shows first, and the daily pass runs on a clock | 2026-10-02 | scale | decided | perry-confirmed |
+| [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) | The audience path reads the artist list from a copy up to a minute old | 2026-10-02 | scale | decided | perry-confirmed |
 | [0144](0144-every-pull-request-runs-the-suite.md) | Every pull request runs the suite | 2026-10-02 | ops | decided | perry-confirmed |
 | [0158](0158-an-about-is-two-sentences-with-a-space-between.md) | An About is two sentences, with a space between them and no line | 2026-10-02 | ui | decided | perry |
 | [0159](0159-a-sample-s-cover-is-chosen-twice.md) | A sample's cover is chosen twice — the best four side by side — and live videos past the top three give frames | 2026-10-02 | factory | decided | perry |
@@ -186,7 +188,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md) · [0123](0123-asking-a-venue-for-a-spot-is-a-conversation-in-messages.md) · [0124](0124-a-venue-s-phones-get-push-alerts-a-new-ask-to-play.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md)
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
