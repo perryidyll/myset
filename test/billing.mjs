@@ -371,6 +371,20 @@ console.log('\nHALF OF STRIPE’S CARD FEE, EXACTLY  (once Stripe knows what it 
   const give4 = Math.max(0, Math.min(Math.round(192 / 2) - Math.round(stripeFeeEstimate(lineC) / 2), charged4));
   eq('postage never shrinks the venue’s half: the estimate uses the line, not the charge', r.give, give4);
   eq('which here is eight cents', give4, 8);
+
+  /* AN ARTIST'S PLAN NEVER HAD THE ESTIMATE TAKEN OFF (decision 0139), so there is
+     nothing to correct — and this used to refund MySet's own fee to them whenever
+     the real card fee beat the estimate, which a foreign card always does. */
+  const calls = __stripe.calls.length;
+  __stripe.fees.set('fee_5', { id: 'fee_5', charge: 'ch_5', amount: feeCents(2000, 'free', 'artist'), amount_refunded: 0 });
+  __stripe.bts.set('txn_5', { id: 'txn_5', currency: 'usd', fee: 600,
+    fee_details: [{ type: 'stripe_fee', amount: 118 }], __account: acct });
+  r = await settleSplit('perry-idyll', acct, { id: 'ch_5', amount: 2000, currency: 'usd',
+    balance_transaction: 'txn_5', application_fee: 'fee_5', payment_intent: 'pi_5' });
+  ok('an artist’s charge is owed no correction', r.ok && r.give === 0, r);
+  eq('so none of MySet’s fee goes back', __stripe.fees.get('fee_5').amount_refunded, 0);
+  eq('Stripe is not even asked', __stripe.calls.length, calls);
+  eq('and no row is written', ((await readMeta('perry-idyll')).fees || {}).ch_5, undefined);
 }
 
 delete process.env.STRIPE_SECRET_KEY;
