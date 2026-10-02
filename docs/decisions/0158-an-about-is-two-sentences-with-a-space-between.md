@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [cb2272f]
 tests: [test/factory.mjs]
 files: [netlify/functions/_fai.mjs, public/app.css, public/fan.js]
 ---
