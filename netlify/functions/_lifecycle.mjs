@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts, readDoc, KEY } from './_lib.mjs';
+import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts, readDoc, KEY, sameNightResume } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence, occKey, isVenueOwner } from './_events.mjs';
@@ -126,7 +126,8 @@ export async function walkLive({ now = Date.now(), limit = LIVE_WALK, deadline =
 export function countGig(sh, by = 'artist') {
   sh.gigCount += 1;
   /* `auto` remembers the calendar began this night, so a quiet one can be given back
-     (below). A resume keeps what the night already was. */
+     (below). A resume keeps what the night already was — and a resume of the same
+     night never reaches here at all (0156, `sameNightResume`). */
   sh.freeNight = sh.freeNight && sh.freeNight.id === sh.showId
     ? { ...sh.freeNight, n: sh.freeNight.n + 1 } : { id: sh.showId, n: 1, auto: by === 'schedule' };
 }
@@ -299,8 +300,13 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   let err = null, already = false, placed = null;
   await mutateShow(aid, (show) => {
     if (!fresh && show.status === 'live') { already = true; return false; }
+    /* AN ACCIDENTAL END CAN BE UNDONE AT THE CAP (decision 0156, INVARIANT 0il). A
+       resume of the night already counted, started less than twelve hours ago, is the
+       same night: it is not refused and not counted again. Anything else — a new show,
+       a resume of an older night or of one given back — meets the cap exactly as before. */
+    const sameNight = !fresh && sameNightResume(show, now);
     if (fresh && prevQuiet && prevShow.showId === show.showId) uncountGig(show);
-    if (gigCap !== null && show.gigCount >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
+    if (gigCap !== null && !sameNight && show.gigCount >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
     if (fresh) {
       show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
       delete show.refundsOwed;          // last night's, finished above or past finishing (0155)
@@ -343,7 +349,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
        changes size underneath the people standing in it. Every show from here on
        carries its number. */
     show.roomCap = roomCap;
-    if (gigCap !== null) countGig(show, by);   // after the fresh showId, so the night it names is this one
+    if (gigCap !== null && !sameNight) countGig(show, by);   // after the fresh showId, so the night it names is this one
     show.status = 'live';
     show.startedBy = by;
     show.endedBy = null;

@@ -148,6 +148,9 @@ echo
 echo "── the free plan's limits ──"
 node --import ./test/register.mjs test/limits.mjs
 echo
+echo "── free vibes keep their own places; the same night resumes at the cap (0156) ──"
+node --import ./test/register.mjs test/vibesandresume.mjs
+echo
 echo "── verifying an artist automatically ──"
 node --import ./test/register.mjs test/autoverify.mjs
 echo

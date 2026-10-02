@@ -22,7 +22,14 @@ import { scope } from './_connect.mjs';
    vote-cost path remains available without a card — INVARIANT 0w. */
 
 export const MAX_KEPT = 80;          // total rows retained, oldest resolved first
-export const MAX_PENDING = 30;       // how many can be waiting at once
+export const MAX_PENDING = 30;       // how many song and birthday requests can be waiting at once
+/* A FREE MOOD TAP NEVER TAKES A PAID REQUEST'S PLACE (decision 0156, INVARIANT 0il).
+   Vibes shared the thirty waiting places with song requests and birthdays, so thirty
+   free taps in a night shut the door on a fan with votes — or a card authorised — to
+   spend. Vibes are counted on their own now, against their own MAX_VIBES. Together the
+   two stay under MAX_KEPT, so the list stays bounded and `trim` always has room for
+   the oldest answered rows to make way. */
+export const MAX_VIBES = 30;         // how many mood votes can be waiting at once, on their own
 export const VIBE_OPTIONS = ['Energetic','Chill','Romantic','Upbeat','Melancholy','Funky','Acoustic','Rowdy','Nostalgic','Dark','Groovy','Mellow','Anthemic','Intimate','Hypnotic','Uplifting','Soulful','Wild','Dreamy','Heavy'];
 const KINDS = new Set(['song', 'birthday', 'vibe']);
 const OPEN = 'pending';
@@ -107,8 +114,9 @@ export async function createRequest(aid, show, fanId, body, { verified = false }
     return { ok: false, error: kind === 'song'
       ? 'You’ve already got a request in — wait for that one first'
       : 'That shout-out is already in', status: 409 };
-  if (existing.list.filter((r) => r.status === OPEN && r.showId === show.showId).length >= MAX_PENDING)
-    return { ok: false, error: 'There are a lot of requests in already — try again in a bit', status: 429 };
+  const waiting = existing.list.filter((r) => r.status === OPEN && r.showId === show.showId && (r.kind === 'vibe') === (kind === 'vibe')).length;
+  if (waiting >= (kind === 'vibe' ? MAX_VIBES : MAX_PENDING))
+    return { ok: false, error: kind === 'vibe' ? 'Lots of vibes in already — try again in a bit' : 'There are a lot of requests in already — try again in a bit', status: 429 };
 
   const cost = cfg.cost;
   const free = isUnlimited(fanId, show);
