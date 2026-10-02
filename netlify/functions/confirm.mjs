@@ -2,7 +2,7 @@ import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, cleanFanId, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession, cleanOwnerId } from './_pay.mjs';
-import { stripeFor } from './_connect.mjs';
+import { stripeFor, STRIPE_OPTS } from './_connect.mjs';
 
 /* The fast path: the buyer lands back on /vote.html, /community.html or
    /shop.html with ?paid=<session id> and this verifies the payment with Stripe
@@ -53,7 +53,7 @@ const main = async (req) => {
      charges live and where anything created before Connect still is. */
   if (!session) {
     try {
-      sessionStripe = new Stripe(key); sessionOpts = {};
+      sessionStripe = new Stripe(key, STRIPE_OPTS); sessionOpts = {};   // a clock (0188)
       session = await sessionStripe.checkout.sessions.retrieve(sessionId);
     }
     catch { return bad('could not verify payment', 502); }
