@@ -1,3 +1,4 @@
+import { ERR_SHARDS } from './_errlog.mjs';
 import { store, readDoc, casDoc, inTurn } from './_lib.mjs';
 import { r2Enabled, r2Put, r2Delete } from './_r2.mjs';
 
@@ -105,7 +106,10 @@ export async function globalKeys(now = Date.now()) {
   for (const cid of Object.keys(crm.byId || {})) out.push(`crm_${cid}`);
   for (const owner of Object.keys(arc.byOwner || {})) out.push(`samplearc_${owner}`);
   for (const p of Array.isArray(media.posts) ? media.posts : []) if (p && p.id) out.push(`mediadash/thumb/${p.id}`);
-  for (let i = 0; i < ERR_HOURS; i++) out.push('err_' + new Date(now - i * 3600e3).toISOString().slice(0, 13));
+  for (let i = 0; i < ERR_HOURS; i++) {
+    const h = 'err_' + new Date(now - i * 3600e3).toISOString().slice(0, 13);
+    out.push(h); for (let s = 1; s < ERR_SHARDS; s++) out.push(`${h}_${s}`);   // one hour is ERR_SHARDS documents (0187)
+  }
   /* A city's featured slots. The key is derived from the city's name, so every
      city on the index names one; a city that has left the index is still named
      by the artists who bought a spot there (mirrorcron's keysOf). */
@@ -141,7 +145,7 @@ export const FAMILIES = [
   [/^(crm|crmlib|crmgmail|crm_.+)$/, 'global'],
   [/^(factorycfg|factoryq|costs|suggest|gsheet|payowed)$/, 'global'],
   [/^mediadash\/(data|boosts|thumb\/.+)$/, 'global'],
-  [/^err_\d{4}-\d{2}-\d{2}T\d{2}$/, 'global'],
+  [/^err_\d{4}-\d{2}-\d{2}T\d{2}(_\d)?$/, 'global'],   // the error log: one hour, ERR_SHARDS documents (0187)
   /* never copied */
   [/^(sess_|lock_|authc_|authnet_)/, 'skip', 'a session, a lockout or a sign-in code: ephemeral, and a copy of a secret is a second place to lose it'],
   [/^authsecret$/, 'skip', 'the key that mints every session (0110)'],
