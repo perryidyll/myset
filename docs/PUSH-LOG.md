@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
+**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
+**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
+
 ### 2026-10-03 04:02 — dbae03a — scale-p2-money@fix/refunds-and-stock (76 files since origin/main)
 **tl;dr:** MySet now hears refunds and chargebacks: the night's money drops, only unspent paid votes are taken back; the last merch items are held while a buyer pays, and a payment that still comes up short is refunded at once (0177, 0178)
 **Other sessions:** STACKED on week one's #227. New _refunds.mjs. NEW FIELDS: lost (cents) on payment markers, tip rows and order rows — anything summing money subtracts lost (_evlog, _metrics, warehouse export, venue tip list, revenue.mjs still read face value); refunded/dispute on markers; refunded/dispute/short on orders; wallet on song-vote markers; sid on tip rows; rb receipts on fan records (carryFans carries them). New key mhold_<owner> (FAMILIES skip). Needs 5 Stripe events on BOTH webhook destinations: charge.refunded, charge.dispute.created, charge.dispute.closed, charge.dispute.funds_withdrawn, checkout.session.expired.
