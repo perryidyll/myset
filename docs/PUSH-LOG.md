@@ -10,6 +10,18 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:10 — 626fdbf — scale-ops@ops/small-leaks (25 files since origin/main)
+**tl;dr:** No change for people: the ledger now records that strangers' pull requests already need approval before they build
+**Other sessions:** PER-020 done: Netlify untrusted_flow=review (API, 2026-10-02/03). Deploy retention is still 90 days (desk card).
+
+### 2026-10-03 03:08 — 28e64a8 — scale-ops@ops/small-leaks (25 files since origin/main)
+**tl;dr:** The page a fan returns to after paying can no longer be hammered by one machine: 1,000 a minute per address, far above a real room (0191)
+**Other sessions:** netlify.toml now has THREE rate rules: /api/confirm 1000/min and /api/auth 300/min above /api/* 60000/min (Pro allows five). Specific rules must stay above /api/*.
+
+### 2026-10-03 03:03 — 03adb2e — scale-ops@ops/small-leaks (22 files since origin/main)
+**tl;dr:** Small fixes: shared page scripts stay fresh for ten minutes instead of one, 'near me' can ask for location, myset.vip/robots.txt is a real file, the home page has a share picture, a first-night letter can never go out twice, and the error log keeps counting during an incident (0186, 0187)
+**Other sessions:** NOT MERGED — waits on the founder's word. netlify.toml: /*.css and /*.js rules moved BELOW /:slug (later rule wins per header); Permissions-Policy geolocation=(self), artistpage.mjs SITE_HEADERS kept equal. _errlog: 4 shards/hour (shard 0 = old key), per-shard count n, readErrs(); _watch look() adds overflow. _auto sweepNotes claims before sending. README/GIG-NIGHT/SECURITY/PER-019 corrected.
+
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
 **Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.

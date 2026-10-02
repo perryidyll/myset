@@ -247,9 +247,12 @@ done, it runs exactly as it did before — safe, but not yet with the new locks 
    value on your own machine; never paste it anywhere but the Netlify form.
 2. **Set `FINMODEL_CODE`** to something long. Once `0112` lands, without it the money
    model and the register open for nobody — on purpose.
-3. **Rotate `ADMIN_CODE`.** The original value sat in a committed file for a day on
-   2026-08-17 and the repository has been public since; no rotation is recorded
-   anywhere. Make it long and random; it bypasses every lockout by design.
+3. **Rotate `ADMIN_CODE`** — **done 2026-09-28.** The original value sat in a committed
+   file for a day on 2026-08-17 and the repository has been public since, so that old
+   value is in public history and has been replaced. The new one is long and
+   random, marked secret in Netlify for production, deploy previews and branch deploys,
+   and was never printed (ledger PER-019). It bypasses every lockout by design, so any
+   future suspicion of it means rotating it again.
 4. **2FA everywhere** (PER-003). Still the number-one threat, still twenty minutes.
 5. **Check that a stranger's pull request does not get a deploy preview** with the
    live variables (Netlify → Build & deploy → sensitive variable policy). A preview

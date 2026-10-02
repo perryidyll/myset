@@ -1,6 +1,6 @@
 import { readDoc, casDoc, DEFAULT_ARTIST } from './_lib.mjs';
 import { OWED } from './_pay.mjs';
-import { recentErrs } from './_errlog.mjs';
+import { readErrs } from './_errlog.mjs';
 
 /* SOMEBODY IS TOLD WHEN PRODUCTION BREAKS (decision 0157).
 
@@ -54,7 +54,10 @@ export async function look(now = Date.now()) {
       body: `A fan paid and has not been given what they bought, for ${mins(owedOldestMs)} minutes. The scheduler keeps retrying; Money → sweep recovers it by hand.` });
   } catch { /* the store problem above already says it */ }
   try {
-    errors = (await recentErrs(2, now)).filter((e) => now - e.at < 3600e3).length;   // two hourly buckets cover any sixty minutes
+    /* Two hourly buckets cover any sixty minutes. Rows past a shard's cap are gone,
+       but counted (decision 0187): every one this clock hour is inside the sixty. */
+    const { rows, perHour } = await readErrs(2, now);
+    errors = rows.filter((e) => now - e.at < 3600e3).length + Math.max(0, perHour[0].n - perHour[0].kept);
     if (errors >= ERRS_PER_HOUR) problems.push({ kind: 'errors', title: `${errors} server errors in the last hour`,
       body: 'Something is failing repeatedly. The error log has the lines.' });
   } catch { /* as above */ }

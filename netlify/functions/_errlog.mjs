@@ -6,9 +6,19 @@ import { casDoc, readDoc, bad, roomHash, isStoreError } from './_lib.mjs';
    Enterprise feature. So a fan who says "it broke on Saturday" on Monday was, until
    this file, describing something nobody could look at. Decision 0029.
 
-   Errors are written into the same blob store as everything else, in ONE document
-   per hour with a computable key — `err_2026-09-11T14` — so nothing here needs
-   `list()` (INVARIANT 1). A bug report gathers the last three hours of those.
+   Errors are written into the same blob store as everything else, in ERR_SHARDS
+   documents per hour with computable keys — `err_2026-09-11T14`, then `…T14_1`,
+   `…T14_2`, `…T14_3` — so nothing here needs `list()` (INVARIANT 1). A bug report
+   gathers the last three hours of those.
+
+   SPREAD OVER SHARDS, AND COUNTED (decision 0187). It was ONE document an hour,
+   three tries, a hundred rows: exactly when errors pile up, every failing request
+   fought over that one document, most lost, and the hundred rows were the first
+   hundred — the error log failed during the incident it existed for. Now a row goes
+   to a shard picked at random, and a lost race moves to the next shard rather than
+   waiting on the same one. Each shard also counts every row it was handed (`n`),
+   past its cap, so "how many errors this hour" has an answer when the rows no longer
+   fit (`readErrs`, which the watch reads).
 
    Two rules:
      · logging must never throw and never slow the request that failed — a few
@@ -20,8 +30,8 @@ import { casDoc, readDoc, bad, roomHash, isStoreError } from './_lib.mjs';
        every bug report reads out (INVARIANT 0fb; decision 0110)
 
    BUG REPORTS ARE ALSO CAPPED PER NETWORK (decision 0111). "One per device per ten
-   minutes" is keyed on an id the phone chooses, and each report costs three reads
-   of the hourly error documents before its write — so a loop with a fresh id per
+   minutes" is keyed on an id the phone chooses, and each report costs three hours'
+   reads of the error documents before its write — so a loop with a fresh id per
    call was four reads and a write, per call, for ever. Each artist's `bugs_`
    document keeps a small map of network hash → reports this hour, capped at
    BUG_PER_NETWORK_PER_HOUR; twelve is a whole bar on one wifi hitting the same
@@ -35,7 +45,8 @@ import { casDoc, readDoc, bad, roomHash, isStoreError } from './_lib.mjs';
    oldest go. The hash is roomHash, never the address. */
 
 export const HOUR = 3600e3;
-export const KEEP_PER_HOUR = 100;
+export const KEEP_PER_HOUR = 100;            // rows kept per shard, per hour
+export const ERR_SHARDS = 4;
 export const BUG_HOURS = 3;
 export const KEEP_BUGS = 30;
 export const BUG_EVERY = 10 * 60e3;          // one report per device per ten minutes
@@ -43,6 +54,9 @@ export const BUG_PER_NETWORK_PER_HOUR = 12;  // and this many per network per ho
 export const BUG_NETS_KEPT = 300;            // network windows kept per artist; the oldest fall off
 
 export const hourKey = (t = Date.now()) => 'err_' + new Date(t).toISOString().slice(0, 13);
+/** Every key an hour's errors may be in. Shard 0 is the old single key, so an hour
+ *  written before the shards is still read. */
+export const shardKeys = (t = Date.now()) => Array.from({ length: ERR_SHARDS }, (_, i) => (i ? `${hourKey(t)}_${i}` : hourKey(t)));
 const bugsKey = (aid) => `bugs_${aid}`;
 
 const cut = (s, n) => String(s == null ? '' : s).slice(0, n);
@@ -59,23 +73,46 @@ export async function logErr(where, e, ctx = {}) {
   /* A store that did not answer is not written down IN that store (0142): the write
      would wait on the same failure, and the caller is holding a reply for it. */
   if (isStoreError(e)) return;
-  try {
-    await casDoc(hourKey(now), () => ({ v: 1, list: [] }), (d) => {
-      d.list = Array.isArray(d.list) ? d.list : [];
-      d.list.push(row);
-      if (d.list.length > KEEP_PER_HOUR) d.list = d.list.slice(-KEEP_PER_HOUR);
-      return true;
-    }, null, 3);
-  } catch { /* the console line is the fallback */ }
+  /* Three tries, as before — but each on a different shard, starting at random: a
+     lost race means another request is writing THAT shard, so the next one is the
+     better bet than the same one again. */
+  const keys = shardKeys(now), first = Math.floor(Math.random() * ERR_SHARDS);
+  for (let i = 0; i < 3; i++) {
+    try {
+      await casDoc(keys[(first + i) % ERR_SHARDS], () => ({ v: 1, n: 0, list: [] }), (d) => {
+        d.list = Array.isArray(d.list) ? d.list : [];
+        d.n = Math.max(Number(d.n) || 0, d.list.length) + 1;
+        d.list.push(row);
+        if (d.list.length > KEEP_PER_HOUR) d.list = d.list.slice(-KEEP_PER_HOUR);
+        return true;
+      }, null, 1);
+      return;
+    } catch { /* the next shard; after three, the console line is the fallback */ }
+  }
 }
 
-/** The last `hours` hourly buckets, oldest first. `hours` reads, all computable. */
-export async function recentErrs(hours = BUG_HOURS, now = Date.now()) {
-  const keys = [];
-  for (let i = 0; i < hours; i++) keys.push(hourKey(now - i * HOUR));
-  const docs = await Promise.all(keys.map((k) => readDoc(k, null).then((r) => r.data).catch(() => null)));
-  return docs.flatMap((d) => (d && Array.isArray(d.list) ? d.list : [])).sort((a, b) => a.at - b.at);
+/** The last `hours` hours, every shard: the rows oldest first, and per hour (this
+ *  hour first) how many rows were logged (`n`, counted past the cap) and how many
+ *  are still kept. `hours × ERR_SHARDS` reads, all computable. */
+export async function readErrs(hours = BUG_HOURS, now = Date.now()) {
+  const hourDocs = await Promise.all(Array.from({ length: hours }, (_, h) =>
+    Promise.all(shardKeys(now - h * HOUR).map((k) => readDoc(k, null).then((r) => r.data).catch(() => null)))));
+  const rows = [];
+  const perHour = hourDocs.map((docs) => {
+    const hour = { n: 0, kept: 0 };
+    for (const d of docs) {
+      const list = d && Array.isArray(d.list) ? d.list : [];
+      hour.kept += list.length;
+      hour.n += Math.max(Number(d && d.n) || 0, list.length);   // an hour from before the count: its rows
+      rows.push(...list);
+    }
+    return hour;
+  });
+  return { rows: rows.sort((a, b) => a.at - b.at), perHour };
 }
+
+/** The last `hours` hours' rows, oldest first. */
+export const recentErrs = async (hours = BUG_HOURS, now = Date.now()) => (await readErrs(hours, now)).rows;
 
 /** Wrap a handler so an uncaught exception is recorded, then answered honestly. */
 export const guard = (where, h) => async (req, ctx) => {

@@ -192,6 +192,13 @@ console.log('\nTHE EDGE’S RATE RULE NEVER MEETS A REAL ROOM  (decision 0160)')
   }
   ok('a 5,000 room has at least half the cap to spare for votes and page loads',
      !!api && Math.ceil(5000 * 2 * 60000 / pollFloorFor(5000)) * 2 <= api.limit);
+  /* The return trip from Checkout (decision 0191): the busiest buying minute on one
+     wifi — 5,000 phones, a tenth paying, each page confirming twice — must fit. */
+  const conf = rule('/api/confirm');
+  ok('the /api/confirm rule is there, per minute', !!conf && conf.size === 60, conf);
+  ok('above the general one', toml.indexOf('from = "/api/confirm"') > 0 && toml.indexOf('from = "/api/confirm"') < toml.indexOf('from = "/api/*"'));
+  ok('a 5,000 room\'s buying minute fits under it', !!conf && 5000 * 0.1 * 2 <= conf.limit, conf);
+  ok('and it still holds a script to under twenty a second', !!conf && conf.limit / 60 < 20, conf);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
