@@ -9,6 +9,7 @@ import venue from './venue.mjs';
 import diary from './diary.mjs';
 import artists from './artists.mjs';
 import mapconfig from './mapconfig.mjs';
+import songs from './songs.mjs';
 
 /* THE ONE WARM DOOR FOR EVERYTHING A FAN READS (decision 0049).
 
@@ -37,8 +38,11 @@ import mapconfig from './mapconfig.mjs';
    2026-09-25 (decision 0088): the directory and the front door's map were the
    last two public reads on their own sleeping functions — measured cold at
    1.8–2.0 s, and never kept at the edge. Through the door they wake with it
-   and are shared for a minute. */
-const DOORS = { profile, events, board, me, community, venue, diary, artists, mapconfig };
+   and are shared for a minute.
+
+   `songs` joined on 2026-10-03 (decision 0150): every song the room can vote for,
+   fetched once per page open and again only when the board's `songsV` changes. */
+const DOORS = { profile, events, board, me, community, venue, diary, artists, mapconfig, songs };
 
 const main = async (req, ctx) => {
   const what = new URL(req.url).searchParams.get('what') || '';
