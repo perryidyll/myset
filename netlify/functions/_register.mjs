@@ -36,8 +36,9 @@ import { planOf } from './_plan.mjs';
    reachable with computed keys and Blobs `list()` is never called (INVARIANT 1).
    ONE WRITER: the bell (`registercron.mjs`) and the dashboard's Refresh both run
    `foldRegister` under the lock in `registersync`; nothing on the End tap or in the
-   scheduler's ring folds anything — they only leave a `regdirty` mark on `gigsched`
-   inside a write they already make, and the next ring folds those artists first.
+   scheduler's ring folds anything, and since 0154 nothing there writes `gigsched`
+   either — the live walk at the top of this bell's ring (`walkLive`) leaves a
+   `regdirty` mark for an artist whose night changed, and the fold folds those first.
    INCREMENTAL: per artist the fold reads the index, the id list and the calendar
    (three reads); a night's detail is read when it is new or its index row changed
    (`rowSig`), or when the calendar changed (`ev_` etag) — then the five other
@@ -72,7 +73,7 @@ export const HEAD = 'register';
 export const WORK = 'register_work';
 export const STATE = 'registersync';
 export const SHARD = (ym, part = 0) => (part ? `register_${ym}_${part}` : `register_${ym}`);
-export const SCHED = 'gigsched';                 // where the lifecycle leaves `regdirty` marks
+export const SCHED = 'gigsched';                 // where the live walk (0154) and history.mjs leave `regdirty` marks
 export const CONCURRENT_ARTISTS = 4;
 export const BUDGET_MS = () => Math.max(1500, Number(process.env.MYSET_REGISTER_BUDGET_MS ?? 6000));
 export const FULL_EVERY_MS = 6 * 3600e3;         // walk the whole registry at least this often (renames, hides, heals, re-checks leave no mark)
@@ -500,7 +501,7 @@ async function readShards(months) {
   got.forEach((g, i) => { const [ym] = keys[i]; (out[ym] ||= []).push(...(((g.data || {}).rows) || [])); });
   return { byMonth: out, reads: keys.length };
 }
-/** The register's dirty marks: `gigsched.regdirty` (written by the lifecycle) — `aid → at`. */
+/** The register's dirty marks: `gigsched.regdirty` (written by the live walk, 0154) — `aid → at`. */
 export async function readDirty() { const { data } = await readDoc(SCHED, null); return { ...((data && data.regdirty) || {}) }; }
 export const clearDirty = (marks) => casDoc(SCHED, () => ({ v: 1, byArtist: {}, live: {} }), (d) => {
   d.regdirty ||= {};

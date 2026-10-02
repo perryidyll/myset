@@ -628,8 +628,9 @@ If you are about to violate one, stop and say so rather than working around it.
     shards `register_<YYYY-MM>` under a head `register`, with working state
     `register_work` and the bell's state `registersync`. Only `foldRegister` writes any
     of them, under the lock in `registersync`, from the bell (`registercron.mjs`) or the
-    dashboard's Refresh; the End tap and the scheduler's ring only leave a `regdirty`
-    mark on `gigsched` inside a write they already make. The night rule lives in
+    dashboard's Refresh; nothing on the End tap or in the scheduler's ring writes it
+    — the live walk (0ij) and a rename, hide or re-check leave a `regdirty` mark on
+    `gigsched`. The night rule lives in
     `_nightrule.mjs` and is called by the register, the stats page (`_metrics.mjs`) and
     the Sheet (`_warehouse.mjs`); `tools/actuals.py` is pinned to the same answers on
     `finance/fixtures/2026-09-11` and `2026-09-25` (`test/everyshow.mjs`,
@@ -1986,6 +1987,8 @@ If you are about to violate one, stop and say so rather than working around it.
 0hr. **A page that cannot reach the room asks less, not more, and every request has a clock.** On the vote page each load in a row without a fresh board doubles the wait to a minute (`FAILS`), the last board stays on screen, and a tap, a pull or the screen coming on brings it back to one doubling. Every `fetch` goes through `timed` (or `within` for the two the `<head>` starts). A vote answered "busy" is sent again with the SAME cast id (15h), up to three more times; a real no is never retried. The words "Couldn’t reach the room" replace the skeleton when the first board does not arrive. Decision `0143`.
 
 0ii. **The room stops before Stripe is asked, and a count Stripe did not finish is never filed as whole.** `endShow` flips the show to ended as its first write; the request holds are released and the night is filed after it (ending wipes no tally — 17c still holds — and the archive reads the fans after the flip). Pricing has a clock: `MYSET_MONEY_AT_END_MS` at the End and before a fresh start, `PRICE_MS` on the Money tab and Re-check, and at most `MONEY_PAGES` pages an ask. A count that stops with pages left — the clock, the page limit, or Stripe failing after a page — is `source: 'stripe-partial'` with a `partial` place-marker, and every reader treats it as not known (only `'stripe'` is Stripe's answer). `priceNight` finishes it from the marker, adding only the pages after it, and writes the detail only if the marker is still the one it started from; the register's bell carries partial nights on every ring until they are whole, and Re-check carries one on rather than starting again. A partial figure never overwrites a whole one on the row (0ga). `test/endfirst.mjs`. Decision `0153`.
+
+0ij. **No start and no end writes a document every artist shares; the show record is the live mark.** `startShow` and `endShow` write the artist's own records only (the first-night note, once per account ever, is the one exception). Who is live is found by a walk, never by `list()` (1): `walkLive` reads the artist registry and one show record per artist from `liveCursor`, at most `LIVE_WALK` a ring and never past `LIVE_WALK_MS` without reading one, and folds what it saw into `gigsched` in ONE write, only when something changed — a live show onto `live` (its last write or its start, moved only forward), a show seen not live off it, and a `regdirty` mark for a night whose status, start or end changed since `liveSeen`. A record it cannot read is left as it was. The walk runs first in the register's bell, so that ring's fold files what it marked. Anything new that must know "who is live now" reads `live` or walks the registry; it never asks a start or an end to write a shared document. `test/livewalk.mjs`. Decision `0154`.
 
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and

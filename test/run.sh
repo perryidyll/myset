@@ -154,6 +154,9 @@ echo
 echo "── shows that start and end themselves ──"
 node --import ./test/register.mjs test/autoshow.mjs
 echo
+echo "── one live mark per artist: no start or end writes a shared document (0154) ──"
+node --import ./test/register.mjs test/livewalk.mjs
+echo
 echo "── where a night happened ──"
 node --import ./test/register.mjs test/place.mjs
 echo
