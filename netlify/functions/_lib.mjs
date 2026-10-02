@@ -1144,18 +1144,154 @@ export function roomCounts(fans) {
 }
 export const uniqueRoom = (fans) => roomCounts(fans).phones;
 
-/** One write per device per show. Called only from the voting page, only while a
- *  show is live, and skipped entirely once the stamp is already there. */
-export async function markPresence(aid, fanId, show, req) {
-  if (!fanId || !show || show.status !== 'live') return;
+/* NEW PHONES PER NETWORK, PER SHOW — decision 0149.
+
+   Every new device id was handed tonight's free votes, and the id is the phone's own
+   to choose: a loop minting a fresh one per request outvoted a fifty-phone room with
+   fifty requests (the 2 October 2026 audit). The network address is the one thing the
+   caller does not choose (Netlify sets it; 0111). So a network brings at most about
+   NEW_DEVICES_PER_NETWORK phones into a show with free votes. Past that a phone still
+   opens the page, sees the board and can buy votes: it is a phone that has already
+   spent its free ones.
+
+   THE COUNT IS KEPT IN THE FAN FILE THE PHONE LIVES IN, in the write that is happening
+   anyway. A phone's first write of the night — its "I'm here" or its first vote —
+   counts the phones from its network already let in to ITS file tonight (a twelfth of
+   the room), and is let in while that is under NET_QUOTA. No new document, no extra
+   read or write, and the decision is the same compare-and-swap that writes the
+   record: there is no separate counter for a flood to jam its way past. A phone held
+   out with nothing on its record is not written at all, so fakes do not grow the
+   files either.
+
+   The price of counting per file is that the number is not exact: a network's phones
+   fall into the twelve files by chance. NET_QUOTA is the smallest per-file count under
+   which a network of exactly NEW_DEVICES_PER_NETWORK real phones loses, on average,
+   under a tenth of a phone — so a bar of that size on one wifi is let in whole, and a
+   script from one network is held to NET_QUOTA × SHARDS however fast it asks.
+
+   ONE NUMBER, the founder's to choose (his desk offers 60, 200 or 500). Infinity
+   switches the cap off. Not counted: a request whose network cannot be named (0111's
+   rule) and the artist's own unlimited devices. */
+export const NEW_DEVICES_PER_NETWORK = 200;
+export const NET_QUOTA = (() => {
+  const n = NEW_DEVICES_PER_NETWORK, p = 1 / SHARDS;
+  if (!Number.isFinite(n)) return Infinity;
+  /* P(k of the network's n phones land in one file), worked in logs so a big n does
+     not underflow, then the expected number over the quota across all the files. */
+  const pk = [];
+  let lp = n * Math.log(1 - p);
+  for (let k = 0; k <= n; k++) { pk.push(Math.exp(lp)); lp += Math.log((n - k) / (k + 1)) + Math.log(p / (1 - p)); }
+  for (let q = 1; q <= n; q++) {
+    let lost = 0;
+    for (let k = q + 1; k <= n; k++) lost += (k - q) * pk[k];
+    if (SHARDS * lost < 0.1) return q;
+  }
+  return n;
+})();
+
+/** Let into tonight's free votes: stamped present tonight. */
+export const admitted = (me, show) => !!me && !!show && !!show.showId && me.seenShow === show.showId;
+/** Held out of them tonight (and so, already, their allowance stamped as spent). */
+export const heldOut = (me, show) => !!me && !!show && !!show.showId && me.nf === show.showId;
+
+/** For a phone not decided yet: 'in' or 'out', from the file it lives in. `bag` may
+ *  be that file or the whole room merged; only records in the phone's own file count. */
+export function freeVerdict(bag, fanId, show, net) {
+  if (!net || isUnlimited(fanId, show) || !Number.isFinite(NET_QUOTA)) return 'in';
+  const home = shardOf(fanId);
+  let n = 0;
+  for (const id of Object.keys(bag || {})) {
+    const f = bag[id];
+    if (id !== fanId && f && f.seenShow === show.showId && f.ipH === net && shardOf(id) === home && ++n >= NET_QUOTA) return 'out';
+  }
+  return 'in';
+}
+/** HELD OUT = THE FREE ALLOWANCE STAMPED AS SPENT, ON NOTHING. `used` and `freeUsed`
+ *  move together, exactly as a phone that spent its free votes would have them, so
+ *  every place that works out a fan's credits — vote.mjs, buildMe, _requests.mjs, the
+ *  request check in pay.mjs, paidUsed, unspentPaid, the decline refund — gives the
+ *  right answer without a line of it changing: bought votes are spent as bought votes,
+ *  counted as paid, and carried to the next show. `nf` names the night. */
+export function holdOut(me, show) {
+  chargeFan(me, show, 0);                                   // normalise a legacy ledger first
+  chargeFan(me, show, Math.max(0, (show.freeCredits || 0) - me.freeUsed));
+  me.nf = show.showId;
+  return me;
+}
+/** Decide a phone, inside the write being made: let in (stamped present), or held
+ *  out. True when it was let in, or already had been. */
+export function settleFree(me, bag, fanId, show, net, now = Date.now()) {
+  if (admitted(me, show)) return true;
+  if (heldOut(me, show)) return false;
+  if (freeVerdict(bag, fanId, show, net) === 'in') {
+    me.seenShow = show.showId; me.ipH = net; me.seenAt = now;
+    return true;
+  }
+  holdOut(me, show);
+  return false;
+}
+/** A record with nothing on it: what mutateFan makes for an id it has never seen. */
+const blankFan = (me) => Object.keys(me).every((k) => {
+  const v = me[k];
+  return ['v', 'extra', 'ts', 'spent', 'va'].includes(k) && (!v || (typeof v === 'object' && !Object.keys(v).length));
+});
+/** What /api/me shows a phone, from the file it read: its own record — or, for a
+ *  phone not let in tonight whose network has no room left in its file, the same
+ *  record with the free votes withheld, so the page never offers a free vote the
+ *  server would refuse (INVARIANT 0ad). */
+export function freeView(bag, fanId, show, net) {
+  const me = own(bag, fanId) || null;
+  if (admitted(me, show) || heldOut(me, show) || freeVerdict(bag, fanId, show, net) === 'in') return me;
+  return holdOut(me ? JSON.parse(JSON.stringify(me)) : { v: [], extra: 0 }, show);
+}
+
+/* WHEN A STAMP FALLS DUE. A phone on the page polls at least every twenty times the
+   floor (vote.html's terminal rung), with up to a fifth of jitter: 72 seconds in a pub,
+   eight minutes at the twenty-second floor. Its stamp is written again on the first
+   poll after its own due time, between ten and twenty minutes — spread by device, so a
+   room that arrived together does not come back together. A stamp is therefore at
+   most twenty minutes plus one slow poll old; the window is thirty, and a phone that
+   has stopped polling (a locked screen) drops out of the count, which is right for a
+   dial whose job is load. The price is one write a phone about every quarter hour. */
+export const PRESENCE_WINDOW_MS = 30 * 60e3;
+export function presenceDue(fanId) {
+  let h = 7;
+  for (let i = 0; i < fanId.length; i++) h = (h * 31 + fanId.charCodeAt(i)) >>> 0;
+  return 10 * 60e3 + (h % 600) * 1000;
+}
+/** Is this phone's stamp tonight's, and not yet due? A stamp from before its time was
+ *  kept is current, as it always was. The network is not compared: see markPresence. */
+export const presenceCurrent = (me, show, fanId, now = Date.now()) =>
+  admitted(me, show) && !(Number(me.seenAt) > 0 && now - me.seenAt >= presenceDue(fanId));
+
+/** One write per device per show, and one more each time its stamp falls due
+ *  (decision 0149). Called only from the voting page, only while a show is live, and
+ *  skipped entirely while the stamp is current. A phone's first stamp of the night is
+ *  also where it is let into tonight's free votes or held out of them (`settleFree`);
+ *  a phone held out with nothing on its record is not written at all. Returns the
+ *  record as written, or null when nothing was. */
+export async function markPresence(aid, fanId, show, req, now = Date.now()) {
+  if (!fanId || !show || show.status !== 'live') return null;
   const ipH = roomHash(aid, clientIp(req));
   try {
-    await mutateFan(aid, fanId, (me) => {
-      if (me.seenShow === show.showId && me.ipH === ipH) return false;   // already counted
-      me.ipH = ipH; me.seenShow = show.showId;
-      return true;
+    const r = await mutateFan(aid, fanId, (me, bag) => {
+      if (heldOut(me, show)) return false;                      // decided tonight: nothing to stamp
+      /* THE NETWORK A PHONE WAS LET IN ON IS ITS NETWORK FOR THE NIGHT. This used to
+         write the new one on every change of network (wifi to mobile data), which was
+         a shard write each time — and once the network count existed, a loop: let a
+         file's worth in on one address, move them to another, and the first has room
+         again. vote.mjs has always kept the first stamp (`||=`); so does this now. */
+      if (admitted(me, show)) {
+        if (presenceCurrent(me, show, fanId, now)) return false;        // already counted, recently
+        me.ipH ||= ipH; me.seenAt = now;
+        return true;
+      }
+      const blank = blankFan(me);                               // before settleFree writes on it
+      if (settleFree(me, bag, fanId, show, ipH, now)) return true;      // let in, and stamped
+      return !blank;                     // held out: written only if the record holds something real
     });
-  } catch { /* a missed head-count must never break the voting page */ }
+    return r && r.ok ? own(r.data, fanId) || null : null;
+  } catch { return null; /* a missed head-count must never break the voting page */ }
 }
 
 /** Earliest moment each song received a vote — used to break ties fairly. */
@@ -1191,10 +1327,18 @@ export function rankSongs(list, counts, first) {
     one document per arrival, and arrivals are exactly the moment a room is busiest
     — 10,000 people through one CAS door is the queue that breaks. Counting a bag
     that has already been read is free. */
-export function countInRoom(fans, show) {
+/* ...AND ONLY PHONES SEEN RECENTLY (decision 0149). A stamp used to count all night,
+   so a burst of fake "I'm here" pings held a pub on the slowest rung until it ended.
+   A phone still on the page refreshes its stamp now and then (`presenceDue`), so the
+   count is the phones seen in the last PRESENCE_WINDOW_MS. A stamp from before the
+   time was kept on it counts as it always did. */
+export function countInRoom(fans, show, now = Date.now()) {
   if (!show || !show.showId) return 0;
   let n = 0;
-  for (const id of Object.keys(fans)) if (fans[id].seenShow === show.showId) n++;
+  for (const id of Object.keys(fans)) {
+    const f = fans[id];
+    if (f.seenShow === show.showId && !(Number(f.seenAt) > 0 && now - f.seenAt >= PRESENCE_WINDOW_MS)) n++;
+  }
   return n;
 }
 

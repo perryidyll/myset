@@ -100,6 +100,9 @@ echo
 echo "── the cast receipts are short (0148) ──"
 node --import ./test/register.mjs test/receipts.mjs
 echo
+echo "── new phones per network, and a head count of who is still here (0149) ──"
+node --import ./test/register.mjs test/netcap.mjs
+echo
 echo "── paid-vote attribution and artist decline/refund ──"
 node --import ./test/register.mjs test/decline.mjs
 echo

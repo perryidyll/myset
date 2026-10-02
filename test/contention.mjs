@@ -87,6 +87,18 @@ ok('and every one was counted in the room', doors.presenceLanded === 5000, doors
 ok('nobody waited past the function limit', doors.me.overTimeout === 0, doors.me);
 console.log('    ' + times(doors.me));
 
+console.log('\nA SCRIPT ON ONE NETWORK: 5,000 FRESH IDS SAY "I\'M HERE" IN A MINUTE (0149)');
+/* The count of phones a network may bring in lives in the fan file the phone lives
+   in, decided in the write that stamps it — so a flood cannot get past it by jamming
+   a counter, and a phone held out leaves nothing behind. */
+const flood = room({ P: 0, arrive: 5000, arriveSec: 60, oneNet: true });
+ok('the room ran', !flood.error && flood.unfinished === 0 && !flood.err, flood);
+ok('every request got its page', flood.me.status[200] === 5000, flood.me);
+ok('no more phones let in than one network may bring', flood.presenceLanded > 0 && flood.presenceLanded <= flood.netMax, flood);
+ok('and the files hold no record for a phone held out', flood.newRecords === flood.presenceLanded, flood);
+ok('nobody waited past the function limit', flood.me.overTimeout === 0, flood.me);
+console.log(`    ${flood.presenceLanded} of 5,000 let in; ` + times(flood.me));
+
 console.log('\nA STAMPEDE ON A SLOW STORE: 800 VOTES IN ONE SECOND, 400 MS WRITES');
 const jam = room({ P: 800, votedShare: 0, burst: 800, burstSec: 1, w: 400 });
 ok('the room ran', !jam.error && jam.unfinished === 0 && !jam.err, jam);

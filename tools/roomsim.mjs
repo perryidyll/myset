@@ -12,6 +12,7 @@
    votedShare share of them that already voted (their records are bigger); 0.5
    burst      votes cast, spread evenly at random over burstSec seconds
    arrive     NEW phones opening the page (the "I'm here" stamp) over arriveSec
+   oneNet     every arrival from ONE address: a script minting ids (decision 0149)
    play       the artist taps Play Top halfway through the burst
    oneSong    every vote goes to the first song (the worst case for Play)
    ghosts     devices that are in the files but not in the room
@@ -106,7 +107,10 @@ const fid = () => 'f' + rid(12);
 const pick = () => songs[Math.min(songs.length - 1, Math.floor(Math.pow(Math.random(), 2.2) * songs.length))];
 const now0 = Date.now();
 const bags = Array.from({ length: lib.SHARDS }, () => ({}));
-const blank = () => ({ v: [], extra: 0, ts: {}, spent: 0, va: {}, ipH: rid(16), seenShow: show.showId });
+/* A phone already in the room: stamped tonight, and since decision 0149 stamped with
+   the time too, as the code now writes it. */
+const blank = () => ({ v: [], extra: 0, ts: {}, spent: 0, va: {}, ipH: rid(16), seenShow: show.showId,
+  ...(lib.PRESENCE_WINDOW_MS ? { seenAt: now0 - 6e5 } : {}) });
 const fresh = [];                         // in the room, every free vote unspent
 for (let i = 0; i < P; i++) {
   const id = fid(), rec = blank();
@@ -153,7 +157,7 @@ voters.forEach((f) => at(Math.random() * burstSec * 1000, async () => {
 }));
 for (let i = 0; i < arrive; i++) at(Math.random() * arriveSec * 1000, async () => {
   const t0 = Date.now();
-  const r = await me(new Request('https://x/api/me?a=sim&in=1&fan=' + fid(), { headers: { 'x-forwarded-for': ip('198.51.100.') } }));
+  const r = await me(new Request('https://x/api/me?a=sim&in=1&fan=' + fid(), { headers: { 'x-forwarded-for': A.oneNet ? '198.51.100.66' : ip('198.51.100.') } }));
   res.me.push([r.status, Date.now() - t0]);
 });
 if (play) at(burstSec * 500, async () => {
@@ -227,6 +231,9 @@ console.log(JSON.stringify({
   vote: score(res.vote), votesLanded: voters.filter(holds).length,
   votesLost: play ? null : said200.filter((f) => !holds(f)).length,
   me: score(res.me), presenceLanded: arrive ? Object.values(fans).filter((f) => f.seenShow === show.showId).length - P - ghosts : null,
+  // records the arrivals left in the files: a phone held out with nothing to keep leaves none (0149)
+  newRecords: arrive ? Object.keys(fans).length - P - ghosts : null,
+  netMax: Number.isFinite(lib.NET_QUOTA) ? lib.NET_QUOTA * lib.SHARDS : null,
   play: res.play, strandedOnPlayedSong: stranded, rowsLeftInFiles: rawOnSong,
   receipts: rc, replays: again,
   store: { ...store, MBread: Math.round(store.bytesR / 1e6), MBwritten: Math.round(store.bytesW / 1e6) },

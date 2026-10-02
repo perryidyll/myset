@@ -1,6 +1,6 @@
 import { guard, logErr } from './_errlog.mjs';
 import { getShow, mutateFan, creditsUsed, chargeVotes, takeCastToken, costOf, isUnlimited, publicArtist, json, bad,
-         cleanFanId, votable, roomHash, clientIp, findReceipt, keepReceipts, receipt } from './_lib.mjs';
+         cleanFanId, votable, roomHash, clientIp, findReceipt, keepReceipts, receipt, settleFree } from './_lib.mjs';
 
 /* A FAN CANNOT REVERSE A VOTE. It stays on the song it was cast for until that
    song is played or the night ends. The artist's explicit decline/refund action is
@@ -62,9 +62,10 @@ const main = async (req) => {
      out of the existing shape rather than a new field. */
   let err = null, outcome = null, want = null, replayed = false;
   const held = (me) => (me.v || []).filter((x) => x === song).length;
+  const net = roomHash(aid, clientIp(req));
 
   try {
-    await mutateFan(aid, fan, (me) => {
+    await mutateFan(aid, fan, (me, bag) => {
       me.ts ||= {};
       /* Stamp the network hash here too. markPresence was the ONLY writer, and it
          runs from the polling path only — so a fan record created purely by voting
@@ -73,7 +74,7 @@ const main = async (req) => {
          worth watching. The write is already happening, so this costs nothing.
          `||=` on purpose: a device that changes network mid-gig keeps its first
          stamp and so cannot inflate `nets` in the other direction either. */
-      me.ipH ||= roomHash(aid, clientIp(req));
+      me.ipH ||= net;
       // window closed => no changes at all, in or out (an un-vote while paused
       // could not be re-cast and would silently drop the on-stage tally)
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
@@ -103,6 +104,12 @@ const main = async (req) => {
       if (op === 'clear') { err = ['Those votes are cast — they stay with the song', 409]; return false; }
       // casting is where the setlist applies — see the note above
       if (!offered) { err = ['That one isn’t on tonight’s list', 404]; return false; }
+      /* TONIGHT'S FREE VOTES ARE DECIDED ONCE A PHONE (decision 0149). A phone whose
+         first act of the night is a vote — a page whose "I'm here" never landed, or a
+         script that skipped the page — is let in or held out here, by the same count
+         the page's stamp uses. Held out, it votes with what it bought; with nothing
+         bought the check below says "no-credits" and nothing is written. */
+      settleFree(me, bag, fan, show, net);
       const free = isUnlimited(fan, show);
       const total = show.freeCredits + (me.extra || 0);
       const need = cost * n;
