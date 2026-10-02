@@ -111,6 +111,19 @@ const main = async (req) => {
     return json({ received: true });
   }
 
+  /* A MERCH CHECKOUT THAT RAN OUT (decision 0178) lets its stock go now rather than
+     when the hold's own clock runs out a few minutes later. Only a nicety: a hold
+     past its checkout's expiry stops counting whether or not this ever arrives. */
+  if (event.type === 'checkout.session.expired') {
+    const s = event.data.object || {}, md = s.metadata || {};
+    if (md.kind === 'merch' && md.hold) {
+      const owner = cleanOwnerId(md.artist) || (event.account ? await artistForAccount(event.account) : '') || DEFAULT_ARTIST;
+      const { releaseHold } = await import('./_profile.mjs');
+      await releaseHold(owner, String(md.hold));
+    }
+    return json({ received: true });
+  }
+
   if (event.type === 'checkout.session.completed' ||
       event.type === 'checkout.session.async_payment_succeeded') {
     let session = event.data.object;

@@ -105,6 +105,9 @@ echo
 echo "── money that went back: refunds and chargebacks (0177) ──"
 node --import ./test/register.mjs test/refunds.mjs
 echo
+echo "── merch held while the buyer pays, refunded if still short (0178) ──"
+node --import ./test/register.mjs test/stockholds.mjs
+echo
 echo "── a read that failed is not an empty document ──"
 node --import ./test/register.mjs test/storefail.mjs
 echo

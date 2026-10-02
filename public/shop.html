@@ -1091,6 +1091,7 @@ async function redeem(sid,found){
     const d=await r.json();
     if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){} CHECKING='';
       if(d.kind&&d.kind!=='merch'){ RECEIPT={sid,tip:true,already:!!d.already}; render(); return true; }   // the shared key can hold a tip started on the community page
+      if(d.short){ RECEIPT={sid,short:true,order:d.order||{}}; render(); return true; }   // sold out before the money landed: refunded in full, nothing to pick up (0178)
       const p=pend(), o=d.order||{}, pm=p&&p.id===sid?p:null;
       const order={sid,slug:SLUG,venue:VENUE,item:o.item||(pm&&pm.item)||'',title:o.title||(pm&&pm.title)||'Your order',
         qty:o.qty!=null?o.qty:(pm?pm.qty:null),variant:o.variant||(pm&&pm.size)||'',ship:o.ship||(pm&&pm.ship)||'pickup',
@@ -1105,6 +1106,8 @@ const tick=()=>`<svg class="ok" viewBox="0 0 24 24" aria-hidden="true"><circle c
 function receiptCard(R){
   const o=R.order||{}, N=esc(D.name), q=R.quiet?' quiet':'';
   if(R.tip) return `<div class="receipt${q}" role="status"><b>${tick()}Paid — thank you</b>${R.already?'That tip was already in.':`${esc(firstName())} has your tip.`}</div>`;
+  if(R.short) return `<div class="receipt${q}" role="status"><b>Sold out — you’ve been refunded</b><div>The last ${esc(o.title||'one')}${o.variant?' ('+esc(o.variant)+')':''} went to someone else while you were paying. Your money is on its way back to your card.</div>
+    <div class="acts"><button class="btn btn-text btn-sm" data-keep>Keep shopping</button></div></div>`;
   const head=R.already?'Already in':R.found?'Found it — you paid earlier':'Paid — thank you';
   const line=`${o.qty?o.qty+' × ':''}${esc(o.title||'Your order')}${o.variant?' ('+esc(o.variant)+')':''}${o.cents!=null?' · '+money(o.cents):''}${o.post?' + '+money(o.post)+' shipping':''}`;
   const code=o.code?`<b class="code" aria-label="${esc(o.code.split('').join(' '))}">${o.code.split('').map(c=>`<i>${esc(c)}</i>`).join('')}</b>`:'';
