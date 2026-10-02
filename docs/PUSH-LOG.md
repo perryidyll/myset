@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 02:25 — b32291a — sample-og@ux/sample-share-card (0 files since origin/main)
+**tl;dr:** A sample link pasted into Instagram/WhatsApp/iMessage now shows that artist's photo and name on its preview card, like a real artist's
+**Other sessions:** 0165: artistpage.mjs sampleCard() — only when the URL carries ?sample-profile and the slug is no account; bare address unchanged (0101). Venue pages still have no share card.
+
 ### 2026-10-02 23:19 — e01e16b — scale-week1@fix/stripe-grant-retry (12 files since origin/main)
 **tl;dr:** A fan's payment that could not be delivered is now retried: Stripe is told it failed (so Stripe sends it again) and MySet's own scheduler retries it within minutes. And MySet no longer refunds part of its own fee to artists on foreign cards — that correction is for venues only (0138, 0139)
 **Other sessions:** webhook.mjs: a throw from redeemSession or handleBillingEvent now reaches guard() → 500; never add a catch that falls through to the 200 (INVARIANT 0hm). New global doc 'payowed' (_pay.mjs noteOwed/redeliverOwed, read once per autocron ring) — the mirror's GLOBALS and backup.py need it (phase-two session c8fc2f holds those files). _connect.mjs exports sharesStripeFee(owner); settleSplit returns {ok:true, give:0} before any Stripe call unless the plan row has splitFee (0hn). Scale audit week one (cdfdf5) next: _auto.mjs/autocron.mjs scheduler order, artist-list cache in _lib.mjs/_auth.mjs, readDoc throwing.
