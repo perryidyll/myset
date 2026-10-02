@@ -24,6 +24,7 @@ import { readConnect, connectUsable } from './_connect.mjs';
 import { readWishes } from './_wishes.mjs';
 import { readMine as readFeaturedMine } from './_featured.mjs';
 import { readMeta } from './_lib.mjs';
+import { readPaidAll } from './_pay.mjs';
 import { hasPassword } from './_cred.mjs';
 import { occurrences, placeNight, judgeRow } from './_nightrule.mjs';
 
@@ -520,7 +521,7 @@ async function artistRows(aid, artist, state, dry) {
   const realRoom = realNights.reduce((a, x) => a + (x.room || 0), 0);
   const realVotes = realNights.reduce((a, x) => a + (x.totalVotes || 0), 0);
   const realGross = realNights.reduce((a, x) => a + (Number(x.gross) || 0), 0);
-  const packs = Object.values(meta.paid || {}).filter((p) => p && p.kind !== 'tip' && p.kind !== 'merch');
+  const packs = Object.values(await readPaidAll(aid, { meta }).catch(() => meta.paid || {})).filter((p) => p && p.kind !== 'tip' && p.kind !== 'merch');
   const tips = (meta.tips || []);
   const firstReal = realNights.slice().sort((a, b) => a.startedAt - b.startedAt)[0] || null;
   const lastReal = realNights.slice().sort((a, b) => b.startedAt - a.startedAt)[0] || null;

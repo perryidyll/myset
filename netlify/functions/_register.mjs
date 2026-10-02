@@ -4,6 +4,7 @@ import { placeNight, judgeNight, EARLY_MS, MIN_NIGHT_H, MAX_NIGHT_H, LOADTEST_PH
 import { localDate, localTime, utcToDate, dayOfWeek } from './_time.mjs';
 import { sameVenue, venueKey } from './_venues.mjs';
 import { planOf } from './_plan.mjs';
+import { readPaidAll, paidArcYears, PAID_ARC_MARGIN_MS } from './_pay.mjs';
 
 /* EVERY SHOW ON THE PLATFORM — the register (decision 0095, INVARIANT 0gi).
 
@@ -538,7 +539,16 @@ async function readArtist(aid, { rowsKept, sigs, etagEv, dirty, rebuild }, now) 
       if (doc) { nights[id] = doc; newSigs[id] = sig; }
     });
   }
-  return { idx, ids, ev: evD.data, etagEv: evD.etag, meta: meta.data, reqs: reqs.data, fb: fb.data, rsvp: rsvp.data, feats: feats.data, nights, sigs: newSigs, reads, unchanged: false, calendarChanged };
+  /* A night old enough that its payment markers may have moved to their year
+     (decision 0193) reads the archives too, so its `store` counts do not fall to
+     nothing on a rebuild; a register pass over recent nights reads none. */
+  let metaD = meta.data;
+  const oldest = Math.min(...want.map(([id]) => Number((rowOf[id] || {}).startedAt) || 0));
+  if (metaD && want.length && now - oldest > PAID_ARC_MARGIN_MS) {
+    metaD = { ...metaD, paid: await readPaidAll(aid, { meta: metaD, now }) };
+    reads += paidArcYears(now).length;
+  }
+  return { idx, ids, ev: evD.data, etagEv: evD.etag, meta: metaD, reqs: reqs.data, fb: fb.data, rsvp: rsvp.data, feats: feats.data, nights, sigs: newSigs, reads, unchanged: false, calendarChanged };
 }
 /** A kept row → the slim night it was built from, for a rebuild without re-reading the detail. */
 function slimFromKept(r) {

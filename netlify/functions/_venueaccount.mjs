@@ -6,6 +6,7 @@ import { readEvents } from './_events.mjs';
 import { merchSlots } from './_profile.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
 import { readPending, dropClipKeys, vidKey } from './_video.mjs';
+import { PAIDARC, paidArcYears } from './_pay.mjs';
 
 /* A VENUE'S ACCOUNT — take it with you, or leave.
 
@@ -51,6 +52,8 @@ export async function keysForVenue(vid) {
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
     `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `log_${o}`, `rec_${o}`,
     `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`];   // paylim_: the checkout limiter (0111)
+  // the payment markers that left meta for their year (0193) — every year since MySet's first, computed
+  for (const y of paidArcYears()) keys.push(PAIDARC(o, y));
   const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);
   for (const slot of ['cover', 'avatar', 'idcheck', ...Array.from({ length: 12 }, (_, i) => 'p' + i)])
     keys.push(IMG(vid, slot));

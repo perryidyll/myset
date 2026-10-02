@@ -19,7 +19,7 @@ const admin  = (await import('../netlify/functions/admin.mjs')).default;
 const revFn  = (await import('../netlify/functions/revenue.mjs')).default;
 const { redeemSession } = await import('../netlify/functions/_pay.mjs');
 const { readMeta, readFans } = await import('../netlify/functions/_lib.mjs');
-const { __failWrites } = await import('./blobs-fake.mjs');
+const { __failWrites, __failReads } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -223,6 +223,127 @@ console.log('\nTHE SWEEP DOES ONLY WHAT IS OWED  (decision 0181)');
   eq('and says nothing is left', res.left, 0);
   const res2 = await (await revFn(new Request('https://x/api/revenue?code=devlocal', { method: 'POST' }))).json();
   eq('a second press finds nothing to do', [res2.recovered, res2.left], [0, 0]);
+}
+
+console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (decision 0193)');
+/* `meta.paid` kept every marker for ever and every payment rewrote all of it. A
+   delivered marker older than ninety days now moves to `paidarc_<aid>_<YYYY>`, and
+   the dangerous case is the one PAY-6 named: the fan record (and its receipt) is
+   long gone, so if the claim check did not look in the archive, any later delivery
+   attempt would grant the pack again. */
+{
+  const P = await import('../netlify/functions/_pay.mjs');
+  const { archivePaid, archiveDue, readPaidAll, PAIDARC, PAID_KEEP_MS } = P;
+  const AID = 'perry-idyll';
+  const DAY = 86400e3;
+  const NOW = Date.now();
+  const oldAt = NOW - 100 * DAY;                      // past the ninety days
+  const Y = new Date(oldAt).getUTCFullYear();
+  const oldSess = (id, fan, votes) => ({ id, payment_status: 'paid', amount_total: 500, created: Math.floor(oldAt / 1000),
+    metadata: { fan, kind: 'votes', votes: String(votes), artist: AID } });
+  const arcDoc = async (y = Y) => (await readDoc(PAIDARC(AID, y), null)).data;
+  const seed = (rows) => casDoc('meta_perry-idyll', () => ({}), (m) => { Object.assign(m.paid, rows); return true; });
+  await seed({
+    cs_arc_old:   { kind: 'votes', amount: 5, granted: 5, fan: 'jo', at: oldAt, song: '', show: 'show-old', delivered: true, deliveredAt: oldAt + 5000 },
+    cs_arc_owed:  { kind: 'votes', amount: 5, granted: 3, fan: 'kit', at: oldAt - DAY, song: '', show: 'show-old', delivered: false },
+    cs_arc_young: { kind: 'tip', amount: 2, granted: 0, fan: 'lu', at: NOW - 10 * DAY, song: '', show: 'show-new', delivered: true },
+    cs_arc_2025:  { kind: 'tip', amount: 1, granted: 0, fan: 'mo', at: Date.UTC(2025, 5, 1), song: '', show: '', delivered: true },
+  });
+  const before = JSON.stringify((await readMeta(AID)).paid.cs_arc_old);
+  eq('jo has no fan record — his receipt went with his last show', (await readFans(AID)).jo, undefined);
+
+  // the archive write is acked and never sticks: nothing may leave meta
+  __failWrites(/^paidarc_/);
+  const failed = await archivePaid(AID, { now: NOW });
+  __failWrites(null);
+  eq('THE ORDER: with the archive write lost, nothing is moved', failed.moved, 0);
+  ok('and the old marker is still in meta, untouched', JSON.stringify((await readMeta(AID)).paid.cs_arc_old) === before);
+  ok('the failed year is named', failed.failedYears.includes(Y), failed);
+
+  // the archive lands but the trim of meta is lost: the marker is in BOTH, never neither
+  __failWrites(/^meta_/);
+  const half = await archivePaid(AID, { now: NOW });
+  __failWrites(null);
+  eq('with the meta trim lost, nothing counts as moved', half.moved, 0);
+  ok('the marker is in its year', !!((await arcDoc()) || { paid: {} }).paid.cs_arc_old);
+  ok('AND still in meta — both, never neither', !!(await readMeta(AID)).paid.cs_arc_old);
+  eq('a replay while it is in both answers "already"', (await redeemSession(AID, oldSess('cs_arc_old', 'jo', 5))).already, true);
+
+  const moved = await archivePaid(AID, { now: NOW });
+  eq('the next pass finishes the move: one marker', moved.moved, 1);
+  const m = (await readMeta(AID)).paid;
+  ok('the delivered old marker left meta', !m.cs_arc_old, m.cs_arc_old);
+  eq('and sits in paidarc_<aid>_<year>, byte for byte', JSON.stringify((await arcDoc()).paid.cs_arc_old), before);
+  eq('the archive is shaped { v:1, paid }', (await arcDoc()).v, 1);
+  ok('THE RULE: an UNDELIVERED marker never moves, however old', !!m.cs_arc_owed && !(await arcDoc()).paid.cs_arc_owed);
+  ok('a delivered marker inside ninety days stays', !!m.cs_arc_young && !(await arcDoc()).paid.cs_arc_young);
+  ok('a marker dated before MySet’s first year stays (no key could find it)', !!m.cs_arc_2025);
+  eq('a second pass moves nothing', (await archivePaid(AID, { now: NOW })).moved, 0);
+  eq('the limit is honoured (oldest first, none here)', (await archivePaid(AID, { now: NOW + 365 * DAY, limit: 0 })).moved, 0);
+
+  console.log('\n  the double-grant guard');
+  const calls = __stripe.calls.length;
+  const replay = await redeemSession(AID, oldSess('cs_arc_old', 'jo', 5));
+  ok('THE GUARD: an archived session answers "already"', replay.ok && replay.already === true, replay);
+  eq('with its marker', [replay.kind, replay.granted, replay.fan], ['votes', 5, 'jo']);
+  eq('and grants NOTHING — jo has no record to hold a receipt, so only the archive stood between him and a second pack', await extraOf('jo'), 0);
+  ok('nor is the session re-claimed in meta', !(await readMeta(AID)).paid.cs_arc_old);
+  eq('Stripe was not asked anything', __stripe.calls.length, calls);
+
+  __failReads(/^paidarc_/);
+  const blind = await redeemSession(AID, oldSess('cs_arc_old', 'jo', 5)).catch((e) => ({ threw: String(e.message) }));
+  __failReads(null);
+  ok('an archive that cannot be read is an error, never a grant', !!blind.threw, blind);
+  eq('still nothing for jo', await extraOf('jo'), 0);
+
+  const never = await redeemSession(AID, oldSess('cs_arc_never', 'nia', 4));
+  ok('an OLD session that was never claimed at all is still owed — granted, not refused', never.ok && !never.already, never);
+  eq('nia has her four', await extraOf('nia'), 4);
+
+  const young = { id: 'cs_arc_fresh', payment_status: 'paid', amount_total: 500, created: Math.floor(NOW / 1000) - 60,
+    metadata: { fan: 'ola', kind: 'votes', votes: '2', artist: AID } };
+  __failReads(/^paidarc_/);                           // a fresh claim must not even look
+  const fresh = await redeemSession(AID, young).catch((e) => ({ threw: String(e.message) }));
+  __failReads(null);
+  ok('a session younger than the margin never reads the archive (the fan’s path costs nothing)', fresh.ok && !fresh.already, fresh);
+
+  console.log('\n  the Money tab');
+  __stripe.sessions.set('cs_arc_old', { session: oldSess('cs_arc_old', 'jo', 5), onAccount: '' });
+  const rev = await (await revFn(new Request('https://x/api/revenue?code=devlocal'))).json();
+  const row = (rev.payments || []).find((p) => p.id === 'cs_arc_old');
+  ok('the old session is listed (inside the 180-day window)', !!row, rev.payments && rev.payments.map((p) => p.id));
+  eq('THE FIX: and called redeemed, from its archive', row && row.redeemed, true);
+  const sweep = await (await revFn(new Request('https://x/api/revenue?code=devlocal', { method: 'POST' }))).json();
+  ok('the sweep does not touch it', !(sweep.results || []).some((x) => x.id === 'cs_arc_old'), sweep);
+  eq('jo still has nothing', await extraOf('jo'), 0);
+
+  console.log('\n  the lifetime readers');
+  const all = await readPaidAll(AID);
+  ok('readPaidAll: the archive and meta together', !!all.cs_arc_old && !!all.cs_arc_young && !!all.cs_arc_owed, Object.keys(all));
+  const { artistPart } = await import('../netlify/functions/_metrics.mjs');
+  const meta = await readMeta(AID);
+  const pack = (part) => part.money.filter((x) => x.t === oldAt && x.kind === 'pack');
+  eq('_metrics without the archive has lost the old pack (why the archive is passed in)', pack(artistPart(AID, { meta })).length, 0);
+  eq('_metrics with it counts the pack once', pack(artistPart(AID, { meta, arc: [await arcDoc()] })).map((x) => [x.amount, x.votes]), [[5, 5]]);
+  eq('a marker in both places is counted once', pack(artistPart(AID, { meta: { ...meta, paid: { ...meta.paid, cs_arc_old: (await arcDoc()).paid.cs_arc_old } }, arc: [await arcDoc()] })).length, 1);
+
+  console.log('\n  the key lists');
+  const { keysFor } = await import('../netlify/functions/_account.mjs');
+  const { keysForVenue } = await import('../netlify/functions/_venueaccount.mjs');
+  ok('deleting an artist deletes their archive years', (await keysFor(AID)).includes(PAIDARC(AID, Y)));
+  ok('and a venue’s', (await keysForVenue('somebar')).includes(PAIDARC('v_somebar', Y)));
+  const { skipped } = await import('../netlify/functions/_mirror.mjs');
+  ok('the off-site copy keeps it (real money history)', !skipped(PAIDARC(AID, Y)));
+
+  console.log('\n  the bell’s pass');
+  await casDoc('artists', () => ({ byId: {} }), (r) => { r.byId ||= {}; r.byId[AID] ||= { slug: 'perry', name: 'Perry' }; return true; });
+  await seed({ cs_arc_bell: { kind: 'votes', amount: 5, granted: 2, fan: 'pip', at: oldAt + 1000, song: '', show: '', delivered: true } });
+  const ring1 = await archiveDue({ now: NOW, deadline: Date.now() + 2000 });
+  ok('a pass over every owner reaches the end and resets its cursor', ring1.done && ring1.next === 0, ring1);
+  ok('and moves what is due', ring1.moved >= 1 && !!(await arcDoc()).paid.cs_arc_bell && !(await readMeta(AID)).paid.cs_arc_bell, ring1);
+  const ring2 = await archiveDue({ now: NOW, deadline: 0 });
+  ok('with no time left it still does one chunk, so a pass always moves', ring2.looked >= 1, ring2);
+  eq('PAID_KEEP_DAYS is ninety', PAID_KEEP_MS, 90 * DAY);
 }
 
 delete process.env.STRIPE_WEBHOOK_SECRET;
