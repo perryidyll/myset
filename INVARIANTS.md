@@ -2600,11 +2600,13 @@ If you are about to violate one, stop and say so rather than working around it.
     would have landed spend a token. A replay of a kept cast is answered before the
     bucket is consulted. `test/errlog.mjs`. Decision `0030`.
 
-0fb. **Errors go to the blob store under a computable hourly key, and logging never
-    throws.** `_errlog.mjs`: `err_<YYYY-MM-DDTHH>`, capped per hour, three tries then
-    silence, with the console line as the fallback into Netlify's own 24-hour log. A
-    bug report reads the last three of those keys — never `list()` (INVARIANT 1). No
-    request body, no email, no secret is ever written into it. Decision `0029`.
+0fb. **Errors go to the blob store under computable hourly keys, and logging never
+    throws.** `_errlog.mjs`: `err_<YYYY-MM-DDTHH>` and its shards `…_1`–`…_3`
+    (`shardKeys`, decision `0187`), each capped and counting past its cap (`n`), three
+    tries on three different shards then silence, with the console line as the fallback
+    into Netlify's own 24-hour log. A bug report reads the last three hours of those
+    keys — never `list()` (INVARIANT 1). No request body, no email, no secret is ever
+    written into it. Decision `0029`.
 
 0fc. **A Stripe options object is passed only when it has something in it.**
     stripe-node accepts a trailing object as *options* only if it carries a key it
