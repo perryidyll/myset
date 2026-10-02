@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 02:25 — b32291a — sample-og@ux/sample-share-card (0 files since origin/main)
+**tl;dr:** A sample link pasted into Instagram/WhatsApp/iMessage now shows that artist's photo and name on its preview card, like a real artist's
+**Other sessions:** 0165: artistpage.mjs sampleCard() — only when the URL carries ?sample-profile and the slug is no account; bare address unchanged (0101). Venue pages still have no share card.
+
 ### 2026-10-03 02:18 — e4b23a5 — tagline-voice@HEAD (0 files since origin/main)
 **tl;dr:** New sample pages get a tagline in the same magazine voice as the About (the one-liner under the name)
 **Other sessions:** 0163: _fai.mjs COPY_SYSTEM + VENUE_COPY_SYSTEM tagline lines; style line stays plain; 120-char cap and facts-only unchanged.
