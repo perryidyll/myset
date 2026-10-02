@@ -10,6 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:22 — 6ea0f6b — scale-songlist@fix/vote-song-list (47 files since origin/main)
+**tl;dr:** In a big room every song stays votable: the vote page fetches the song list once and then polls only the tallies (when the server supports it; otherwise exactly today's page) (0192)
+**Other sessions:** NOT MERGED. Stacked on #228; pairs with c8fc2f's #226 (0150). vote.html: detection = board carries songsV; lean=1 polls only while the held list matches songsV; fromList() rebuilds a today-shaped board from tally+list; falls back to the full board on list failure/5 s/version mismatch/unknown song. INVARIANT 0ig.
 ### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
 **tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
 **Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
