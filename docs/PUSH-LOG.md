@@ -93,6 +93,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
 **tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
 **Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+### 2026-10-03 02:49 — df20945 — scale-p2@test/contention-sim (64 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test passes on GitHub's runner
+**Other sessions:** test/contention.mjs: byte-identical repeat only on Node >= 24; on 20/22 it compares status counts + votes landed/lost. roomsim preloads every netlify/functions/*.mjs before the virtual clock.
+
 ### 2026-10-03 02:40 — fc9d1d8 — scale-p2@test/contention-sim (64 files since origin/main)
 **tl;dr:** No change for a person: the crowded-room test now gives the same result twice on GitHub's runner too
 **Other sessions:** tools/roomsim.mjs flush() turns the event loop until test/blobs-fake.mjs stats.calls stops moving (max 64 turns a virtual ms); the fake counts every get/set in stats.calls. Seeded runs failed to repeat on Node 22 (CI) while they did on Node 26 (Mac).
