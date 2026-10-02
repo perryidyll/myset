@@ -628,8 +628,9 @@ If you are about to violate one, stop and say so rather than working around it.
     shards `register_<YYYY-MM>` under a head `register`, with working state
     `register_work` and the bell's state `registersync`. Only `foldRegister` writes any
     of them, under the lock in `registersync`, from the bell (`registercron.mjs`) or the
-    dashboard's Refresh; the End tap and the scheduler's ring only leave a `regdirty`
-    mark on `gigsched` inside a write they already make. The night rule lives in
+    dashboard's Refresh; nothing on the End tap or in the scheduler's ring writes it
+    — the live walk (0ij) and a rename, hide or re-check leave a `regdirty` mark on
+    `gigsched`. The night rule lives in
     `_nightrule.mjs` and is called by the register, the stats page (`_metrics.mjs`) and
     the Sheet (`_warehouse.mjs`); `tools/actuals.py` is pinned to the same answers on
     `finance/fixtures/2026-09-11` and `2026-09-25` (`test/everyshow.mjs`,
@@ -656,7 +657,7 @@ If you are about to violate one, stop and say so rather than working around it.
     for its tile and, when the filed row disagrees, writes the same figure onto
     the row and the detail (`refreshShowMoney`) — one Stripe read, one number.
     *Re-check* uses the same window. Only a figure Stripe answered may overwrite
-    a row: 'off' and 'stripe-unreachable' are not answers. Broken on 2026-09-15
+    a row: 'off', 'stripe-unreachable' and 'stripe-partial' (0ii) are not answers. Broken on 2026-09-15
     by two $1 tips sent the day after a night: $22 in the tile, $30 in profit.
     Decision `0081`; `test/latetips.mjs`. The first-gig pieces beside it —
     `meta.signAt`, `meta.nights`, the one morning-after note on the bell's
@@ -855,8 +856,9 @@ If you are about to violate one, stop and say so rather than working around it.
    total, ever (decision 0120; the number is `PLANS.free.gigs`) — enforced in ONE place,
    `startShow` in `_lifecycle.mjs`, which every start path calls: "Start the show",
    "New show" and the schedule. Only a start on the free plan counts (a paid night never
-   does, the founder never is); a resume counts again, so one night cannot be stretched
-   over many; a night ended with **Discard** gives back everything it used (`uncountGig`,
+   does, the founder never is); a resume of a night begun over twelve hours ago counts
+   again, so one night cannot be stretched over many — a resume of the same night is
+   neither counted nor refused at the cap (0il, decision 0156); a night ended with **Discard** gives back everything it used (`uncountGig`,
    inside the end's own CAS), and so does a night the CALENDAR started that ended with no
    vote cast (`quietAutoNight`, decided before the fans are wiped; a new show over a
    still-running one decides it in `startShow`). A discard of a REAL night (60+ minutes
@@ -1984,6 +1986,14 @@ If you are about to violate one, stop and say so rather than working around it.
 0hq. **A read that failed is an error, never an empty document.** `readDoc` returns the fallback only when the document is not there. When the store throws, or does not answer inside `READ_TIMEOUT_MS`, it throws a `StoreError` (`code: 'store-read'`). Never wrap a read in a `catch` that substitutes a default unless the default is honestly safe for THAT caller, and say why in a comment. `casDoc` retries one failed read, throws on the second, and never writes after a read that failed. `guard()` answers a `StoreError` with 503 "busy", `no-store`, and does not write it to the error log (a write to the same store). Every request handler is behind `guard()`; a new one must be too. The Studio treats a 5xx as "offline": it keeps its screen, its sign-in and its timer (16). A sign-in check that cannot read is a 503, never "unauthorized". `test/storefail.mjs`. Decision `0142`.
 
 0hr. **A page that cannot reach the room asks less, not more, and every request has a clock.** On the vote page each load in a row without a fresh board doubles the wait to a minute (`FAILS`), the last board stays on screen, and a tap, a pull or the screen coming on brings it back to one doubling. Every `fetch` goes through `timed` (or `within` for the two the `<head>` starts). A vote answered "busy" is sent again with the SAME cast id (15h), up to three more times; a real no is never retried. The words "Couldn’t reach the room" replace the skeleton when the first board does not arrive. Decision `0143`.
+
+0ii. **The room stops before Stripe is asked, and a count Stripe did not finish is never filed as whole.** `endShow` flips the show to ended as its first write; the request holds are released and the night is filed after it (ending wipes no tally — 17c still holds — and the archive reads the fans after the flip). Pricing has a clock: `MYSET_MONEY_AT_END_MS` at the End and before a fresh start, `PRICE_MS` on the Money tab and Re-check, and at most `MONEY_PAGES` pages an ask. A count that stops with pages left — the clock, the page limit, or Stripe failing after a page — is `source: 'stripe-partial'` with a `partial` place-marker, and every reader treats it as not known (only `'stripe'` is Stripe's answer). `priceNight` finishes it from the marker, adding only the pages after it, and writes the detail only if the marker is still the one it started from; the register's bell carries partial nights on every ring until they are whole, and Re-check carries one on rather than starting again. A partial figure never overwrites a whole one on the row (0ga). `test/endfirst.mjs`. Decision `0153`.
+
+0ij. **No start and no end writes a document every artist shares; the show record is the live mark.** `startShow` and `endShow` write the artist's own records only (the first-night note, once per account ever, is the one exception). Who is live is found by a walk, never by `list()` (1): `walkLive` reads the artist registry and one show record per artist from `liveCursor`, at most `LIVE_WALK` a ring and never past `LIVE_WALK_MS` without reading one, and folds what it saw into `gigsched` in ONE write, only when something changed — a live show onto `live` (its last write or its start, moved only forward), a show seen not live off it, and a `regdirty` mark for a night whose status, start or end changed since `liveSeen`. A record it cannot read is left as it was. The walk runs first in the register's bell, so that ring's fold files what it marked. Anything new that must know "who is live now" reads `live` or walks the registry; it never asks a start or an end to write a shared document. `test/livewalk.mjs`. Decision `0154`.
+
+0ik. **A refund owed is written down in the same write that makes it owed, and taken off only when it has run whole.** "Decline + refund" hides the song AND sets `show.refundsOwed[song] = { show, title, at }` in one CAS; `settleOwedRefund` runs `refundSongVotes` and `declineRequestsForSong` and only then removes the mark. Both are retry-safe (a vote leaves its fan in the write that returns its credit; a declined request is not declined twice), so a refund can be finished from anywhere and never pays twice. While a mark stands the Live tab offers *Finish the refund* (stage `owed`, tonight's, live only); `endShow` finishes what is owed after the flip, and `startShow(fresh)` finishes it BEFORE `carryFans` and then drops last night's marks — never refusing the start. A mark from another night is dropped, never paid. Showing the song again (`toggleSong` on) takes its mark off; deleting a song with a refund owed refunds instead of dropping. Never hide a song, or take away the control that finishes a refund, before the refund is written down. `test/refundowed.mjs`. Decision `0155`.
+
+0il. **A free mood tap never takes a paid request's place, and an accidental End is undone at the free cap — nothing else gets past it.** Vibes are counted against `MAX_VIBES` on their own; songs and birthdays keep `MAX_PENDING` to themselves, and the two together stay under `MAX_KEPT`. A resume is "the same night" (`sameNightResume`, `_lib.mjs`) only when the show is not live, the free plan already counted this showId (`freeNight.id === showId`) and it started less than `SAME_NIGHT_MS` ago: such a resume is neither refused at the cap nor counted. A new show, a resume of an older night, of a night given back (discard, quiet calendar night) or of a night played on a paid plan meets the cap and is counted exactly as before. The Studio offers "Resume it instead" at the cap only when the stage says `resumeSameNight` (rule 3). `test/vibesandresume.mjs`. Decision `0156`.
 
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and

@@ -23,6 +23,7 @@ const { createArtist, signToken, readArtists, revOf, mutateArtists } = await imp
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
 const { getShow, mutateShow, casDoc } = await import('../netlify/functions/_lib.mjs');
 const { readHistIndex } = await import('../netlify/functions/_history.mjs');
+const { walkLive } = await import('../netlify/functions/_lifecycle.mjs');
 const { __opsStart, __opsStop } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
@@ -119,6 +120,9 @@ console.log('\nMANUAL AND IDLE ENDINGS  save a useful title');
   const TIdle = await signToken('idle@example.com', revOf(await readArtists(), idleArtist.artistId));
   ok('an unscheduled show starts', (await AS(TIdle, 'status', { status: 'live' })).ok);
   await mutateShow(idleArtist.artistId, (s) => { s.log = [{ songId: 'one', title: 'One', roundVotes: 1, at: Date.now() }]; return true; });
+  /* No start writes the bell's index any more (decision 0154): the live walk finds the
+     show from its own record and puts it on the idle sweep's list. */
+  await walkLive();
   const swept = await sweepIdle({ now: Date.now() + SHOW_IDLE_MS + 1000 });
   eq('three idle hours end it', swept.ended, 1);
   const idleShow = await getShow(idleArtist.artistId);
@@ -506,6 +510,7 @@ console.log('\nUNDER LOAD  the ring looks at who is waiting, not at who is alrea
   console.log('\nIDLE SHOWS  a show that cannot be idle yet costs nothing');
   const young = await mk('idle-young');
   ok('a show starts by hand', (await AS(young.t, 'status', { status: 'live' })).ok);
+  await walkLive();                                   // the live walk puts it on the list (0154)
   const startedAt = (await readSched()).live[young.artistId];
   ok('it is on the live list', startedAt > 0, (await readSched()).live);
   const y = await count(() => sweepIdle({ now: startedAt + 60 * 60e3 }));

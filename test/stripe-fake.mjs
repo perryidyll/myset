@@ -30,6 +30,7 @@ export const __stripe = state;
 export const __resetStripe = () => {
   for (const m of [state.accounts, state.sessions, state.paymentIntents, state.customers, state.products, state.prices, state.coupons, state.subs, state.bts, state.fees, state.feeRefunds, state.refunds]) m.clear();
   state.links.length = 0; state.calls.length = 0;
+  state.listDelayMs = 0; state.listFailAfter = null; state.onList = null; state.listCalls = 0;
   state.nextAcct = 1; state.nextSession = 1; state.nextCus = 1; state.nextPrice = 1; state.nextSub = 1; state.nextProd = 1;
 };
 /* The real library rejects an EMPTY options object on anything but `retrieve`
@@ -317,10 +318,23 @@ export default class Stripe {
            older charge gets booked against the wrong side of the books. */
         const g = ((params || {}).created || {}).gte ?? 0;
         const l = ((params || {}).created || {}).lte ?? 9e12;
-        return { data: [...state.sessions.values()]
+        /* A SLOW OR FAILING STRIPE, AND REAL PAGES (decision 0153). `listDelayMs` makes
+           every page take that long, `listFailAfter` makes every page after that many
+           throw, and `onList` runs before each page answers — so a test can look at the
+           store at the moment Stripe is being asked. `limit` and `starting_after` are
+           honoured as Stripe does, with `has_more`, so a night past one page is paged. */
+        state.listCalls = (state.listCalls || 0) + 1;
+        if (state.onList) await state.onList(params);
+        if (state.listDelayMs) await new Promise((r) => setTimeout(r, state.listDelayMs));
+        if (state.listFailAfter != null && state.listCalls > state.listFailAfter) throw new Error('Stripe: connection error (fake)');
+        const rows = [...state.sessions.values()]
           .filter((r) => r.onAccount === asked && r.session.mode !== 'subscription'
                       && (r.session.created ?? 0) >= g && (r.session.created ?? 0) <= l)
-          .map((r) => r.session) };
+          .map((r) => r.session);
+        if (!(params && params.limit)) return { data: rows };
+        const from = params.starting_after ? rows.findIndex((s) => s.id === params.starting_after) + 1 : 0;
+        const page = rows.slice(from, from + params.limit);
+        return { data: page, has_more: from + page.length < rows.length };
       },
     } };
   }

@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { COUNTDOWN_MS, getShow, mutateShow, readFans, liveFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
+import { COUNTDOWN_MS, getShow, mutateShow, readFans, liveFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk,
@@ -11,7 +11,7 @@ import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActiv
 import { readChart, saveChart, MAX_CHART } from './_chart.mjs';
 import { genresFor, MAP_SIZE } from './_genremap.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong,
-         completeSongRequests, declineRequestsForSong } from './_requests.mjs';
+         completeSongRequests, settleOwedRefund } from './_requests.mjs';
 import { readArtists, mutateArtists, artistById } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
@@ -2269,6 +2269,9 @@ const main = async (req) => {
           }
         }
         sg.active = turningOn;
+        /* Shown again, the declined song is un-declined: the votes still on it stand,
+           and there is no refund left to owe on them (0155). */
+        if (turningOn && show.refundsOwed) delete show.refundsOwed[sg.id];
         break;
       }
       case 'addSong': {
@@ -2361,7 +2364,10 @@ const main = async (req) => {
       }
       case 'removeSong':
         show.songs = show.songs.filter((s) => s.id !== body.song);
-        droppedSong = String(body.song || '');   // remove standing votes; do not refund
+        /* a declined song whose votes are still owed back is refunded, not dropped: the
+           refund was promised when it was declined (0155); its mark stays until it has run */
+        if (((show.refundsOwed || {})[body.song] || {}).show === show.showId) refundSong = String(body.song);
+        else droppedSong = String(body.song || '');   // remove standing votes; do not refund
         break;
       case 'declineSong': {
         const sg = show.songs.find((s) => s.id === body.song);
@@ -2369,6 +2375,10 @@ const main = async (req) => {
         if (show.nowPlaying === sg.id) { err = ['That song is playing now', 409]; return false; }
         if (show.played.includes(sg.id)) { err = ['Played songs can’t be declined as ordinary votes', 409]; return false; }
         sg.active = false;
+        /* The refund is written down in the same write that hides the song (0155): if
+           giving the votes back then fails, the Studio still has the song to finish it
+           with — hiding it used to take the only button away. */
+        show.refundsOwed = { ...(show.refundsOwed || {}), [sg.id]: { show: show.showId, title: sg.title || '', at: Date.now() } };
         refundSong = sg.id;
         break;
       }
@@ -2438,11 +2448,9 @@ const main = async (req) => {
   }
   if (clearBoard) await logLeft(aid, showIdNow, 'reset', await wipeBoard(aid)).catch(() => {});
   else if (refundSong) {
-    let given = [];
-    try { given = await refundSongVotes(aid, refundSong, await getShow(aid)); }
-    catch { return bad('Song hidden, but the vote return is still finishing — tap “Decline + refund” again.', 503); }
-    await logLeft(aid, showIdNow, 'refund', given).catch(() => {});
-    await declineRequestsForSong(aid, refundSong, await getShow(aid));
+    const settled = await settleOwedRefund(aid, refundSong);
+    if (!settled.ok) return bad('Song hidden — its votes haven’t all gone back yet. Tap “Finish the refund” on the Live tab.', 503);
+    await logLeft(aid, showIdNow, 'refund', settled.given).catch(() => {});
   }
   // a deleted song's votes must not go on being counted for a song nobody can see
   else if (droppedSong) await logLeft(aid, showIdNow, 'drop', await dropSongVotes(aid, droppedSong)).catch(() => {});

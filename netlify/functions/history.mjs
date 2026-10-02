@@ -6,6 +6,9 @@ import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMo
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
    a single show. The show currently running is included as a live preview so the
    artist can see tonight's numbers before he ends it. */
+/* How long one load or one Re-check may spend asking Stripe (0153). It was ten pages
+   and no clock, on every open of the Money tab. */
+const PRICE_MS = 5000;
 const main = async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
@@ -47,7 +50,9 @@ const main = async (req) => {
       return json({ ok: true, ...r });
     }
     if (body.action !== 'reconcile') return bad('unknown action');
-    const d = await reconcileShow(aid, String(body.show || ''));
+    /* Re-check has a clock (0153): what it cannot count in time is filed as still
+       counting, and the next Re-check — or the register's bell — carries on from there. */
+    const d = await reconcileShow(aid, String(body.show || ''), { deadline: Date.now() + PRICE_MS });
     if (!d) return bad('unknown show', 404);
     await dirty(aid);
     return json({ ok: true, show: d });
@@ -89,7 +94,7 @@ const main = async (req) => {
   /* No showId or no start time means there is no night to price yet, and asking
      anyway cost up to ten Stripe round-trips on every load of the Money tab. */
   const money = (show.showId && show.startedAt)
-    ? await moneyForShow(aid, show.showId, show.startedAt, Date.now())
+    ? await moneyForShow(aid, show.showId, show.startedAt, Date.now(), { deadline: Date.now() + PRICE_MS })
         .catch(() => ({ gross: 0, unattributed: 0, source: 'stripe-unreachable' }))
     : { gross: 0, unattributed: 0, source: 'none' };
   /* THE TILE AND THE BOOK MUST AGREE. The night above is priced start→now, so a
@@ -117,6 +122,8 @@ const main = async (req) => {
       ...(show.log || []).map((e) => e.voters || 0), 0),
     gross: money.gross,
     unattributed: money.unattributed,
+    // a count Stripe did not finish in time is part of the night, and the tile says so (0153)
+    partial: money.source === 'stripe-partial',
   };
 
   /* Hide tonight's row only while tonight is actually RUNNING — it is shown above

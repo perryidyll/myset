@@ -548,6 +548,20 @@ export const mutateShow = (aid, fn) => {
   (d) => stamp === null || !!(d && d.updatedAt === stamp));
 };
 
+/* A RESUME OF THE SAME NIGHT (decision 0156). "Resume it instead" after an End tapped
+   by mistake is the same night, not a new show: it is never counted against the free
+   plan and never refused at its cap. The same night is one that is not live, that the
+   free plan already counted (`freeNight` names this showId), and that started less than
+   SAME_NIGHT_MS ago — so a night cannot be resumed next week to play for free, and a
+   night given back (a discard, a quiet calendar night) counts again if it is resumed.
+   Here, not in _lifecycle.mjs, because the Studio's stage payload asks it too and must
+   not load the lifecycle to do so. Pure: no reads. */
+export const SAME_NIGHT_MS = 12 * 3600e3;
+export function sameNightResume(sh, now = Date.now()) {
+  return !!(sh && sh.status !== 'live' && sh.showId && Number(sh.startedAt) > 0
+    && sh.freeNight && sh.freeNight.id === sh.showId && now - Number(sh.startedAt) < SAME_NIGHT_MS);
+}
+
 /* ---------- fan shards ---------- */
 /* Does this object carry `k` ITSELF — not through its prototype? `bag[fanId]` for a
    fan called `__proto__` is Object.prototype: truthy, so `||=` kept it, and every
@@ -1054,7 +1068,11 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
 export async function refundSongVotes(aid, songId, show) {
   if (!songId) return [];
   const harvested = [];                      // every vote it gave back — see dropSongVotes
-  await Promise.all(
+  /* Every file's write has finished, one way or the other, before this answers. With
+     Promise.all the first file that failed answered at once while the other eleven
+     kept writing, so a refund reported as failed could still land a moment later —
+     after the artist had already shown the song again (decision 0155). */
+  const done = await Promise.allSettled(
     Array.from({ length: SHARDS }, (_, n) => {
       let got = [];
       return casDoc(shardKey(aid, n), () => ({}), (bag) => {
@@ -1099,6 +1117,8 @@ export async function refundSongVotes(aid, songId, show) {
         .then(() => { for (const h of got) harvested.push(h); });
     })
   );
+  const failed = done.find((d) => d.status === 'rejected');
+  if (failed) throw failed.reason;
   return harvested;
 }
 
