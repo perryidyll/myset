@@ -23,8 +23,10 @@ import { readArtists, mutateArtists, cleanSlug, RESERVED } from './_auth.mjs';
      · claiming adds ONE row to `artists` and takes this one away. Nothing is copied
        and nothing moves: the data was always under the account's own keys.
 
-   THE LINK. myset.vip/<slug>#sample-profile (a venue: /v/<slug>#sample-profile). The
-   words after the # are a label, the same on every page, and not a secret (the
+   THE LINK. myset.vip/<slug>?sample-profile (a venue: /v/<slug>?sample-profile). It was
+   #sample-profile until 2026-10-03, when Instagram's DMs dropped the # part and the page
+   opened as "no page here"; the pages still read both. The
+   words after the ? are a label, the same on every page, and not a secret (the
    founder's call, 2026-09-28: a link ending in twelve random characters looks like
    spam and does not get tapped). So the address alone opens a sample and the
    address alone can claim it. What stands between a stranger and somebody else's
@@ -78,7 +80,7 @@ export const ownerOfSlug = (reg, slug, kind = 'artist') => {
 /** The page's link for a row: its address, then the label after the #. */
 export async function linkFor(owner, row) {
   const site = process.env.URL || 'https://myset.vip';
-  return { key: SAMPLE_MARK, link: `${site}/${isVenueOwner(owner) ? 'v/' : ''}${row.slug}#${SAMPLE_MARK}` };
+  return { key: SAMPLE_MARK, link: `${site}/${isVenueOwner(owner) ? 'v/' : ''}${row.slug}?${SAMPLE_MARK}` };
 }
 
 /** Is there a sample at this address, asked for with the label? A wrong label and an

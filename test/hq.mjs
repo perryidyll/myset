@@ -223,13 +223,13 @@ ok('THE CONTACT NOW POINTS AT THE PAGE', !!doc.owner && (await S.readSampleReg()
 eq('and learned the handles the factory found', [doc.links.tiktok, doc.links.facebook], ['https://www.tiktok.com/@thetidelines', 'https://www.facebook.com/thetidelines']);
 const tideOwner = doc.owner;
 r = await H({ action: 'job', id: tideJob });
-ok('done: a quiet preview to view, and it waits for a look', r.job.st === 'done' && r.preview.endsWith('?pv=1#sample-profile') && r.link.endsWith('#sample-profile') && r.review === true, r);
+ok('done: a quiet preview to view, and it waits for a look', r.job.st === 'done' && r.preview.endsWith('?pv=1&sample-profile') && r.link.endsWith('?sample-profile') && r.review === true, r);
 row = await rowOf(tide);
 eq('its stage is read off the page: Needs review', [row.stage, !!row.link, row.exp > Date.now()], ['review', true, true]);
 
 console.log('\nTHE CONTACT, AND WHAT IT SHOWS');
 r = await H({ action: 'contact', cid: tide });
-ok('the contact, its page and the drafts', r.ok && r.contact.email === 'tide@example.com' && r.page && r.page.state === 'review' && r.page.preview && r.drafts && r.drafts.dm.includes('#sample-profile'), r.page);
+ok('the contact, its page and the drafts', r.ok && r.contact.email === 'tide@example.com' && r.page && r.page.state === 'review' && r.page.preview && r.drafts && r.drafts.dm.includes('?sample-profile'), r.page);
 eq('the note is private: on the contact', r.contact.notes.map((n) => n.text), ['Saw them at Sunset Bar']);
 r = await H({ action: 'update', cid: tide, fields: { tags: ['beach', 'Priority', 'jazz'], star: true, fu: Date.now() + 2 * DAY, email: 'not an email', links: { instagram: '@tidelinesofficial' } } });
 ok('an edit: tidy tags, the star, the follow-up', r.ok && r.row.star && r.row.tags.join() === 'beach,Priority,jazz' && r.row.fu > Date.now(), r.row);

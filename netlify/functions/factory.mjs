@@ -232,7 +232,7 @@ export async function sampleDetail(owner, row) {
   /* `preview`: the same link with ?pv=1, which the founder opens — the page and its Studio
      then count nothing and push nothing, so a look from the console is never mistaken
      for the act's own first open */
-  return { row: liveRow(owner, row), link: lk.link, preview: lk.link.replace('#', '?pv=1#'), key: lk.key, profile,
+  return { row: liveRow(owner, row), link: lk.link, preview: lk.link.replace('?', '?pv=1&'), key: lk.key, profile,
     record: rec ? { sources: rec.sources || [], facts: rec.facts || null, provenance: rec.provenance || null, photos: rec.photos || [],
                     quality: rec.quality || null, events: rec.events || [], seed: rec.seed || null, usage: rec.usage || null } : null,
     msgs: messagesFor(row, rec, lk.link, cfg) };
