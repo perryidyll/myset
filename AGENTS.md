@@ -143,7 +143,7 @@ secrets are unset outside production) but it **reads and writes production data*
 
 **Every pull request runs the suite** (decision 0144): `.github/workflows/tests.yml`
 runs `sh test/run.sh` on GitHub's machine and reports it as the check named `suite`.
-Wait for it to go green before merging; a red one is a broken build, not a formality.
+It takes about six minutes. Wait for it to go green before merging; a red one is a broken build, not a formality.
 Running it yourself first is still the fast way to find out.
 
 Doc-only work puts `[skip ci]` in the **merge subject**, never in a branch commit:

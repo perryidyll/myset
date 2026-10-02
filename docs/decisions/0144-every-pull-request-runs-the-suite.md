@@ -72,7 +72,7 @@ author's, and costs nothing.
 
 ## What this makes harder
 
-- A merge waits for the suite: about two minutes.
+- A merge waits for the suite: about six minutes on GitHub's runner.
 - A branch whose last commit says `[skip ci]` cannot merge once the check is
   required. Add a commit, or amend the message.
 
@@ -82,7 +82,8 @@ The suite growing past ten minutes, or flaking. Then split it, do not remove it.
 
 ## How it was verified
 
-See the pull request that added the workflow: the `suite` check ran on it.
+The `suite` check ran on the pull request that added it (#206): the whole of
+`sh test/run.sh` on `ubuntu-latest`, Node 22, passed in 5 m 40 s (run 37035750687).
 
 **Not checked:** holding code deploys while a show is live (the audit's other half
 of this item). That needs a deploy gate, not a test run, and is not built.
