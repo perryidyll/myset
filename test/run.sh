@@ -130,6 +130,9 @@ echo
 echo "── every song the room can vote for, and the poll with only the tallies (0150) ──"
 node --import ./test/register.mjs test/songlist.mjs
 echo
+echo "── the personal poll asks for the show on condition (0152) ──"
+node --import ./test/register.mjs test/showkept.mjs
+echo
 echo "── the one warm door ──"
 node --import ./test/register.mjs test/fandoor.mjs
 echo
