@@ -93,6 +93,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
 **tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
 **Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+### 2026-10-03 02:15 — 61229d0 — scale-p2@test/contention-sim (36 files since origin/main)
+**tl;dr:** No change for a person: the test run's temporary key log now starts on GitHub's Linux runner as well as on a Mac
+**Other sessions:** #218's suite check failed in 8 s on 'mktemp: too few X's'; test/run.sh now uses mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX".
+
 ### 2026-10-03 02:02 — 3ff2f52 — scale-p2@test/contention-sim (26 files since origin/main)
 **tl;dr:** The test suite now runs a crowded room on every pull request, and every kind of saved document now has an off-site copy or a stated reason it has none; the off-site copy was read back and restored in a rehearsal (0145, 0146)
 **Other sessions:** NEW RULE once merged: a new kind of blob key needs a line in _mirror.mjs FAMILIES or the suite's last step (test/keyfamilies.mjs) fails; test/run.sh exports MYSET_KEYLOG. test/blobs-fake.mjs gains __latency (keep it beside week one's __failReads when rebasing). keysFor gains bugs_; keysForVenue gains vpitch_, push_v_, gigok_ (now deleted with their account). PR for 0147 (Play is one write) is stacked on this branch.
