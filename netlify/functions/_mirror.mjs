@@ -16,7 +16,8 @@ import { r2Enabled, r2Put } from './_r2.mjs';
    (`getMetadata`, no body); a key whose etag is in the owner's manifest
    (`mirror_<owner>`) is skipped. So a nightly pass is one metadata read per key
    and a copy only of what changed — write-once documents (a night, a version, a
-   log part) cross exactly once.
+   log part) cross exactly once, and since 0173 a version or a sealed log part
+   already across is not even asked for its etag (`sealed`).
 
    WHAT IS NOT COPIED, on purpose: sign-in secrets and codes, sessions and lockouts
    (ephemeral, and a second copy of a secret is a second place to lose it), the
@@ -148,6 +149,21 @@ async function etagOf(key) {
   try { const m = await store().getMetadata(key); return m ? (m.etag || null) : null; } catch { return null; }
 }
 
+/* WHAT CAN NEVER CHANGE IS NOT ASKED AGAIN — decision 0173. A version (`ver_`) and
+   a sealed part of an append-only log (`<head>_p<i>`) are written once, with
+   `onlyIfNew`, and never again (0066/0067). Once one is in the manifest, its etag
+   cannot have moved, so the pass skips it without the metadata read. For an
+   account with a few hundred nights those are most of its keys. A part counts
+   only when its head is on the same list and is one of the five logs, so a venue
+   called "P12" (`postsarch_v_p12`, a head that does change) is never mistaken
+   for one. */
+const LOG_HEAD = /^(evt|vers|postsarch|fbarch|inboxarch)_/;
+export const sealed = (k, listed) => {
+  if (String(k).startsWith('ver_')) return true;
+  const m = /^(.+)_p\d+$/.exec(String(k));
+  return !!(m && LOG_HEAD.test(m[1]) && listed.has(m[1]));
+};
+
 /** Copy one owner's keys that changed since the manifest, from index `start`,
  *  until `deadline`. Returns the counts, `partial` when the deadline stopped it
  *  short, and `next` — the index the next ring should start from. */
@@ -156,12 +172,14 @@ export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infi
   const { data: man } = await readDoc(MANIFEST(owner), null);
   const by = { ...((man && man.by) || {}) };
   const todo = [...new Set(keys)].filter((k) => k && !skipped(k));
+  const listed = new Set(todo);
   const POOL = 6;
   let i = Math.min(Math.max(0, start | 0), todo.length);
   const worker = async () => {
     do {
       if (i >= todo.length) return;
       const k = todo[i++];
+      if (by[k] && sealed(k, listed)) { out.skipped++; continue; }   // written once, already across
       const etag = await etagOf(k);
       if (!etag) { out.missing++; continue; }
       if (by[k] === etag) { out.skipped++; continue; }

@@ -264,6 +264,9 @@ node test/seatstudio.mjs
 echo
 echo "── push alerts per seat: who hears what, and a sign-out ends them (0114) ──"
 node --import ./test/register.mjs test/pushseats.mjs
+echo
+echo "── background jobs that keep up: the purge, the nightly copy, the sheet (0173) ──"
+node --import ./test/register.mjs test/background.mjs
 
 echo
 echo "── no kind of document without a second home, or a reason (0146) ──"

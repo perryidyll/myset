@@ -574,6 +574,17 @@ export function sameNightResume(sh, now = Date.now()) {
    the belt to that brace — decision 0110). */
 export const own = (o, k) => (o != null && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 
+/* Reads side by side, a few at a time, answered in the order asked (decision 0173).
+   For a walk over many documents off the live path: an account's key list, the
+   owners in a city. Never more than `width` in flight. */
+export async function inTurn(items, fn, width = 8) {
+  const out = new Array(items.length);
+  let i = 0;
+  const worker = async () => { while (i < items.length) { const j = i++; out[j] = await fn(items[j]); } };
+  await Promise.all(Array.from({ length: Math.min(width, items.length) }, worker));
+  return out;
+}
+
 /* Every write to a fan file also tidies the receipts of every record in it (decision
    0148): a receipt past RECEIPT_MS is dropped and one in the old long shape is
    shortened. The file is being rewritten whole anyway, so this costs no read and no
