@@ -66,6 +66,19 @@ ok('and every one is on the board', big.votesLanded === 1500 && big.votesLost ==
 ok('nobody waited past the function limit', big.vote.overTimeout === 0, big.vote);
 console.log('    ' + times(big.vote) + `; each fan file is about ${big.shardKB} KB`);
 
+console.log('\nTHE NIGHT THE SHORT RECEIPTS DEPLOY: 5,000 PHONES, A RUSH, THEN EVERY RETRY (0148)');
+/* The room as it stands the moment decision 0148 deploys: every voter's receipts in
+   the old long shape. A rush rewrites every file; then two hundred phones whose first
+   answer was lost ask again with the same cast id. */
+const deploy = room({ P: 5000, burst: 1500, burstSec: 20, oldReceipts: true, replays: 200 });
+ok('the room ran', !deploy.error && deploy.unfinished === 0 && !deploy.err, deploy);
+ok('every vote was answered yes, and is on the board', said(deploy, 200) === 1500 && deploy.votesLanded === 1500, deploy.vote);
+ok('every file was written, and no long receipt is left in one', deploy.receipts && deploy.receipts.long === 0 && deploy.receipts.short > 0, deploy.receipts);
+ok('no record keeps more receipts than it may', deploy.receipts.maxPerFan <= 20, deploy.receipts);
+ok('every retry was answered from memory', deploy.replays && deploy.replays.asked === 200 && deploy.replays.fromMemory === 200, deploy.replays);
+ok('and not one was cast twice', deploy.replays && deploy.replays.castTwice === 0, deploy.replays);
+console.log(`    ${deploy.receipts.short} short receipts in the files; ` + times(deploy.vote));
+
 console.log('\nTHE DOORS OPEN: 5,000 PHONES ARRIVE IN A MINUTE');
 const doors = room({ P: 0, arrive: 5000, arriveSec: 60 });
 ok('the room ran', !doors.error && doors.unfinished === 0 && !doors.err, doors);

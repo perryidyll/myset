@@ -97,6 +97,9 @@ echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs
 echo
+echo "── the cast receipts are short (0148) ──"
+node --import ./test/register.mjs test/receipts.mjs
+echo
 echo "── paid-vote attribution and artist decline/refund ──"
 node --import ./test/register.mjs test/decline.mjs
 echo
