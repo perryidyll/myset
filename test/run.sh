@@ -273,6 +273,9 @@ node --import ./test/register.mjs test/citycounts.mjs
 echo
 echo "── the nightly copy keeps each changed version under its day, ninety days (0175) ──"
 node --import ./test/register.mjs test/snapshots.mjs
+echo
+echo "── one small file per page address and per artist, beside the artist list (0176) ──"
+node --import ./test/register.mjs test/lookups.mjs
 
 echo
 echo "── no kind of document without a second home, or a reason (0146) ──"

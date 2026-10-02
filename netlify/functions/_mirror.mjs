@@ -150,6 +150,7 @@ export const FAMILIES = [
   [/^(mirror|mirror_.+)$/, 'skip', "the mirror's own cursor and manifests: rebuilt by the next pass"],
   [/^mirrorsnap_\d{4}-\d{2}-\d{2}$/, 'skip', "which documents a day's dated copies on R2 hold (0175): the mirror's own bookkeeping, kept only to delete them"],
   [/^watch$/, 'skip', 'what the watch has already told the founder (0157): rebuilt at its next ring'],
+  [/^(aslug_.+|arow_.+|alookheal)$/, 'skip', "small copies of the artist list's lines and their heal's cursor (0176): rebuilt from `artists`, which is copied; a copy put back beside a list from another moment could disagree with it"],
   /* an owner's */
   [/^(show|meta|profile|histidx|histids|histpend|hist|req|ev|lists|learn|push|connect|fb|fbarch|apitch|songstats|posts|postsarch|likes|billing|log|rec|pkeys|vidpend|ledger|ledidx|feats|rsvp|biz|wishes|diary|img|lyr|chart|evt|ver|vers|cred|inbox|inboxarch|msg|sample|bugs)_/, 'owner'],
   [/^(vprofile|vouch|gigok|vpitch)_/, 'owner'],

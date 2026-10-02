@@ -119,8 +119,17 @@ for (const [what, re] of [['the artist list', /^artists$/], ['her show', new Reg
   ok(`with ${what} unreadable the Studio is told busy (503), never unauthorized — ${s.status} ${s.error}`, s.status === 503 && s.error === 'busy', s);
 }
 __failReads(/^artists$/);
+/* Since decision 0176 her room finds her through its own small copies of the list,
+   so the list alone being unreadable no longer touches it: the room still votes. With
+   the copies unreadable too, it is busy — never "unknown artist". */
+(await import('../netlify/functions/_auth.mjs')).__flushArtists();
 const pub = await hit(meFn, 'https://x/api/me?a=mia&fan=' + ann);
-ok(`and her room is busy, not "unknown artist" — ${pub.status}`, pub.status === 503, pub);
+ok(`and her room still answers, from the list's small copies — ${pub.status}`, pub.status === 200 && pub.ok, pub);
+__failReads(/^(artists|aslug_.+|arow_.+)$/);
+(await import('../netlify/functions/_auth.mjs')).__flushArtists();
+const pub2 = await hit(meFn, 'https://x/api/me?a=mia&fan=' + ann);
+ok(`with the copies unreadable too it is busy, not "unknown artist" — ${pub2.status}`, pub2.status === 503, pub2);
+__failReads(/^artists$/);
 const act = await hit(admin, 'https://x/api/admin', { action: 'addSong', title: 'Never', artist: 'T' }, TM);
 eq('an action is refused the same way', act.status, 503);
 __failReads(null);
