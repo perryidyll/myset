@@ -152,6 +152,8 @@ async function facts() {
       shards: lib.SHARDS,
       castBurst: lib.CAST_BURST,
       castPerMin: lib.CAST_PER_MIN,
+      // the cast receipts a fan record keeps for a retry (decision 0148)
+      receiptsKept: lib.RECEIPTS_KEPT, receiptMinutes: lib.RECEIPT_MS / 60e3,
       countdownMs: lib.COUNTDOWN_MS,
       maxVideoBytes: video.MAX_VIDEO_BYTES,
       clipLinkSecs: r2.LINK_SECS,
@@ -385,6 +387,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Venue Studio actions | ${f.shape.venueActions.length} |
 | Fan-record shards | ${f.constants.shards} |
 | Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
+| Cast receipts a fan record keeps for a retry, and for how long (\`RECEIPTS_KEPT\`, \`RECEIPT_MS\`, decision 0148) | ${f.constants.receiptsKept} / ${f.constants.receiptMinutes} minutes |
 | A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
 | Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |
 | …and a whole network — sized so a packed bar on one wifi never meets it (\`PAY_NET_BURST\`, \`PAY_NET_PER_MIN\`) | ${f.security.payNetBurst} / ${f.security.payNetPerMin} |

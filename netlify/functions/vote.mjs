@@ -1,6 +1,6 @@
 import { guard, logErr } from './_errlog.mjs';
 import { getShow, mutateFan, creditsUsed, chargeVotes, takeCastToken, costOf, isUnlimited, publicArtist, json, bad,
-         cleanFanId, votable, roomHash, clientIp } from './_lib.mjs';
+         cleanFanId, votable, roomHash, clientIp, findReceipt, keepReceipts, receipt } from './_lib.mjs';
 
 /* A FAN CANNOT REVERSE A VOTE. It stays on the song it was cast for until that
    song is played or the night ends. The artist's explicit decline/refund action is
@@ -62,7 +62,6 @@ const main = async (req) => {
      out of the existing shape rather than a new field. */
   let err = null, outcome = null, want = null, replayed = false;
   const held = (me) => (me.v || []).filter((x) => x === song).length;
-  const CASTS_KEPT = 20;
 
   try {
     await mutateFan(aid, fan, (me) => {
@@ -93,10 +92,9 @@ const main = async (req) => {
       /* Already done this exact cast: hand back what it returned the first time
          and write NOTHING. Checked inside the mutation so two racing retries cannot
          both get past it. */
-      me.casts ||= [];
       if (castId) {
-        const prior = me.casts.find((c) => c && c.id === castId);
-        if (prior) { outcome = { ...(prior.out || {}), replay: true }; replayed = true; return false; }
+        const prior = findReceipt(me.casts, castId);          // short receipts since 0148, or the old long kind
+        if (prior) { outcome = { ...prior, replay: true }; replayed = true; return false; }
       }
 
       const mine = held(me);
@@ -127,7 +125,7 @@ const main = async (req) => {
       want = mine + n;
       outcome = { voted: true, votes: n, cost: need,
                   remaining: free ? null : Math.max(0, total - creditsUsed(me, show)) };
-      if (castId) { me.casts.push({ id: castId, at: Date.now(), out: outcome }); me.casts = me.casts.slice(-CASTS_KEPT); }
+      if (castId) { const at = Date.now(); me.casts = keepReceipts([...(me.casts || []), receipt(castId, at, outcome)], at); }
       return true;
     },
     // read back after writing: if the votes didn't stick, retry

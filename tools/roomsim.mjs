@@ -17,6 +17,12 @@
    ghosts     devices that are in the files but not in the room
    songs      library size; 60
    r, w       storage read and write time in ms; 42 and 80
+   rMB, wMB   and what each megabyte adds to them; 20 and 40 (the 2 October audit's
+              own model was 100 and 200: run both when a change is about bytes)
+   oldReceipts  seed the voters' cast receipts in the long shape kept before decision
+              0148 — a room as it stands the moment that change deploys
+   replays    after the rush, send this many of the answered casts again, same cast
+              id: each must be answered from memory, never cast twice (INVARIANT 15h)
    timeout    the function limit a slow answer is scored against; 10000
    seed       the run repeats exactly for a given seed; 1
    capSec     stop after this many virtual seconds; 240
@@ -109,7 +115,10 @@ for (let i = 0; i < P; i++) {
     for (let k = 0; k < 3; k++) {
       const s = pick(); rec.v.push(s); rec.ts[s] ||= now0 - 6e5;
       (rec.va[s] ||= []).push([1, 0, now0 - 6e5]);
-      casts.push({ id: rid(32), at: now0 - 6e5, out: { voted: true, votes: 1, cost: 1, remaining: 2 - k } });
+      const id = rid(32), out = { voted: true, votes: 1, cost: 1, remaining: 2 - k };
+      /* The receipt in the shape the code keeps (decision 0148), unless asked for the
+         long one — what every record held before it. */
+      casts.push(lib.receipt && !A.oldReceipts ? lib.receipt(id, now0 - 6e5, out) : { id, at: now0 - 6e5, out });
     }
     Object.assign(rec, { casts, rl: { t: 19.5, at: now0 - 6e5 }, lastAt: now0 - 6e5, used: 3, freeUsed: 3 });
   } else fresh.push(id);
@@ -127,17 +136,20 @@ if (voters.length < burst) fail({ error: 'not enough phones with free votes for 
 
 // ---- the rush, on a virtual clock ----
 mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.now() });
-blobs.__latency({ r: A.r ?? 42, w: A.w ?? 80, rand: Math.random });
-const res = { vote: [], me: [], play: null, err: null };
+blobs.__latency({ r: A.r ?? 42, w: A.w ?? 80, rPerMB: A.rMB ?? 20, wPerMB: A.wMB ?? 40, rand: Math.random });
+const res = { vote: [], me: [], play: null, err: null, again: [] };
 let pending = 0;
 const at = (ms, fn) => { pending++; setTimeout(async () => { try { await fn(); } catch (e) { res.err = String((e && e.message) || e); } pending--; }, ms); };
 const ip = (net) => net + (1 + Math.floor(Math.random() * 250));
+const sent = [];                          // [fan, request body, ip] of every cast answered yes
+const castReq = (body, addr) => new Request('https://x/api/vote?a=sim', { method: 'POST',
+  headers: { 'content-type': 'application/json', 'x-forwarded-for': addr }, body });
 voters.forEach((f) => at(Math.random() * burstSec * 1000, async () => {
-  const t0 = Date.now();
-  const r = await vote(new Request('https://x/api/vote?a=sim', { method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip('203.0.113.') },
-    body: JSON.stringify({ fan: f, song: A.oneSong ? songs[0] : pick(), n: 1, cast: rid(32), op: 'cast' }) }));
+  const t0 = Date.now(), addr = ip('203.0.113.');
+  const body = JSON.stringify({ fan: f, song: A.oneSong ? songs[0] : pick(), n: 1, cast: rid(32), op: 'cast' });
+  const r = await vote(castReq(body, addr));
   res.vote.push([r.status, Date.now() - t0, f]);
+  if (r.status === 200) sent.push([f, body, addr]);
 }));
 for (let i = 0; i < arrive; i++) at(Math.random() * arriveSec * 1000, async () => {
   const t0 = Date.now();
@@ -163,6 +175,13 @@ const flush = async () => {
 const cap = (A.capSec ?? 240) * 1000, wall0 = process.hrtime.bigint();
 let vt = 0;
 while (pending > 0 && vt < cap) { mock.timers.tick(1); vt++; await flush(); }
+/* The retries, once the rush is over: the same tap asking again, as a phone whose
+   first answer was lost on the way back would. Spread over five seconds. */
+for (const [f, body, addr] of sent.slice(0, A.replays ?? 0)) at(Math.random() * 5000, async () => {
+  const r = await vote(castReq(body, addr));
+  res.again.push([r.status, (await r.json().catch(() => ({}))).replay === true, f]);
+});
+while (pending > 0 && vt < cap) { mock.timers.tick(1); vt++; await flush(); }
 const store = { ...blobs.stats };
 blobs.__latency(null);
 mock.timers.reset();
@@ -177,6 +196,20 @@ const score = (rows) => {
 const fans = await lib.readFans(a.artistId);
 const showEnd = await lib.getShow(a.artistId);
 const holds = (f) => !!(fans[f] && (fans[f].v || []).length);
+/* Every receipt left in the files, by shape: the short kind (decision 0148) and the
+   long kind every record held before it, which the next write to a file shortens. */
+const rc = { short: 0, long: 0, maxPerFan: 0 };
+for (const f of Object.values(fans)) {
+  const c = Array.isArray(f && f.casts) ? f.casts : [];
+  for (const x of c) Array.isArray(x) ? rc.short++ : rc.long++;
+  rc.maxPerFan = Math.max(rc.maxPerFan, c.length);
+}
+const again = res.again.length ? {
+  asked: res.again.length,
+  fromMemory: res.again.filter((x) => x[0] === 200 && x[1]).length,
+  // a voter in the rush cast one vote, so a record holding more was cast twice
+  castTwice: res.again.filter((x) => ((fans[x[2]] || {}).v || []).length > 1).length,
+} : null;
 /* The two things that must never happen. A vote the fan was told landed (a 200)
    that is on no song and was not taken by Play is LOST. A vote still sitting on
    the song that is now playing is STRANDED: Play collected before it landed. */
@@ -188,13 +221,14 @@ const onSong = (fs) => Object.values(fs).reduce((n, f) => n + ((f && f.v) || [])
 const rawOnSong = nowPlaying ? onSong(fans) : null;
 const stranded = nowPlaying ? onSong(lib.liveFans ? lib.liveFans(fans, showEnd) : fans) : null;
 console.log(JSON.stringify({
-  cfg: { P, burst, burstSec, arrive, arriveSec, play, ghosts, r: A.r ?? 42, w: A.w ?? 80, timeout: TIMEOUT, seed: A.seed ?? 1 },
+  cfg: { P, burst, burstSec, arrive, arriveSec, play, ghosts, r: A.r ?? 42, w: A.w ?? 80, rMB: A.rMB ?? 20, wMB: A.wMB ?? 40, timeout: TIMEOUT, seed: A.seed ?? 1 },
   shardKB: Math.round(shardBytes.reduce((x, y) => x + y, 0) / lib.SHARDS / 1024),
   virtualSec: Math.round(vt / 100) / 10, unfinished: pending,
   vote: score(res.vote), votesLanded: voters.filter(holds).length,
   votesLost: play ? null : said200.filter((f) => !holds(f)).length,
   me: score(res.me), presenceLanded: arrive ? Object.values(fans).filter((f) => f.seenShow === show.showId).length - P - ghosts : null,
   play: res.play, strandedOnPlayedSong: stranded, rowsLeftInFiles: rawOnSong,
+  receipts: rc, replays: again,
   store: { ...store, MBread: Math.round(store.bytesR / 1e6), MBwritten: Math.round(store.bytesW / 1e6) },
   wallSec: Math.round(Number(process.hrtime.bigint() - wall0) / 1e8) / 10, err: res.err }));
 process.exit(0);

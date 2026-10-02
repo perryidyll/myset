@@ -556,6 +556,10 @@ export const mutateShow = (aid, fn) => {
    the belt to that brace — decision 0110). */
 export const own = (o, k) => (o != null && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 
+/* Every write to a fan file also tidies the receipts of every record in it (decision
+   0148): a receipt past RECEIPT_MS is dropped and one in the old long shape is
+   shortened. The file is being rewritten whole anyway, so this costs no read and no
+   write — only the bytes the next writer of this file no longer has to move. */
 export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
   casDoc(
     shardKey(aid, shardOf(fanId)),
@@ -563,7 +567,9 @@ export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
     (bag) => {
       const me = own(bag, fanId) || (bag[fanId] = { v: [], extra: 0, ts: {} });
       me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0; me.va ||= {};
-      return fn(me, bag);
+      const out = fn(me, bag);
+      if (out !== false) pruneReceipts(bag);
+      return out;
     },
     verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
   );
@@ -886,6 +892,61 @@ export function takeCastToken(me, now = Date.now()) {
   if (t < 1) return false;
   me.rl = { t: t - 1, at: now };
   return true;
+}
+
+/* THE CAST RECEIPTS — decision 0148.
+
+   A cast id makes a retry safe (INVARIANT 15h): the outcome of every cast is kept on
+   the fan's record, and the same id arriving again is answered from it instead of
+   casting twice. Each receipt used to be the whole id and the whole outcome as an
+   object — about 118 bytes — and twenty were kept for the whole night, so they were
+   the largest thing on a voter's record: 355 of 796 bytes after three casts. Every
+   vote rewrites a twelfth of the room, so every byte on every record is moved by
+   every writer of its file (the 2 October 2026 scale audit's write ceiling).
+
+   Now a receipt is [key, at, votes, cost, remaining]: the key is the first twelve hex
+   characters of the id's hash (one device's last twenty casts; a false match is one
+   in 10^13), and the outcome is three numbers. A receipt is kept for RECEIPT_MS. A
+   retry is the same tap asking again — 0.9 s after its first try fails, and a try
+   fails at the latest when the phone's network gives up on a dead connection, which
+   is minutes, not half an hour. The page keeps no cast id past the tap that made it.
+
+   An old receipt is read as it is and shortened by the next write to its file. */
+export const RECEIPTS_KEPT = 20;
+export const RECEIPT_MS = 30 * 60e3;
+const receiptKey = (castId) => sha(castId).slice(0, 12);
+/** A cast's receipt, in the shape that is kept. */
+export const receipt = (castId, at, out) =>
+  [receiptKey(castId), at, out.votes, out.cost, out.remaining === undefined ? null : out.remaining];
+/** The outcome a cast with this id had, if this record still remembers it. */
+export function findReceipt(casts, castId) {
+  if (!castId || !Array.isArray(casts)) return null;
+  const k = receiptKey(castId);
+  for (const c of casts) {
+    if (Array.isArray(c) && c[0] === k) return { voted: true, votes: c[2], cost: c[3], remaining: c[4] };
+    if (c && !Array.isArray(c) && c.id === castId) return { ...(c.out || {}) };   // the long shape, before its next write
+  }
+  return null;
+}
+/** The receipts worth keeping: short, younger than RECEIPT_MS, the last RECEIPTS_KEPT. */
+export function keepReceipts(casts, now = Date.now()) {
+  const out = [];
+  for (const c of Array.isArray(casts) ? casts : []) {
+    const r = Array.isArray(c) ? c
+      : (c && typeof c.id === 'string' ? receipt(c.id, Number(c.at) || 0, c.out || {}) : null);
+    if (r && now - (Number(r[1]) || 0) < RECEIPT_MS) out.push(r);
+  }
+  return out.slice(-RECEIPTS_KEPT);
+}
+/** Every record in a fan file, its receipts tidied. Records without any are untouched. */
+export function pruneReceipts(bag, now = Date.now()) {
+  for (const id of Object.keys(bag || {})) {
+    const f = bag[id];
+    if (!f || f.casts === undefined) continue;
+    const kept = keepReceipts(f.casts, now);
+    if (kept.length) f.casts = kept; else delete f.casts;
+  }
+  return bag;
 }
 
 export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
