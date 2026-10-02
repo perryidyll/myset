@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, publicArtist, bad } from './_lib.mjs';
 import { readFlags, flagsFor } from './_flags.mjs';
-import { buildBoard } from './_board.mjs';
+import { buildBoard, leanBoard } from './_board.mjs';
 
 /* THE SHARED BOARD — /api/board?a=<slug>
 
@@ -54,7 +54,12 @@ const main = async (req) => {
      Cache HITs are still billed as web requests (0ep) — what this removes is the
      compute and the twelve-shard read behind every one of them, which is the wall. */
   const ttl = Math.max(1, Math.round(board.nextPollMs / 1000));
-  return new Response(JSON.stringify(board), {
+  /* `lean=1` is the same board without the song shapes, for a page that holds the
+     song list (decision 0150). It is one more address for the whole room, never one
+     per phone, so it is cached exactly like this one (0ep is about a fan id in the
+     URL; this is not one). */
+  const lean = new URL(req.url).searchParams.get('lean') === '1';
+  return new Response(JSON.stringify(lean ? leanBoard(board) : board), {
     status: 200,
     headers: {
       'content-type': 'application/json',
