@@ -153,7 +153,10 @@ async function facts() {
                 bugPerNetworkPerHour: errLim.BUG_PER_NETWORK_PER_HOUR,
                 secretMin: secretMod.MIN_LENGTH, legacyDays: Math.round(auth.LEGACY_MS / 86400e3),
                 gateTries: gate.TRIES, gateWindowMin: Math.round(gate.WINDOW / 60e3), gateLockMin: Math.round(gate.LOCK_FOR / 60e3),
-                gateLockCapHours: Math.round(gate.LOCK_CAP / 3600e3), sealed: sealMod.FAMILIES },
+                gateLockCapHours: Math.round(gate.LOCK_CAP / 3600e3), sealed: sealMod.FAMILIES,
+                /* how long a delivered payment marker stays in the payments document, and from
+                   what age every claim check also looks in its year's archive (decision 0193) */
+                paidKeepDays: payLim.PAID_KEEP_DAYS, paidArcMarginDays: payLim.PAID_ARC_MARGIN_MS / 86400e3 },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -405,6 +408,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | A sign-in session lasts / renews itself on a reply once it is older than (\`TOKEN_LIFE\`, \`RENEW_AFTER_MS\`, decision 0199) | ${f.security.sessionDays} days / ${f.security.renewAfterHours} hours |
 | Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |
 | …and a whole network — sized so a packed bar on one wifi never meets it (\`PAY_NET_BURST\`, \`PAY_NET_PER_MIN\`) | ${f.security.payNetBurst} / ${f.security.payNetPerMin} |
+| A delivered payment marker stays in \`meta_<aid>\` / every claim check also reads its year's archive for a session older than (\`PAID_KEEP_DAYS\`, \`PAID_ARC_MARGIN_MS\`, decision 0193) | ${f.security.paidKeepDays} days / ${f.security.paidArcMarginDays} days |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (\`NET_CODES_PER_HOUR\`) | ${f.security.netCodesPerHour} |
 | Phones one network may put on one night's RSVP count (\`RSVP_PER_NETWORK\`) | ${f.security.rsvpPerNetwork} |
 | Ratings one network may leave for one artist in a day (\`FEEDBACK_PER_NETWORK_PER_DAY\`) | ${f.security.feedbackPerNetworkPerDay} |

@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, requireArtist, readMeta, DEFAULT_ARTIST } from './_lib.mjs';
-import { redeemSession } from './_pay.mjs';
+import { redeemSession, archivedAmong } from './_pay.mjs';
 
 /* Artist-only. Stripe is the source of truth for money; the app's own ledger can
    only ever be a cache of it. GET lists what Stripe actually charged and flags
@@ -76,9 +76,16 @@ const main = async (req) => {
      newest first, and the loop stops at a deadline; `left` tells the Studio to press
      again. The bell retries what the webhook could not deliver (0138), so this is
      the artist's backstop, not the first road. */
+  /* A MARKER MAY HAVE MOVED TO ITS YEAR (decision 0193). A delivered marker older than
+     ninety days lives in `paidarc_<aid>_<YYYY>`, so a session meta no longer holds is
+     looked for there before it is called unredeemed or swept — one read per year the
+     window spans, at most two, and none when every session is in meta or too young
+     to have moved. Without it the sweep would grant an old pack a second time. */
+  const settled = (meta, arc) => (s) => !!(meta.paid[s.id] ? meta.paid[s.id].delivered !== false : arc[s.id]);
   if (req.method === 'POST') {
     const held = await readMeta(aid);
-    const owed = paidSessions.filter((s) => !(held.paid[s.id] && held.paid[s.id].delivered !== false))
+    const done = settled(held, await archivedAmong(aid, paidSessions, held));
+    const owed = paidSessions.filter((s) => !done(s))
       .sort((a, b) => (b.created || 0) - (a.created || 0));
     const deadline = Date.now() + SWEEP_BUDGET_MS;
     const results = [];
@@ -93,6 +100,7 @@ const main = async (req) => {
   }
 
   const meta = await readMeta(aid);
+  const done = settled(meta, await archivedAmong(aid, paidSessions, meta));
   const payments = paidSessions.map((s) => {
     const md = s.metadata || {};
     return {
@@ -109,7 +117,7 @@ const main = async (req) => {
       note: md.note || '',
       email: (s.customer_details && s.customer_details.email) || '',
       // claimed-but-undelivered is NOT redeemed — it is the case the sweep exists for
-      redeemed: !!(meta.paid[s.id] && meta.paid[s.id].delivered !== false),
+      redeemed: done(s),
     };
   }).sort((a, b) => b.at - a.at);
 
