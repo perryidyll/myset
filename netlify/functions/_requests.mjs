@@ -3,7 +3,7 @@
    tax on reads that never touch money. stripeForRow loads it when a pledge is
    actually captured or cancelled (speed pass two, decision 0048). */
 import { casDoc, readDoc, KEY, creditsUsed, isUnlimited, mutateFan, mutateMeta,
-         grantPaidSongVotes, cleanFanId, getShow } from './_lib.mjs';
+         grantPaidSongVotes, cleanFanId, getShow, mutateShow, refundSongVotes } from './_lib.mjs';
 import { notify } from './_push.mjs';
 import { scope } from './_connect.mjs';
 
@@ -371,6 +371,52 @@ export async function declineRequestsForSong(aid, songId, show) {
     r.kind === 'song' && r.songId === songId && r.status === 'added');
   for (const r of rows) await resolveRequest(aid, r.id, 'declined', show);
   return rows.length;
+}
+
+/* A REFUND OWED IS WRITTEN DOWN BEFORE IT IS PAID (decision 0155, INVARIANT 0ik).
+   "Decline + refund" hides the song and records `show.refundsOwed[song]` — the night
+   it belongs to and the song's title — in that same write. Then the votes go back
+   (`refundSongVotes`) and the song's accepted requests are declined
+   (`declineRequestsForSong`); only when both have run is the mark taken off. Until
+   then the Studio shows it (Finish the refund), and an End and the next fresh start
+   finish it on their own, the fresh start before it wipes the fans.
+
+   It can never refund twice: a vote is taken off its fan in the same write that gives
+   its credit back, so a second pass finds nothing on that fan; a request already
+   declined is not declined again. And it can never leave a fan with nothing to retry:
+   the mark stays until the refund has run whole. A mark from another night is
+   dropped: its fans were carried into a new night, and there is nothing left to give
+   back to. Returns { ok, given, owed } — `owed` false when there was nothing to do. */
+export async function settleOwedRefund(aid, songId) {
+  const show = await getShow(aid);
+  const mark = (show.refundsOwed || {})[songId];
+  if (!mark) return { ok: true, given: [], owed: false };
+  const drop = () => mutateShow(aid, (s) => {
+    if (!s.refundsOwed || !s.refundsOwed[songId] || s.refundsOwed[songId].show !== mark.show) return false;
+    delete s.refundsOwed[songId]; return true;
+  });
+  // a mark left behind after a refund that DID run is harmless: the next pass finds nothing and takes it off
+  if (mark.show !== show.showId) { await drop().catch(() => {}); return { ok: true, given: [], owed: false }; }
+  let given;
+  try {
+    given = await refundSongVotes(aid, songId, show);
+    await declineRequestsForSong(aid, songId, show);
+  } catch (e) {
+    console.error('refund still owed', aid, songId, e && e.message);
+    return { ok: false, given: [], owed: true };
+  }
+  await drop().catch(() => {});
+  return { ok: true, given, owed: true };
+}
+/** Every refund still owed for tonight, finished where it can be (End, a fresh start). */
+export async function settleOwedRefunds(aid) {
+  const show = await getShow(aid);
+  const out = { settled: 0, left: [] };
+  for (const songId of Object.keys(show.refundsOwed || {})) {
+    const r = await settleOwedRefund(aid, songId).catch(() => ({ ok: false }));
+    if (r.ok) out.settled += r.owed ? 1 : 0; else out.left.push(songId);
+  }
+  return out;
 }
 
 /** An unplayed request is never charged just because the show ended. Release every

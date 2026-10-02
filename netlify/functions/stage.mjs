@@ -109,6 +109,11 @@ export async function stagePayload(aid, seat) {
     room: live ? room.phones : 0,
     nets: live ? room.nets : 0,
     asks: shapeRequests(reqs, show),
+    /* Declined songs whose votes have not all gone back yet (0155) — tonight's only, and
+       only while the room is live, like every other refund affordance. The Live tab
+       offers "Finish the refund" for each. */
+    owed: live ? Object.entries(show.refundsOwed || {}).filter(([, m]) => m && m.show === show.showId)
+      .map(([id, m]) => ({ id, title: m.title || ((show.songs || []).find((x) => x.id === id) || {}).title || '' })) : [],
     songs: (() => {
       const on = new Set(playable(show).songs.map((x) => x.id));
       /* `votable` is the server's own answer to "could the room choose this right

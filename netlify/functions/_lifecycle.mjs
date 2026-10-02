@@ -268,6 +268,14 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   // A finished show must be snapshotted BEFORE anything wipes the tally —
   // carryFans() destroys the only copy.
   if (fresh) {
+    /* A refund still owed from a "Decline + refund" (0155) is finished BEFORE the fans
+       are carried into the new night: after that there is nothing left to give back to.
+       Never a reason the start fails — what cannot be finished is said in the log. */
+    try {
+      const { settleOwedRefunds } = await import('./_requests.mjs');
+      const owed = await settleOwedRefunds(aid);
+      if (owed.left.length) console.error('startShow: refunds still owed as a new night began', aid, owed.left.join(','));
+    } catch { /* the store is failing; the start below will say so if it must */ }
     try {
       const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
       await completeSongRequests(aid, '');
@@ -295,6 +303,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
     if (gigCap !== null && show.gigCount >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
     if (fresh) {
       show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
+      delete show.refundsOwed;          // last night's, finished above or past finishing (0155)
       show.log = [];
       show.col = {};                 // last night's marks; `plays` itself only ever counts up (0147)
       show.showId = freshId;
@@ -426,6 +435,13 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
       return true;
     }).catch(() => {});
   }
+  /* A refund still owed from a "Decline + refund" (0155) is finished here, while the
+     night's fans are still the night's; what cannot be finished stays owed for the
+     Studio and the next fresh start. */
+  try {
+    const { settleOwedRefunds } = await import('./_requests.mjs');
+    await settleOwedRefunds(aid);
+  } catch { /* still owed; nothing about ending waits on it */ }
   /* Ending the night is not the same as finishing the current song. Anything the
      artist never explicitly completed is released, never charged. After the flip, so
      no new hold can arrive (a request needs a live show), and before the archive, so

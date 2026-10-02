@@ -106,6 +106,9 @@ echo
 echo "── paid-vote attribution and artist decline/refund ──"
 node --import ./test/register.mjs test/decline.mjs
 echo
+echo "── a refund owed is written down before it is paid (0155) ──"
+node --import ./test/register.mjs test/refundowed.mjs
+echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
 echo
