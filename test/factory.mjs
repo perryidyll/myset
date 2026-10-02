@@ -187,6 +187,7 @@ function claude(body, headers) {
     return reply(JSON.stringify({ best: ai.coverPick === 'none' ? 'none' : ids[ai.coverPick || 0], why: 'canned' }));
   }
   if (sys.includes('· COPY')) {
+    ai.copySys = (ai.copySys || []).concat([sys]);
     const f = (re) => at(re);
     if (user.startsWith('VENUE')) return reply(JSON.stringify({ tagline: { text: 'A bar with live music and outdoor seating', src: [f('venue_type'), f('music_nights'), f('amenity')] },
       about: [{ s: 'Sunset Bar is a bar with outdoor seating.', src: [f('venue_type'), f('amenity')] }, { s: 'It puts on live music.', src: [f('music_nights')] }],
@@ -461,6 +462,7 @@ eq('three extras: another video, then the website’s — one frame per video', 
    ['riptide0001', 'website', 'https://thetidelines.com/wp-content/uploads/hero-1600x1067.jpg']);
 ok('the too-big website picture came in as its smaller WordPress copy', ph.p2 && ph.p2.width === 1600);
 ok('a live video ranked past the top three is looked at for frames; the fourth, not live, is not (0159)', hit('/vi/hollowlive1/maxresdefault') && !hit('/vi/vlogday0003/maxres'));
+ok('the bio is asked for in a magazine voice with a wink of humour, still only from the facts (0161)', (ai.copySys || []).some((x) => !/VENUE|venue’s/.test(x) && /bio: exactly two sentences/.test(x) && /magazine/.test(x) && /wink of humour/.test(x) && /never an invented fact/.test(x) && /Only what the facts say/.test(x) && /exactly two sentences/.test(x)));
 ok('the cover review ran once, on two to four covers', (ai.covers || []).length >= 1 && ai.covers.every((ids) => ids.length >= 2 && ids.length <= 4), ai.covers);
 ok('every photo is real bytes under 900 KB, with a focus point', Object.values(ph).every((x) => Buffer.isBuffer(x.bytes) && x.bytes.length <= 900 * 1024 && /^\d+% \d+%$/.test(x.focus)));
 ok('the logo and the title-covered pictures were judged and left out', P.provenance.judged.some((j) => j.kind === 'logo') && !Object.values(P.provenance.photos).some((x) => /avatar|banner/.test(x)));
@@ -515,6 +517,7 @@ eq('address, phone, coordinates and the map link', [V.address, V.phone, V.lat, V
    'https://www.google.com/maps/place/Sunset+Bar/@9.7312,100.0136,17z']);
 ok('OpenStreetMap is credited in the sources', V.sources.some((x) => x.kind === 'osm' && /OpenStreetMap contributors/.test(x.title)));
 ok('the founder’s photo is the cover; a venue has no portrait', V.photos.cover && V.photos.cover.from === 'founder' && !V.photos.avatar);
+ok('a venue’s about is asked for in the same magazine voice (0161)', (ai.copySys || []).some((x) => /about: exactly two sentences/.test(x) && /magazine/.test(x) && /wink of humour/.test(x) && /never an invented fact/.test(x) && /Only what the facts say/.test(x) && /exactly two sentences/.test(x)));
 ok('about, not bio; and it passes', V.about === 'Sunset Bar is a bar with outdoor seating. It puts on live music.' && !V.quality.review, V.quality);
 
 console.log('\nTHE WORKER  only with the key, and a job moves through its states');
