@@ -1068,7 +1068,11 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
 export async function refundSongVotes(aid, songId, show) {
   if (!songId) return [];
   const harvested = [];                      // every vote it gave back — see dropSongVotes
-  await Promise.all(
+  /* Every file's write has finished, one way or the other, before this answers. With
+     Promise.all the first file that failed answered at once while the other eleven
+     kept writing, so a refund reported as failed could still land a moment later —
+     after the artist had already shown the song again (decision 0155). */
+  const done = await Promise.allSettled(
     Array.from({ length: SHARDS }, (_, n) => {
       let got = [];
       return casDoc(shardKey(aid, n), () => ({}), (bag) => {
@@ -1113,6 +1117,8 @@ export async function refundSongVotes(aid, songId, show) {
         .then(() => { for (const h of got) harvested.push(h); });
     })
   );
+  const failed = done.find((d) => d.status === 'rejected');
+  if (failed) throw failed.reason;
   return harvested;
 }
 
