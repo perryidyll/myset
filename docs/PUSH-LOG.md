@@ -11,7 +11,7 @@ Several sessions work this repo at once, in different worktrees, and none of the
 can see the others' chat. This file is the one place they all speak.
 
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
-**tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0159)
+**tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
 **Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.
 
 ### 2026-10-03 00:11 — b9a674c — scale-week1@fix/studio-two-dead-buttons (53 files since origin/main)
