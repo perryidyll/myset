@@ -5590,7 +5590,7 @@ async function makeRecovery(){
   openSheet(`<h3>Your recovery codes</h3>
     <p class="lede">This is the only time we can show you these. Write them down, or copy them somewhere safe.</p>
     <div class="list"><div class="row"><div class="m"><div class="t mono" style="line-height:1.9;white-space:pre">${esc(list)}</div></div></div></div>
-    <button class="big" style="margin-top:14px" onclick="copyText(${JSON.stringify(list)})">Copy them</button>
+    <button class="big" style="margin-top:14px" onclick="copyText(${esc(JSON.stringify(list))})">Copy them</button>
     <p class="fine">Each one works once. Use one to sign in at myset.vip/studio if you ever lose your email.</p>`);
   REC=null; loadRecovery(true);
 }
@@ -5612,7 +5612,7 @@ async function emailChangeStart(){
     <p class="lede">One to <b>${esc(to)}</b>, one to <b>${esc((PLAN&&PLAN.email)||'')}</b>. Both boxes, then it moves.</p>
     <div class="field"><label>Code sent to the new address</label><input class="inp mono" id="ecA" inputmode="numeric" maxlength="6" placeholder="000000"></div>
     <div class="field"><label>Code sent to ${esc((PLAN&&PLAN.email)||'your current address')} — or a recovery code</label><input class="inp mono" id="ecB" placeholder="000000"></div>
-    <button class="big" style="margin-top:14px" onclick="emailChangeFinish(${JSON.stringify(to)})">Move my account</button>`);
+    <button class="big" style="margin-top:14px" onclick="emailChangeFinish(${esc(JSON.stringify(to))})">Move my account</button>`);
 }
 async function emailChangeFinish(to){
   const a=(($('#ecA')||{}).value||'').trim(), b=(($('#ecB')||{}).value||'').trim();

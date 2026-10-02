@@ -288,5 +288,20 @@ check('public/venue-studio.html', [
     if (!good) fail++;
   }
 }
+/* A BUTTON WHOSE HANDLER IS CUT OFF BY ITS OWN QUOTES. `onclick="f(${JSON.stringify(x)})"`
+   writes a double quote inside a double-quoted attribute, so the browser ends the
+   attribute at `f(` and the button does nothing at all. Two Studio buttons shipped
+   like that — "Copy them" under the recovery codes and "Move my account" — and no
+   test noticed, because the page still renders. JSON inside an inline handler goes
+   through esc(), which the browser undoes before it runs the script. */
+{
+  const bad = [];
+  for (const f of readdirSync(new URL('../public/', import.meta.url)).filter((f) => /\.(js|html)$/.test(f))) {
+    const lines = readFileSync(new URL('../public/' + f, import.meta.url), 'utf8').split('\n');
+    lines.forEach((l, i) => { if (/\bon[a-z]+="[^"`]*\$\{JSON\.stringify\(/.test(l)) bad.push(`${f}:${i + 1}`); });
+  }
+  console.log(`  ${bad.length ? '✗' : '✓'} no inline handler writes raw JSON into its own quoted attribute${bad.length ? ' — ' + bad.join(', ') : ''}`);
+  if (bad.length) fail++;
+}
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);
