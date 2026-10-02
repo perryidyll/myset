@@ -8,7 +8,7 @@ area: factory
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [1a4456b]
 tests: [test/factory.mjs]
 files: [netlify/functions/_fai.mjs, netlify/functions/_factory.mjs]
 ---

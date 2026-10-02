@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 00:18 — 4dc1301 — photo-roles@docs/about-cover-0158-0159-live (0 files since origin/main)
+**tl;dr:** Docs: decisions 0158 and 0159 recorded as live (cb2272f, 1a4456b), session note, status header [skip ci]
+**Other sessions:** Puzzle changelog 2694 (0158), 2695 (0159). Andrew's sample is fixed by hand (cover = Pinch live at The Hollow); don't rebuild it with Keep unticked or the hand-picked photos go.
+
 ### 2026-10-02 23:49 — 54d8ec3 — escape-management@ops/ci-and-watch (6 files since origin/main)
 **tl;dr:** The test check on pull requests takes about six minutes; its first run passed
 **Other sessions:** Nothing new beyond the entry below: 0144's record now quotes the first run of the suite check (5 m 40 s, Node 22, ubuntu).
