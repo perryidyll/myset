@@ -283,7 +283,7 @@ const main = async (req) => {
     if (j.st === 'done' && j.owner) {
       if (j.cid) { const crm = await C.readCrm(); if (crm.byId[j.cid] && !crm.byId[j.cid].owner) await C.linkOwner(j.cid, j.owner); }
       const live = reg.byId[j.owner];
-      if (live) { const lk = await linkFor(j.owner, live); link = lk.link; preview = lk.link.replace('#', '?pv=1#'); review = live.st === 'review' || !!live.rv; }
+      if (live) { const lk = await linkFor(j.owner, live); link = lk.link; preview = lk.link.replace('?', '?pv=1&'); review = live.st === 'review' || !!live.rv; }
     }
     const day = new Date().toISOString().slice(0, 10);
     return json({ ok: true, link, preview, review,

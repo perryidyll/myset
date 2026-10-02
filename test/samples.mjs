@@ -86,7 +86,7 @@ const made = await S.createSample({
   sources: [{ url: 'https://www.youtube.com/@thetidelines', kind: 'youtube', title: 'YouTube' }, { url: 'https://thetidelines.example', kind: 'website', title: 'Site' }],
   quality: { score: 0.93, review: false }, msgs: { hook: 'Your cover of Fast Car on the beach stopped me.' },
   seed: { line: 'The Tide Lines | @thetidelines' }, supIds: ['thetidelines', '@thetidelines'], by: 'factory' });
-ok('it is made, with the address and the label for a link', made.ok && made.key === 'sample-profile' && made.link.endsWith('/thetidelines#sample-profile'), made);
+ok('it is made, with the address and the label for a link', made.ok && made.key === 'sample-profile' && made.link.endsWith('/thetidelines?sample-profile'), made);
 const aid = made.owner, KEY = made.key;
 const reg0 = await readArtists();
 ok('it is NOT a row in the registry every phone reads', !reg0.byId[aid] && !reg0.bySlug.thetidelines);
@@ -153,7 +153,7 @@ ok('and cannot rename itself onto it', !r.ok, r);
 const twin = await S.createSample({ kind: 'artist', name: 'The Tide Lines', by: 'founder' });
 const twin2 = await S.createSample({ kind: 'artist', name: 'The Tide Lines', by: 'founder' });
 eq('a second sample of a taken name gets a word, not a number', [twin.slug, twin2.slug], ['thetidelines-music', 'thetidelines-live']);
-ok('and its link reads that way', twin.link.endsWith('/thetidelines-music#sample-profile'), twin.link);
+ok('and its link reads that way', twin.link.endsWith('/thetidelines-music?sample-profile'), twin.link);
 const longName = 'The Extraordinarily Long Named Band';
 const ln1 = await S.createSample({ kind: 'artist', name: longName, by: 'founder' });
 const ln2 = await S.createSample({ kind: 'artist', name: longName, by: 'founder' });
@@ -171,7 +171,7 @@ ok('detail carries the link and all four drafts', r.ok && r.link.includes(KEY) &
 ok('every draft says thirty days, and a word deletes it forever — no Remove to tap', [r.msgs.dm, r.msgs.email.body].every((t) => /30 days/.test(t) && t.includes("Don't want it? Let us know and we'll delete this preview forever – no harm, no foul!") && !/Remove/.test(t)), r.msgs.dm);
 ok('the in-person words and the follow-up say it too', r.msgs.inperson.includes('delete it forever') && r.msgs.followup.includes('delete it forever') && !/Remove/.test(r.msgs.inperson + r.msgs.followup), [r.msgs.inperson, r.msgs.followup]);
 ok('and where it came from', r.msgs.dm.includes('YouTube and website'), r.msgs.dm);
-ok('the founder’s Open is the quiet preview address', r.preview === r.link.replace('#', '?pv=1#') && r.preview.endsWith('/thetidelines?pv=1#sample-profile'), r.preview);
+ok('the founder’s Open is the quiet preview address', r.preview === r.link.replace('?', '?pv=1&') && r.preview.endsWith('/thetidelines?pv=1&sample-profile'), r.preview);
 const before = (await S.readSampleReg()).byId[aid].n;
 await door({ action: 'page', quiet: true, slug: 'thetidelines', key: KEY });
 eq('a quiet look counts nothing', (await S.readSampleReg()).byId[aid].n, before);
@@ -230,7 +230,7 @@ ok('a snapshot is kept: the YouTube frame as a reference, the other photo as byt
    snap && snap.images.find((i) => i.slot === 'cover').yt && !snap.images.find((i) => i.slot === 'cover').b64 && !!snap.images.find((i) => i.slot === 'p0').b64, snap && snap.images);
 ok('the address is free again', !(await S.readSampleReg()).bySlug.quietband);
 r = await F({ action: 'revive', owner: c.owner });
-ok('revived at the same link', r.ok && r.link && r.link.endsWith('/quietband#sample-profile'), r);
+ok('revived at the same link', r.ok && r.link && r.link.endsWith('/quietband?sample-profile'), r);
 r = await door({ action: 'page', slug: 'quietband', key: c.key });
 ok('the page is back, the YouTube frame fetched again', r.ok && r.photo && (r.photos || []).length === 1 && r.sample.cp === 2, r);
 const e = await S.createSample({ kind: 'artist', name: 'Echo Band', by: 'founder' });
@@ -238,7 +238,7 @@ await S.sweepSamples(Date.now() + 31 * 86400e3);
 const echo = await createArtist({ email: 'echo@example.com', name: 'Echo Band' });
 ok('a signup takes the address while the snapshot waits', echo.ok && echo.slug === 'echoband', echo);
 r = await F({ action: 'revive', owner: e.owner });
-ok('the revive gets a word after the name instead', r.ok && r.link.endsWith('/echoband-music#sample-profile'), r);
+ok('the revive gets a word after the name instead', r.ok && r.link.endsWith('/echoband-music?sample-profile'), r);
 const d = await S.createSample({ kind: 'artist', name: 'Old Band', slug: 'oldband', by: 'founder' });
 await S.sweepSamples(Date.now() + 31 * 86400e3);
 ok('in the archive', !!(await S.readArchive())[d.owner]);
@@ -249,7 +249,7 @@ console.log('\nVENUES');
 const v = await S.createSample({ kind: 'venue', name: 'Harbour Bar', slug: 'harbourbar', city: 'Koh Phangan', country: 'Thailand',
   tagline: 'Live music by the pier', about: 'A bar by the pier.', links: { instagram: 'https://instagram.com/harbourbar' },
   photos: { cover: { bytes: JPEG, type: 'image/jpeg' } }, menuUrl: 'https://harbourbar.example/menu', by: 'founder' });
-ok('a venue sample is made at /v/', v.ok && v.link.endsWith('/v/harbourbar#sample-profile'), v);
+ok('a venue sample is made at /v/', v.ok && v.link.endsWith('/v/harbourbar?sample-profile'), v);
 const vtwin = await S.createSample({ kind: 'venue', name: 'Harbour Bar', city: 'Koh Samui', by: 'founder' });
 eq('a second venue of a taken name gets a word', vtwin.slug, 'harbourbar-live');
 await S.removeSample(vtwin.owner, { by: 'founder' });

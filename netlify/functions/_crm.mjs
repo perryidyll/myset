@@ -430,7 +430,7 @@ export function deriveRows({ crm, reg, arc = {}, jobs = [], artists = { byId: {}
     let stage = 'lead', pct = 0, err = '', slug = '', link = '', exp = 0, opens = 0, cover = '', sampleSent = 0, sampleCh = '';
     const path = (s) => `${SITE()}/${kind === 'venue' ? 'v/' : ''}${s}`;
     if (live) {
-      stage = stageOf(live); slug = live.slug; link = `${path(live.slug)}#sample-profile`; exp = live.exp || 0; opens = live.n || 0;
+      stage = stageOf(live); slug = live.slug; link = `${path(live.slug)}?sample-profile`; exp = live.exp || 0; opens = live.n || 0;
       cover = live.cv || ''; sampleSent = live.sent || 0; sampleCh = live.ch || '';
       const rb = rebuilding.get(o); if (rb) { stage = 'building'; pct = rb.pct || 0; }
     } else if (claimed) { stage = 'claimed'; slug = claimed.slug; link = path(claimed.slug); }
