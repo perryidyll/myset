@@ -380,6 +380,9 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
 }
 
 /* ---------- show config ---------- */
+/* How many Play taps the show remembers (decision 0151). A retry follows its tap by
+   seconds; eight is every song of the last half hour or so, and a few hundred bytes. */
+export const TAPS_KEPT = 8;
 function normShow(s) {
   const d = defaultShow();
   const show = { ...d, ...(s || {}) };
@@ -393,6 +396,10 @@ function normShow(s) {
      at tonight — what makes Play one write (decision 0147, `liveFans` below). */
   show.plays = Math.max(0, parseInt(show.plays, 10) || 0);
   show.col = show.col && typeof show.col === 'object' && !Array.isArray(show.col) ? show.col : {};
+  /* The last few Play taps that started a song, by the id the Studio sent with each
+     (decision 0151) — what lets a retry of the same tap be answered, not obeyed. */
+  show.taps = (Array.isArray(show.taps) ? show.taps : [])
+    .filter((t) => t && typeof t.id === 'string' && t.id).slice(-TAPS_KEPT);
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
