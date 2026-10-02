@@ -1299,16 +1299,19 @@ export async function publicArtist(req) {
      resolves and checks the deletion mark from the SAME single read that
      artistBySlug would have done on its own. */
   if (!slug) return DEFAULT_ARTIST;
-  const { readArtists, cleanSlug } = await import('./_auth.mjs');
-  const reg = await readArtists();
+  const { readArtistsPublic, cleanSlug } = await import('./_auth.mjs');
   const want = cleanSlug(slug);
   /* Own properties only: `?a=constructor` used to resolve to Object's constructor,
      a truthy function, and the endpoints then worked on a phantom room keyed by its
      source text instead of answering "unknown artist" (found 2026-09-28). */
-  const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
-  if (!aid) return null;
-  if ((own(reg.byId, aid) || {}).del) return null;
-  return aid;
+  const find = (reg) => {
+    const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
+    return aid && !(own(reg.byId, aid) || {}).del ? aid : null;
+  };
+  /* The instance's copy, up to a minute old, answers a YES (decision 0141). A NO is
+     asked of the store itself — so on a warm instance a room's polls cost no
+     registry read at all, and a page made a moment ago still opens at once. */
+  return find(await readArtistsPublic()) || find(await readArtistsPublic({ fresh: true }));
 }
 /** Is this account on its way out? The Studio needs to know; the public does not. */
 export async function deletionOf(aid) {
