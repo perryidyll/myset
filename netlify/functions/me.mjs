@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { KEY, getShow, readDoc, shardOf, publicArtist, json, bad, cleanFanId,
+import { KEY, getShowKept, readDoc, shardOf, publicArtist, json, bad, cleanFanId,
          markPresence, roomHash, clientIp } from './_lib.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 import { buildMe } from './_board.mjs';
@@ -28,8 +28,9 @@ const main = async (req) => {
   const fanId = cleanFanId(url.searchParams.get('fan'));
   if (!fanId) return bad('missing fan');
   const inRoom = url.searchParams.get('in') === '1';
-  // the artist's name is the board's business, so the registry is not read here
-  const [show, shard] = await Promise.all([getShow(aid, { withName: false }),
+  /* the artist's name is the board's business, so the registry is not read here; and
+     the show is asked for on condition, so an unchanged one sends no body (0152) */
+  const [show, shard] = await Promise.all([getShowKept(aid),
                                            readDoc(KEY.fan(aid, shardOf(fanId)), {})]);
   const me = (shard.data || {})[fanId] || null;
   /* Don't call markPresence when the stamp is already there. It goes mutateFan ->
