@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
+**tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0159)
+**Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.
+
 ### 2026-10-03 00:11 — b9a674c — scale-week1@fix/studio-two-dead-buttons (53 files since origin/main)
 **tl;dr:** Two Studio buttons that did nothing now work: 'Copy them' under the recovery codes, and 'Move my account' at the end of changing your sign-in email
 **Other sessions:** studio.js: JSON inside an inline handler goes through esc() — onclick="f(${esc(JSON.stringify(x))})". test/structure.mjs now fails on a raw ${JSON.stringify( inside a quoted on*= attribute. Found by the page review during the scale audit; no other page had the pattern.
