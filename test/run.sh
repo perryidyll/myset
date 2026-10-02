@@ -124,6 +124,9 @@ echo
 echo "── a payment taken is a payment delivered ──"
 node --import ./test/register.mjs test/delivery.mjs
 echo
+echo "── money that went back: refunds and chargebacks (0177) ──"
+node --import ./test/register.mjs test/refunds.mjs
+echo
 echo "── a read that failed is not an empty document ──"
 node --import ./test/register.mjs test/storefail.mjs
 echo

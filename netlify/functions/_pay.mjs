@@ -194,13 +194,17 @@ async function takeStockFor(owner, item, qty, variant) {
    the owed list, where the bell retries it within minutes: the retry finds the
    receipt on the fan, grants nothing, and makes the flip. The buyer is never told
    about any of this — their votes are already on their phone. */
-async function markDelivered(aid, sid) {
+/* `also` rides in the same write: `{ wallet: true }` when song votes went to the
+   fan's wallet (0182), which is what lets a refund later know there are wallet votes
+   to take back rather than ballot entries it must leave alone (decision 0177). */
+async function markDelivered(aid, sid, also = null) {
   try {
     await casDoc(KEY.meta(aid), emptyMeta, (m) => {
       m.paid ||= {};
       if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
       m.paid[sid].delivered = true;
       m.paid[sid].deliveredAt = Date.now();
+      if (also) Object.assign(m.paid[sid], also);
       return true;
     }, (m) => !!(m && m.paid && m.paid[sid] && m.paid[sid].delivered === true));
   } catch (e) {
@@ -263,8 +267,9 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       if (m.paid[sid] && m.paid[sid].delivered !== false) { already = true; return false; }
       if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
       if (md.kind === 'song_votes') granted = parseInt(md.votes, 10) || 0;
-      // the night it was tagged with rides along (0095) so the app's own record can say which show a tip or a pack belonged to without asking Stripe
-      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at, show: String(md.show || '').slice(0, 40) });
+      // the night it was tagged with rides along (0095) so the app's own record can say which show a tip or a pack belonged to without asking Stripe;
+      // the session id too, so a refund can find the row it takes back (0177)
+      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at, show: String(md.show || '').slice(0, 40), sid });
       /* MERCH. What the buyer bought is an ORDER the artist fulfils by hand, so the
          order record IS the delivery — written inside this same claim, so a session
          can never be claimed without it. Nothing about the buyer is stored: their
@@ -350,8 +355,11 @@ export async function redeemSession(aid, session, fallbackFan = '') {
               && (me.gr || []).includes(sid))
     );
     /* Only now is it delivered. If this flip is lost the marker stays undelivered and
-       the sweep tries again — which is safe, because of the guard above. */
-    await markDelivered(aid, sid);
+       the sweep tries again — which is safe, because of the guard above. Song votes
+       that went to the wallet say so, but only from the call that granted them: a
+       retry cannot tell which road the first grant took, and leaving the flag off
+       means a refund takes nothing back, never the wrong thing (0177). */
+    await markDelivered(aid, sid, asCredits && !alreadyGranted ? { wallet: true } : null);
   }
   if (md.kind === 'song_votes' && !asCredits && who && granted && md.song) {
     /* These dollars were offered for one specific replay. They become ballot
