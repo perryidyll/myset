@@ -2340,9 +2340,10 @@ function render(){
     ${capNote(s)}
     <p class="muted" style="font-size:12px;padding:8px 20px 0">
       ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
-      <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+      ${/* the same night resumes at the free cap; an older one would be refused, so it is not offered (0156) */
+        freeCap()&&(s.gigCount||0)>=freeCap()&&!s.resumeSameNight?'':`<a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
          style="color:var(--accent);font-weight:700">Resume it instead</a>
-      — use that if you ended it by mistake.</p>`
+      — use that if you ended it by mistake.`}</p>`
     :`${SAMPLE||firstGig()?practiceCard(true):''}${todayCard(s)}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
       <button class="big bigplay" onclick="newShowAsk()">

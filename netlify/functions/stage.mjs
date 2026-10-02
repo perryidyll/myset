@@ -1,6 +1,6 @@
 import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, tipsTonight, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME, liveFans } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME, liveFans, sameNightResume } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
@@ -91,6 +91,8 @@ export async function stagePayload(aid, seat) {
       requests: show.requests, birthdays: show.birthdays,
       listId: show.listId, listName: show.listName,
       gigCount: show.gigCount,
+      // "Resume it instead" is the same night, so the free cap does not apply to it (0156)
+      resumeSameNight: sameNightResume(show),
       // who flipped it — 'artist' or 'schedule' — so the Live tab can say so
       startedBy: show.startedBy || null, endedBy: show.endedBy || null,
       sched, autoStart: show.autoStart !== false,
