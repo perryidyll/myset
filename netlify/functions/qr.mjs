@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { bad } from './_lib.mjs';
+import { bad, own } from './_lib.mjs';
 import { qrSvg } from './_qr.mjs';
 import { artistBySlug, cleanSlug, artistById } from './_auth.mjs';
 import { venueBySlug, venueById } from './_venues.mjs';
@@ -29,10 +29,11 @@ const REALM = { profile: 'artist', vote: 'artist', invite: 'artist', venue: 'ven
 const main = async (req) => {
   const q = new URL(req.url).searchParams;
   const kind = q.get('k') || 'home';
-  if (!KINDS[kind]) return bad('unknown code', 404);
+  // own(), not KINDS[kind]: `k=__proto__` must be an unknown code, never a 500
+  if (!own(KINDS, kind)) return bad('unknown code', 404);
 
   let slug = '';
-  if (REALM[kind]) {
+  if (own(REALM, kind)) {
     slug = cleanSlug(q.get('a'));
     if (!slug) return bad('which page?', 400);
     // resolve so a made-up slug cannot be turned into a printable code

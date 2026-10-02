@@ -1,4 +1,4 @@
-import { store, readDoc, casDoc } from './_lib.mjs';
+import { store, readDoc, casDoc, own, roomHash, clientIp } from './_lib.mjs';
 import { r2Enabled, r2Put, r2Head, r2Get, r2Delete, r2PresignGet } from './_r2.mjs';
 
 /* SHORT CLIPS ON A COMMUNITY POST — thirty seconds of the room, from a phone.
@@ -152,11 +152,9 @@ export function mp4Seconds(buf) {
   return null;
 }
 
-/** Accepts a data: URL, returns { bytes, type, seconds } or an { error }.
- *  Every message here is one a person can act on, because it is shown as-is. */
-/** Everything that must be true of a clip's BYTES, whatever brought them here.
- *  Factored out so the chunked upload and the old data-URL path cannot drift into
- *  disagreeing about what a valid clip is. Every message is shown to a person
+/** Everything that must be true of a clip's BYTES, returned as { bytes, type,
+ *  seconds } or an { error }. The chunked upload is the only path in since the
+ *  data-URL `clip` action went (decision 0189). Every message is shown to a person
  *  as-is, so every message says what to do about it. */
 export function checkVideo(bytes) {
   if (!bytes || !bytes.length) return { error: 'That clip came through empty.' };
@@ -172,6 +170,42 @@ export function checkVideo(bytes) {
   if (seconds !== null && seconds > MAX_SECONDS + 1.5)
     return { error: `Clips are up to ${MAX_SECONDS} seconds. That one is ${Math.round(seconds)}.` };
   return { bytes, type: isMp4 ? 'video/mp4' : 'video/webm', seconds };
+}
+
+/* A NETWORK MAY START SO MANY UPLOADS (decision 0189). `begin` is the only door a clip
+   comes in by, and the device id it carries is the client's to choose, so the per-phone
+   three-a-day is no ceiling on a script. One token bucket per network, in one small
+   document per owner, in the shape `payAllowed` uses (0111): CLIP_NET_BURST in a row,
+   then CLIP_NET_PER_HOUR. A real room films a handful of clips a night, and a bar's
+   wifi is one address for every phone on it, so the burst covers the whole room
+   filming the encore at once. A script on one network can hold at most
+   15 + 6 × 2 = 27 of the 40 pending slots in the two hours a clip waits for its
+   post, which leaves the rest for everyone else. A refused begin writes nothing; a
+   limiter that cannot be written never refuses an upload (five tries, then let go). */
+export const CLIP_NET_BURST = 15, CLIP_NET_PER_HOUR = 6;
+const CLIPLIM = (owner) => `cliplim_${owner}`;
+const MAX_CLIP_BUCKETS = 400;
+export async function clipBeginAllowed(owner, req, now = Date.now()) {
+  const net = roomHash(owner, clientIp(req));
+  if (!net) return true;
+  let allowed = true;
+  try {
+    await casDoc(CLIPLIM(owner), () => ({ v: 1, b: {} }), (d) => {
+      d.b = d.b && typeof d.b === 'object' ? d.b : {};
+      const id = 'n:' + net;
+      const b = own(d.b, id) || { t: CLIP_NET_BURST, at: now };
+      const t = Math.min(CLIP_NET_BURST, (Number(b.t) || 0) + Math.max(0, now - (Number(b.at) || now)) / 3600e3 * CLIP_NET_PER_HOUR);
+      if (t < 1) { allowed = false; return false; }
+      d.b[id] = { t: t - 1, at: now };
+      const ids = Object.keys(d.b);
+      if (ids.length > MAX_CLIP_BUCKETS) {
+        ids.sort((a, c) => (d.b[a].at || 0) - (d.b[c].at || 0));
+        for (const x of ids.slice(0, ids.length - MAX_CLIP_BUCKETS)) delete d.b[x];
+      }
+      return true;
+    }, null, 5);
+  } catch { /* the limiter is not the upload */ }
+  return allowed;
 }
 
 /* ---------- a clip that arrives in pieces ----------
@@ -212,17 +246,6 @@ export async function dropUpload(owner, clip, parts) {
     try { await store().delete(CHUNK(owner, clip, i)); } catch { /* already gone */ }
   }
   try { await store().delete(UPKEY(owner, clip)); } catch { /* already gone */ }
-}
-
-export function decodeVideoDataUrl(dataUrl) {
-  const m = /^data:(video\/(?:mp4|webm|quicktime));base64,([A-Za-z0-9+/=]+)$/
-    .exec(String(dataUrl || '').trim());
-  if (!m) return { error: 'That has to be an MP4 or WebM video.' };
-  let bytes;
-  try { bytes = Buffer.from(m[2], 'base64'); } catch { return { error: 'Could not read that clip.' }; }
-  /* Every rule about the bytes themselves lives in ONE place, so this path and the
-     chunked one cannot drift into disagreeing about what a valid clip is. */
-  return checkVideo(bytes);
 }
 
 /* WHERE THE BYTES LIVE (2026-09-11). A clip's bytes go to Cloudflare R2 when the
@@ -332,12 +355,14 @@ export async function dropClipKeys(keys) {
     forgotten: the clip goes back on the pending list, so the two-hour sweep — which
     reads the feed first and finds no post naming it — tries again. Without that a
     hide during an outage would leave 75MB on R2 that nothing could ever find
-    (`list()` is banned, INVARIANT 1). */
-export async function dropClip(owner, clip) {
+    (`list()` is banned, INVARIANT 1). `renote: false` is for the one caller that IS
+    the pending list trimming itself: noting the clip again there would trim the next
+    one, and so on round the list for as long as R2 refuses. */
+export async function dropClip(owner, clip, { renote = true } = {}) {
   let done = true;
   if (r2Enabled()) {
     try { await r2Delete(KEY(owner, clip)); }
-    catch (e) { done = false; await logR2('r2.delete', e); await notePending(owner, clip); }
+    catch (e) { done = false; await logR2('r2.delete', e); if (renote) await notePending(owner, clip); }
   }
   try { await store().delete(KEY(owner, clip)); } catch { /* already gone */ }
   try { const { dropImage } = await import('./_img.mjs'); await dropImage(owner, clip); } catch { /* no poster */ }
@@ -367,18 +392,34 @@ export async function notePending(owner, clip) {
     d.by[owner] = Date.now();
     return true;
   }).catch(() => {});
-  return casDoc(PEND(owner), emptyPend, (d) => {
+  let trimmed = [];
+  const r = await casDoc(PEND(owner), emptyPend, (d) => {
+    trimmed = [];
     d.by ||= {};
     d.by[clip] = Date.now();
     /* Bounded, so a burst of uploads cannot grow one document without end. The
        oldest go first, and they are exactly the ones the sweep would drop next. */
     const ids = Object.keys(d.by);
     if (ids.length > 60) {
-      ids.sort((a, b) => d.by[a] - d.by[b]);
-      for (const id of ids.slice(0, ids.length - 60)) delete d.by[id];
+      ids.sort((a, b) => (a === clip) - (b === clip) || d.by[a] - d.by[b]);
+      for (const id of ids.slice(0, ids.length - 60)) { delete d.by[id]; trimmed.push(id); }
     }
     return true;
   }).catch(() => {});
+  /* A TRIMMED ENTRY TAKES ITS CLIP WITH IT (decision 0189). Off the list, nothing
+     could ever find the clip again (`list()` is banned, INVARIANT 1), so it is
+     dropped now — by its computed keys — unless a post names it: clearPending is
+     best-effort, so a posted clip can still be sitting here. A feed that cannot be
+     read drops nothing; an orphan is better than a video taken off a real post. */
+  if (r && r.ok && trimmed.length) {
+    let claimed = null;
+    try {
+      const { readPosts } = await import('./_community.mjs');
+      claimed = new Set((await readPosts(owner)).list.map((p) => p && p.clip).filter(Boolean));
+    } catch { claimed = null; }
+    if (claimed) for (const id of trimmed) if (CLIP_ID.test(id) && !claimed.has(id)) await dropClip(owner, id, { renote: false });
+  }
+  return r;
 }
 
 export const clearPending = (owner, clip) =>

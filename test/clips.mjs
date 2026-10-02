@@ -1,4 +1,4 @@
-/* CLIPS ON A COMMUNITY POST  (_video.mjs, vid.mjs, the clip action in community.mjs)
+/* CLIPS ON A COMMUNITY POST  (_video.mjs, vid.mjs, clipup.mjs — the one door a clip comes in by)
 
    Pins, in order:
      · the door: what a real MP4 is, what is refused, and by BYTES not by trust
@@ -23,9 +23,10 @@ const commFn = (await import('../netlify/functions/community.mjs')).default;
 const vidFn  = (await import('../netlify/functions/vid.mjs')).default;
 const imgFn  = (await import('../netlify/functions/img.mjs')).default;
 const { createArtist } = await import('../netlify/functions/_auth.mjs');
-const { decodeVideoDataUrl, mp4Seconds, MAX_VIDEO_BYTES, MAX_SECONDS,
+const { checkVideo, mp4Seconds, MAX_VIDEO_BYTES, MAX_SECONDS,
         readPending, sweepPending, sweepQueue, getClip, PENDING_TTL,
-        notePending, CHUNK_BYTES, readUpload } = await import('../netlify/functions/_video.mjs');
+        notePending, CHUNK_BYTES, readUpload, putClip: putClipBytes, CLIP_NET_BURST,
+        CLIP_NET_PER_HOUR } = await import('../netlify/functions/_video.mjs');
 const clipupFn = (await import('../netlify/functions/clipup.mjs')).default;
 const { readPosts, moderate } = await import('../netlify/functions/_community.mjs');
 const { keysFor } = await import('../netlify/functions/_account.mjs');
@@ -40,6 +41,21 @@ const post = (url, body) => new Request(url, { method: 'POST',
   headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const jget = async (r) => { try { return await r.json(); } catch { return {}; } };
 const eq2 = (name, got, want) => ok(name, got === want, { got, want });
+/* A clip up through /api/clipup, the way the page sends one: begin, the pieces, end.
+   `q` names the page (`a=<slug>` or `v=<slug>`); `ip` is the network it comes from. */
+const clipCall = (q, qs, body, raw, ip) => clipupFn(new Request(`https://x/api/clipup?${q}&${qs}`, {
+  method: 'POST',
+  headers: { 'content-type': raw ? 'application/octet-stream' : 'application/json',
+             ...(ip ? { 'x-nf-client-connection-ip': ip } : {}) },
+  body: raw ? body : JSON.stringify(body),
+}));
+async function upClip(q, buf, fan, poster, ip) {
+  const b = await jget(await clipCall(q, 'begin=1', { fan, size: buf.length, type: 'video/mp4' }, false, ip));
+  if (!b.ok) return b;
+  for (let i = 0; i < b.parts; i++)
+    await clipCall(q, `clip=${b.clip}&i=${i}`, buf.subarray(i * CHUNK_BYTES, Math.min(buf.length, (i + 1) * CHUNK_BYTES)), true, ip);
+  return jget(await clipCall(q, `clip=${b.clip}&end=1`, poster ? { poster } : {}, false, ip));
+}
 
 /* A real-enough MP4: an `ftyp` box, then a `moov` holding an `mvhd` that says how
    long it is. Nothing decodes it; the point is that the parser and the signature
@@ -58,16 +74,15 @@ function fakeMp4(seconds = 12, pad = 800) {
   mdat.writeUInt32BE(mdat.length, 0); mdat.write('mdat', 4);
   return Buffer.concat([ftyp, moov, mdat]);
 }
-const asData = (buf, type = 'video/mp4') => `data:${type};base64,${buf.toString('base64')}`;
 const JPEG = 'data:image/jpeg;base64,' + Buffer.concat([
   Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64, 7), Buffer.from([0xff, 0xd9]),
 ]).toString('base64');
 
 console.log('\nTHE DOOR — bytes, not labels');
 {
-  ok('a real MP4 is accepted', !decodeVideoDataUrl(asData(fakeMp4(10))).error);
+  ok('a real MP4 is accepted', !checkVideo(fakeMp4(10)).error);
   ok('and its duration is read out of the container',
-    Math.abs(decodeVideoDataUrl(asData(fakeMp4(10))).seconds - 10) < 0.01);
+    Math.abs(checkVideo(fakeMp4(10)).seconds - 10) < 0.01);
   ok('mp4Seconds handles a 64-bit (version 1) mvhd', (() => {
     const b = fakeMp4(5); // rebuild as version 1
     const i = b.indexOf(Buffer.from('mvhd'));
@@ -75,25 +90,24 @@ console.log('\nTHE DOOR — bytes, not labels');
     b.writeBigUInt64BE(7000n, i + 28);
     return Math.abs(mp4Seconds(b) - 7) < 0.01;
   })());
-  ok('a WebM is accepted by its EBML magic', !decodeVideoDataUrl(
-    `data:video/webm;base64,${Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(200, 3)]).toString('base64')}`).error);
+  ok('a WebM is accepted by its EBML magic', !checkVideo(
+    Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(200, 3)])).error);
 
   ok('a JPEG dressed up as an MP4 is refused',
-    /isn.t really a video/.test(decodeVideoDataUrl(
-      'data:video/mp4;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).toString('base64')).error || ''));
-  ok('a GIF is refused before it is even decoded',
-    !!decodeVideoDataUrl('data:image/gif;base64,R0lGOD').error);
-  ok('empty is refused', !!decodeVideoDataUrl('data:video/mp4;base64,').error);
+    /isn.t really a video/.test(checkVideo(
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8, 9])).error || ''));
+  ok('a GIF is refused', !!checkVideo(Buffer.from('GIF89a' + 'x'.repeat(20))).error);
+  ok('empty is refused', !!checkVideo(Buffer.alloc(0)).error);
   {
-    const err = decodeVideoDataUrl(asData(fakeMp4(5, MAX_VIDEO_BYTES + 5000))).error || '';
+    const err = checkVideo(fakeMp4(5, MAX_VIDEO_BYTES + 5000)).error || '';
     /* The message carries the ACTUAL size and what to do about it, because it is
        shown to a person as-is. "Too big" told somebody nothing they could act on. */
     ok(`over ${MAX_VIDEO_BYTES / 1048576}MB is refused, by bytes`, /limit is/.test(err), err);
     ok('and the refusal says how big it actually is', /\d+\.\dMB/.test(err), err);
   }
   ok(`a clip longer than ${MAX_SECONDS}s is refused even when it is small`,
-    /seconds/.test(decodeVideoDataUrl(asData(fakeMp4(120))).error || ''),
-    decodeVideoDataUrl(asData(fakeMp4(120))));
+    /seconds/.test(checkVideo(fakeMp4(120)).error || ''),
+    checkVideo(fakeMp4(120)));
 }
 
 console.log('\nUPLOAD, THEN POST');
@@ -102,11 +116,9 @@ const aid = A.artistId, slug = A.slug;
 const FAN = 'fanclip0001';
 let clipId = '';
 {
-  const r = await commFn(post(`https://x/api/community?a=${slug}`,
-    { action: 'clip', fan: FAN, data: asData(fakeMp4(8)), poster: JPEG }));
-  const d = await jget(r);
+  const d = await upClip(`a=${slug}`, fakeMp4(8), FAN, JPEG);
   clipId = d.clip || '';
-  ok('the clip uploads on its own and comes back with an id', r.status === 200 && /^k[a-z0-9]{10}$/.test(clipId), d);
+  ok('the clip uploads on its own and comes back with an id', d.ok === true && /^k[a-z0-9]{10}$/.test(clipId), d);
   ok('the bytes really landed in the store', !!(await getClip(aid, clipId)));
   ok('the poster landed as a normal photo slot', !!(await getImage(aid, clipId)));
   ok('and it is on the pending list until a post claims it',
@@ -169,9 +181,7 @@ console.log('\nRANGE — the thing iOS will not play without');
 
 console.log('\nTHE SWEEP — nothing orphaned, nothing wrongly taken');
 {
-  const r = await commFn(post(`https://x/api/community?a=${slug}`,
-    { action: 'clip', fan: 'fanclip0009', data: asData(fakeMp4(4)) }));
-  const orphan = (await jget(r)).clip;
+  const orphan = (await upClip(`a=${slug}`, fakeMp4(4), 'fanclip0009')).clip;
   ok('an unposted clip exists', !!(await getClip(aid, orphan)));
   ok('and is not swept while it is young', (await sweepPending(aid, Date.now())) === 0);
   const later = Date.now() + PENDING_TTL + 1000;
@@ -186,8 +196,7 @@ console.log('\nTHE SWEEP — nothing orphaned, nothing wrongly taken');
     (await sweepPending(aid, Date.now() + PENDING_TTL + 1000)) === 0);
   ok('and its bytes survive', !!(await getClip(aid, clipId)));
 
-  await commFn(post(`https://x/api/community?a=${slug}`,
-    { action: 'clip', fan: 'fanclip0010', data: asData(fakeMp4(4)) }));
+  await upClip(`a=${slug}`, fakeMp4(4), 'fanclip0010');
   const q = await sweepQueue(Date.now() + PENDING_TTL + 1000, 1);
   ok('the cron drains the queue without ever listing keys', q.swept === 1, q);
 }
@@ -198,9 +207,68 @@ console.log('\nTHE DAILY LIMIT IS ON THE UPLOAD DOOR TOO');
   for (let i = 0; i < 3; i++) {
     await commFn(post(`https://x/api/community?a=${slug}`, { action: 'post', fan: F, text: `n${i}` }));
   }
-  const r = await commFn(post(`https://x/api/community?a=${slug}`,
-    { action: 'clip', fan: F, data: asData(fakeMp4(4)) }));
-  ok('a phone that used its three posts cannot still upload 3MB', r.status === 429, r.status);
+  const r = await clipCall(`a=${slug}`, 'begin=1', { fan: F, size: 4000, type: 'video/mp4' });
+  ok('a phone that used its three posts cannot still start an upload', r.status === 429, r.status);
+}
+
+console.log('\nTHE CEILINGS ON ANONYMOUS UPLOADS  (decision 0189)');
+{
+  /* THE OLD DOOR IS SHUT. A whole clip as base64 in the community body: no page sent
+     it, it had no network ceiling, and its daily check counted posts on an id the
+     caller chose — so a script could store a few MB a request for ever. */
+  const legacy = await commFn(post(`https://x/api/community?a=${slug}`,
+    { action: 'clip', fan: 'fanlegacy001', data: `data:video/mp4;base64,${fakeMp4(4).toString('base64')}` }));
+  const ld = await jget(legacy);
+  ok('the old base64 clip action is gone — a real clip sent to it stores nothing',
+    legacy.status === 400 && /unknown action/.test(ld.error || '') && !ld.clip, { status: legacy.status, ld });
+
+  /* ONE NETWORK, MANY DEVICE IDS. The per-phone limit counts a client-chosen id;
+     the network is the ceiling a script actually meets. */
+  const N = await createArtist({ email: 'netcap@example.com', name: 'Net Cap' });
+  const nq = `a=${N.slug}`;
+  const begin = (fan, ip) => clipCall(nq, 'begin=1', { fan, size: 4000, type: 'video/mp4' }, false, ip);
+  let started = 0;
+  for (let i = 0; i < CLIP_NET_BURST; i++) if ((await begin(`fanbar${i}x`, '203.0.113.7')).status === 200) started++;
+  eq2(`a whole bar on one wifi can start ${CLIP_NET_BURST} uploads in a row`, started, CLIP_NET_BURST);
+  const next = await begin('fanscript01', '203.0.113.7');
+  const nd = await jget(next);
+  eq2('the next one from that network is refused', next.status, 429);
+  ok('and says why in words a person can act on', /network/.test(nd.error || ''), nd);
+  eq2('a refused begin holds no pending slot', Object.keys((await readPending(N.artistId)).by).length, CLIP_NET_BURST);
+  eq2('another network is untouched', (await begin('fanother01', '198.51.100.9')).status, 200);
+
+  /* THE ARITHMETIC THE SIZING RESTS ON: in the two hours a clip waits for its post,
+     one network hammering `begin` every minute gets fewer than the 40 slots a page
+     has, so it can never shut the real room out. */
+  const { clipBeginAllowed } = await import('../netlify/functions/_video.mjs');
+  const S = await createArtist({ email: 'netcap2@example.com', name: 'Net Cap Two' });
+  const t0 = Date.now();
+  const req = new Request('https://x/', { headers: { 'x-nf-client-connection-ip': '192.0.2.44' } });
+  let held = 0;
+  for (let m = 0; m <= PENDING_TTL / 60e3; m++) if (await clipBeginAllowed(S.artistId, req, t0 + m * 60e3)) held++;
+  ok(`a script on one network holds at most ${held} of the 40 slots over two hours`,
+    held < 40 && held <= CLIP_NET_BURST + 2 * CLIP_NET_PER_HOUR + 1, { held });
+
+  /* A TRIMMED PENDING ENTRY TAKES ITS CLIP WITH IT. The list is capped at 60; an
+     entry pushed off the end used to leave its bytes where nothing could find them. */
+  const T = await createArtist({ email: 'trimmed@example.com', name: 'Trimmed' });
+  const tq = `a=${T.slug}`;
+  const posted = (await upClip(tq, fakeMp4(3), 'fantrim0001')).clip;
+  await commFn(post(`https://x/api/community?${tq}`, { action: 'post', fan: 'fantrim0001', text: 'kept', clip: posted }));
+  const orphan = 'ktrimorphan';
+  await putClipBytes(T.artistId, orphan, fakeMp4(3), 'video/mp4');
+  const { casDoc } = await import('../netlify/functions/_lib.mjs');
+  await casDoc(`vidpend_${T.artistId}`, () => ({ v: 1, by: {} }), (d) => {
+    d.by = { [orphan]: 1000, [posted]: 2000 };
+    for (let i = 0; i < 58; i++) d.by['kfill' + String(i).padStart(6, '0')] = 3000 + i;
+    return true;
+  });
+  await notePending(T.artistId, 'ktrimnew001');
+  ok('an unposted clip trimmed off the list is deleted', !(await getClip(T.artistId, orphan)));
+  eq2('and the list stays at sixty', Object.keys((await readPending(T.artistId)).by).length, 60);
+  await notePending(T.artistId, 'ktrimnew002');
+  ok('a POSTED clip trimmed off the list keeps its bytes', !!(await getClip(T.artistId, posted)));
+  ok('and the clip being noted is never the one trimmed', !!(await readPending(T.artistId)).by.ktrimnew002);
 }
 
 console.log('\nA FAN\u2019S OWN POST: CHANGE IT FOR A DAY, TAKE IT BACK FOR EVER');
@@ -251,8 +319,7 @@ console.log('\nHIDING TAKES THE PICTURES DOWN TOO');
      publicly fetchable, and once deleting for good became a paid feature that left
      a FREE artist with no way at all to take something offensive off their page. */
   const F2 = 'fanmedia0001';
-  const clipR = await jget(await commFn(post(`https://x/api/community?a=${slug}`,
-    { action: 'clip', fan: F2, data: asData(fakeMp4(6)), poster: JPEG })));
+  const clipR = await upClip(`a=${slug}`, fakeMp4(6), F2, JPEG);
   const made = await jget(await commFn(post(`https://x/api/community?a=${slug}`,
     { action: 'post', fan: F2, text: 'with media', photos: [JPEG], clip: clipR.clip })));
   const pid = made.id;

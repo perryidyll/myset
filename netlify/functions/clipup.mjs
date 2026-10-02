@@ -6,7 +6,7 @@ import { readPosts, PER_DEVICE_PER_DAY, DAY } from './_community.mjs';
 import { decodeDataUrl, putImage } from './_img.mjs';
 import { CHUNK_BYTES, MAX_VIDEO_BYTES, CLIP_ID, newClipId, beginUpload, readUpload,
          readPending, putChunk, joinChunks, dropUpload, checkVideo, putClip,
-         notePending } from './_video.mjs';
+         notePending, clipBeginAllowed } from './_video.mjs';
 
 /* A CLIP, UPLOADED AS IT IS.
  *
@@ -90,6 +90,10 @@ const main = async (req) => {
     const pend = await readPending(owner);
     if (Object.keys(pend.by || {}).length >= 40)
       return bad('Too many clips going up at once here — try again in a few minutes.', 429);
+    /* AND ONE NETWORK CANNOT TAKE THAT CEILING FOR ITSELF (decision 0189). Last, so
+       only a begin that would otherwise go ahead spends a token. */
+    if (!(await clipBeginAllowed(owner, req, now)))
+      return bad('Too many clips from this network just now — try again in a few minutes.', 429);
 
     const clip = newClipId();
     const parts = Math.ceil(size / CHUNK_BYTES);

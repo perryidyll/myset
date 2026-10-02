@@ -10,6 +10,14 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:24 — 0c76c92 — scale-abuse@fix/abuse-ceilings (47 files since origin/main)
+**tl;dr:** No change for people: two rule numbers renamed to avoid a clash
+**Other sessions:** #230's INVARIANTS are now 0iw (clips, 0189) and 0ix (promo tries, 0190); 0ii–0iv belong to c8fc2f.
+
+### 2026-10-03 03:04 — dcdf9aa — scale-abuse@fix/abuse-ceilings (18 files since origin/main)
+**tl;dr:** Abuse ceilings: anonymous clip uploads have one door and a cap per network, trimmed pending clips are deleted, promo codes get five guesses an hour, and a junk QR address answers 404 instead of crashing (0189, 0190)
+**Other sessions:** NOT MERGED — waits on the founder's word. community.mjs legacy 'clip' action REMOVED (no page sent it; use /api/clipup). New key families cliplim_<owner> (clipBeginAllowed, fails open) and global promolim (promoTryAllowed, fails CLOSED); both in _mirror SKIP, keysFor, venue delete list, backup.py skip. Promo errors are one message now. When #218 replaces SKIP with FAMILIES, carry these two.
+
 ### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
 **tl;dr:** Docs: scale-audit week one recorded as live
 **Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
