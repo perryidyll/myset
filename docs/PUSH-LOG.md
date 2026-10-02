@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:50 — 0a927c3 — scale-week1@ops/watch (52 files since origin/main)
+**tl;dr:** MySet now tells the founder when something breaks: a push to the Studio when the scheduler stalls, a payment stays undelivered or errors pile up, plus a check from outside every five minutes that opens an alert if the site stops answering (0157)
+**Other sessions:** New: _watch.mjs (look/watch), watchcron.mjs (*/10), health.mjs (/api/health, uncached, 503 with why[] when unwell), .github/workflows/watch.yml (opens/closes an issue labelled uptime; optional secret NTFY_TOPIC). New global doc 'watch' — the mirror's GLOBALS and backup.py need it, with 'payowed'. Decision 0157 is this session's (cdfdf5), outside the 0145–0156 block c8fc2f holds.
+
 ### 2026-10-03 02:51 — 359e746 — scale-week1@fix/failed-read-is-an-error (32 files since origin/main)
 **tl;dr:** No change for people: a test that brute-forces a six-digit code now reads it once, so a slow test machine can't outlast the code
 **Other sessions:** test/accounts.mjs guess(): read the authc_ doc once, HMAC in memory. Tests that loop over readDoc pay READ_TIMEOUT_MS's timer per call since 0142 — keep store reads out of hot test loops.

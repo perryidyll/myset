@@ -535,9 +535,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 20 — about.html, artist.html, artists.html, community.html, crm.html, dash.html, diary.html, factory.html, index.html, mediadash.html, privacy.html, report.html, shop.html, sign.html, stage.html, studio.html, terms.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 40 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
-| Scheduled jobs | 6 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron |
-| Shared libraries | 73 |
+| HTTP functions | 41 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
+| Scheduled jobs | 7 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
+| Shared libraries | 74 |
 | Artist Studio actions | 136 |
 | Venue Studio actions | 57 |
 | Fan-record shards | 12 |
@@ -555,9 +555,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
 | Invariants | 300 (last: 0gx) |
-| Test suites | 71 |
+| Test suites | 72 |
 | Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 149 |
+| Decision records | 150 |
 
 ### Feature flags in force
 
