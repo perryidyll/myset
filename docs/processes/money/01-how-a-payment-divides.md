@@ -11,7 +11,7 @@ sources:
   - INVARIANTS.md 0hn
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps); 2026-10-03 (update_workflow on d07, step 369873; changelog 2697 for decision 0139, in progress)
-verified: code read 2026-09-12 (_feesplit.mjs header and settleSplit; webhook.mjs charge.updated branch); d08 re-read 2026-09-28 (webhook.mjs tries both signing secrets; ledger PER-001 and PER-008 done); d07 re-read 2026-10-03 for decision 0139 (_feesplit.mjs settleSplit, _connect.mjs sharesStripeFee) on the branch of pull request #205 — not live on that date
+verified: code read 2026-09-12 (_feesplit.mjs header and settleSplit; webhook.mjs charge.updated branch); d08 re-read 2026-09-28 (webhook.mjs tries both signing secrets; ledger PER-001 and PER-008 done); d07 re-read 2026-10-03 for decision 0139 (_feesplit.mjs settleSplit, _connect.mjs sharesStripeFee) — live as `0387145` (PR #205, Netlify's published deploy 2026-10-02 19:29 UTC)
 ---
 
 # How a payment divides (the fee ladder and the split)

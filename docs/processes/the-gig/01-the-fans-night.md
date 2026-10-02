@@ -12,7 +12,7 @@ sources:
   - public/artist.html (the calendar window, the tour poster, the Book sheet)
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections); f22 370866 and f23 370867 added 2026-09-14 (`Live` since `a69154f`, PR #51; changelog 1665, 1666); 2026-10-03 (update_workflow on f03 369763 and f09 369769; changelog 2700 for decision 0142 and 2701 for 0143, both in progress)
-verified: code read 2026-09-12 (vote.mjs refusal order; vote.html dock and bug link); f03, f18 and f20 re-read 2026-09-28 (vote.html what=board / what=me, the three-hour window on `at` − `endedAt`, Up next only while live, loadGigs once; fan.mjs DOORS; autocron.mjs warm ping; _lifecycle.mjs endedAt); f03 and f09 re-read 2026-10-03 for decisions 0142 and 0143 (vote.html timed, within, FAILS, TICKING, the four sends of one cast) on the branch of pull request #212 — not live on that date
+verified: code read 2026-09-12 (vote.mjs refusal order; vote.html dock and bug link); f03, f18 and f20 re-read 2026-09-28 (vote.html what=board / what=me, the three-hour window on `at` − `endedAt`, Up next only while live, loadGigs once; fan.mjs DOORS; autocron.mjs warm ping; _lifecycle.mjs endedAt); f03 and f09 re-read 2026-10-03 for decisions 0142 and 0143 (vote.html timed, within, FAILS, TICKING, the four sends of one cast) — live as `831dcb8` (PR #212, Netlify's published deploy 2026-10-02 19:56 UTC)
 ---
 
 # The fan's night

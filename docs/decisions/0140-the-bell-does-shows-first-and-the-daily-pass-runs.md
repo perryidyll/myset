@@ -8,7 +8,7 @@ area: scale
 reverses:
 superseded_by:
 invariants: [0bw, 9d13, 0ho]
-commits: []
+commits: [8306251]
 tests: [test/autoshow.mjs]
 files: [netlify/functions/autocron.mjs, netlify/functions/_auto.mjs]
 ---

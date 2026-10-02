@@ -13,7 +13,7 @@ sources:
   - docs/decisions/0006, 0012, 0029, 0030, 0034, 0035, 0049, 0142, 0143, 0157, 0160
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections); 2026-10-03 (update_workflow on l02 369857, l03 369858, l04 369859, l08 369863; changelog 2700, 2701, 2703, 2704 for decisions 0142, 0143, 0157, 0160, all in progress)
-verified: code read 2026-09-12 (pollFloorFor and boardLimitFor rungs; board.mjs cache headers); l03, l04 and l11 re-read 2026-09-28 (fan.mjs serves the board and me handlers under their own cache headers; vote.html asks what=board / what=me; ledger P3-002); l02–l04 and l08 re-read 2026-10-03 for decisions 0142 and 0143 (_lib.mjs readDoc, StoreError; _errlog.mjs guard; vote.html schedule) on the branch of pull request #212, and l02 against decision 0160 on `origin/config/rate-rules` (pull request #210) — none live on that date
+verified: code read 2026-09-12 (pollFloorFor and boardLimitFor rungs; board.mjs cache headers); l03, l04 and l11 re-read 2026-09-28 (fan.mjs serves the board and me handlers under their own cache headers; vote.html asks what=board / what=me; ledger P3-002); l02–l04 and l08 re-read 2026-10-03 for decisions 0142 and 0143 (_lib.mjs readDoc, StoreError; _errlog.mjs guard; vote.html schedule) — live as `831dcb8` (PR #212) — and l02 against decision 0160, live as `6ee1884` (PR #210); Netlify's published deploys 2026-10-02 19:56 and 20:03 UTC
 ---
 
 # The room under load

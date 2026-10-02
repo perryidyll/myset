@@ -10,7 +10,7 @@ sources:
   - docs/decisions/0001, 0008, 0030, 0141, 0142
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections); 2026-10-03 (update_workflow on c03 369783, c07 369787, c14 369794; changelog 2699 for decision 0141, 2700 for 0142, 2701 for 0143, all in progress)
-verified: code read 2026-09-12 — every refusal below is quoted from vote.mjs with its status code; c03, c07 and c14 re-read 2026-10-03 for decisions 0141 and 0142 (_lib.mjs publicArtist, readDoc, casDoc; _auth.mjs readArtistsPublic; _errlog.mjs) on the branches of pull requests #211 and #212 — not live on that date
+verified: code read 2026-09-12 — every refusal below is quoted from vote.mjs with its status code; c03, c07 and c14 re-read 2026-10-03 for decisions 0141 and 0142 (_lib.mjs publicArtist, readDoc, casDoc; _auth.mjs readArtistsPublic; _errlog.mjs) — live as `8306251` (PR #211) and `831dcb8` (PR #212), Netlify's published deploys 2026-10-02 19:38 and 19:56 UTC
 ---
 
 # Casting a vote (server path)

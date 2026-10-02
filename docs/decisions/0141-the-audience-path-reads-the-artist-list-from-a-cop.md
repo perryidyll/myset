@@ -8,7 +8,7 @@ area: scale
 reverses:
 superseded_by:
 invariants: [0dd, 9d13, 0hp]
-commits: []
+commits: [8306251]
 tests: [test/cost.mjs]
 files: [netlify/functions/_auth.mjs, netlify/functions/_lib.mjs]
 ---

@@ -8,7 +8,7 @@ area: storage
 reverses:
 superseded_by:
 invariants: [1, 4, 16, 0hq]
-commits: []
+commits: [831dcb8]
 tests: [test/storefail.mjs]
 files: [netlify/functions/_lib.mjs, netlify/functions/_errlog.mjs, public/studio.js, test/blobs-fake.mjs]
 ---

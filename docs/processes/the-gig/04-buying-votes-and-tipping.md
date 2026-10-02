@@ -11,7 +11,7 @@ sources:
   - docs/decisions/0007, 0014, 0017, 0026, 0032, 0138
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections); 2026-09-13 (b05 — the shop as a third redeeming page, decision 0064; update_workflow, read back through list_steps). b05 (step 369821) stays `Live`, unlike the eleven `Testing` steps in *Merch orders* (41974): its action — the direct-charge Checkout session — is live on myset.vip and only its note anticipates `shop.html`; nothing to flip when the shop PR merges.; 2026-10-03 (update_workflow on b08 369824 and b11 369827; changelog 2696 for decision 0138, in progress)
-verified: code read 2026-09-12 (pay.mjs kinds and clamps; _pay.mjs claim/delivered); b08 and b11 re-read 2026-10-03 for decision 0138 (webhook.mjs, _pay.mjs noteOwed/redeliverOwed) on the branch of pull request #205 — not live on that date
+verified: code read 2026-09-12 (pay.mjs kinds and clamps; _pay.mjs claim/delivered); b08 and b11 re-read 2026-10-03 for decision 0138 (webhook.mjs, _pay.mjs noteOwed/redeliverOwed) — live as `0387145` (PR #205, Netlify's published deploy 2026-10-02 19:29 UTC)
 ---
 
 # Buying votes and tipping

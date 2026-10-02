@@ -10,7 +10,7 @@ sources:
   - docs/decisions/0098 (and its amendment, 2026-09-28), 0141
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps); 2026-10-03 (update_workflow on q03, step 369978; changelog 2699 for decision 0141, in progress)
-verified: code read 2026-09-12 (_account.mjs startDeletion/cancelDeletion/freeSlug; the 423 rule in ACCOUNTS.md); q03 re-read 2026-09-28 against 1385b2b (the share card and the sheet, decision 0098); q03 re-read 2026-10-03 for decision 0141 (_auth.mjs readArtistsPublic) on the branch of pull request #211 — not live on that date
+verified: code read 2026-09-12 (_account.mjs startDeletion/cancelDeletion/freeSlug; the 423 rule in ACCOUNTS.md); q03 re-read 2026-09-28 against 1385b2b (the share card and the sheet, decision 0098); q03 re-read 2026-10-03 for decision 0141 (_auth.mjs readArtistsPublic) — live as `8306251` (PR #211, Netlify's published deploy 2026-10-02 19:38 UTC)
 ---
 
 # Leaving, with thirty days to change your mind
