@@ -5,7 +5,7 @@ import { json, bad, cleanFanId, getShow, publicArtist, sha,
 import { canTakeMoney, payAllowed } from './_pay.mjs';
 import { readConnect, connectUsable, feeCents, scope, STRIPE_OPTS } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
-import { getProfile, MIN_CENTS, merchSoldOut } from './_profile.mjs';
+import { getProfile, MIN_CENTS, merchSoldOut, holdStock, releaseHold } from './_profile.mjs';
 import { PAYOUT_COUNTRIES } from './_connect.mjs';
 
 /* Where a shipped item can go. Stripe needs an explicit list; this is the payout
@@ -65,6 +65,18 @@ const stockRefusal = (item, qty) => {
   if (item.stock != null && item.stock < qty) return bad(`Only ${item.stock} left`, 409);
   return null;
 };
+/* HELD BY SOMEBODY ON STRIPE'S PAGE (decision 0178). The count covers it, but other
+   buyers are paying for some of it right now. Said in the shapes the shop already
+   reads: "Only N left" caps the quantity, a refusal that names a size strikes that
+   size, any other 409 shows the item as gone until the next read. Taken last, after
+   every other refusal, so a refused checkout never leaves a hold behind. */
+const holdIdOf = (owner, fan, attempt) => 'h' + sha(`myset-hold|${owner}|${fan}|${attempt || Math.random()}`).slice(0, 15);
+// the device, hashed: a hold only needs to know the same phone again, never which phone (0bu)
+const deviceOf = (owner, fan) => sha(`myset-hold-fan|${owner}|${fan}`).slice(0, 16);
+const heldRefusal = (h, label) => h.left > 0
+  ? bad(h.size ? `Only ${h.left} left in ${label}` : `Only ${h.left} left`, 409)
+  : bad(h.size ? 'That size is held by someone checking out — try again in half an hour'
+               : 'Someone’s checking out with the last one — try again in half an hour', 409);
 
 const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -141,11 +153,15 @@ const main = async (req) => {
        otherwise. Both are paths THIS server builds from the venue's slug — `from` is
        a choice between them, never a url (0f8). */
     const back = body.from === 'shop' ? `/v/${reg.slug}/shop` : `/v/${reg.slug}/community`;
+    // the stock this buyer is paying for is held until the checkout expires (0178)
+    const vhold = await holdStock(owner, item, vlabel, qty, holdIdOf(owner, fan, attempt), deviceOf(owner, fan));
+    if (vhold.refused) return heldRefusal(vhold, vlabel);
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment', line_items: [vline],
         metadata: { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty), ship: item.ship, artist: owner,
-                    variant: vlabel, post: String(vpost) },
+                    variant: vlabel, post: String(vpost), ...(vhold.id ? { hold: vhold.id } : {}) },
+        expires_at: vhold.expires,
         payment_intent_data: {
           ...(fee > 0 ? { application_fee_amount: fee } : {}),
           metadata: { kind: 'merch', artist: owner, base: String(amountCents(vline)) },
@@ -156,7 +172,10 @@ const main = async (req) => {
         cancel_url: `${origin}${back}?cancelled=1`,
       }, { ...(attempt ? { idempotencyKey: sha(`myset-pay|${owner}|${fan}|merch|${attempt}`).slice(0, 48) } : {}), stripeAccount: conn.acct });
       return json({ ok: true, url: session.url, id: session.id });
-    } catch (e) { return bad(e.message || 'stripe error', 502); }
+    } catch (e) {
+      if (vhold.id) await releaseHold(owner, vhold.id).catch(() => {});   // no checkout, no hold
+      return bad(e.message || 'stripe error', 502);
+    }
   }
 
   const aid = await publicArtist(req);
@@ -168,7 +187,7 @@ const main = async (req) => {
   if (!(await payAllowed(aid, fan, req))) return bad('Too many tries from this phone — give it a minute', 429);
   const artist = show.artist || 'the artist';
 
-  let line, metadata, shipping = false, post = 0;
+  let line, metadata, shipping = false, post = 0, holdItem = null;
   if (body.kind === 'votes') {
     // price is whatever the artist set — never what the client claims
     const pack = show.packs && show.packs[body.pack];
@@ -287,6 +306,7 @@ const main = async (req) => {
     metadata = { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty),
                  ship: item.ship, show: show.showId || '', artist: aid, variant: vlabel, post: String(post) };
     shipping = item.ship === 'ship';
+    holdItem = item;
   } else {
     return bad('unknown kind');
   }
@@ -354,11 +374,22 @@ const main = async (req) => {
       ? (who && who.slug ? `/${who.slug}/community` : '/community.html')
       : (who && who.slug ? `/${who.slug}/vote` : '/vote.html');
 
+  /* MERCH IS HELD WHILE THE BUYER PAYS (decision 0178): the quantity on its counter,
+     until about half an hour after now, when the checkout itself expires. Last of
+     all the refusals above, so nothing refused leaves a hold behind. */
+  let hold = null;
+  if (holdItem) {
+    hold = await holdStock(aid, holdItem, metadata.variant, Number(metadata.qty), holdIdOf(aid, fan, attempt), deviceOf(aid, fan));
+    if (hold.refused) return heldRefusal(hold, metadata.variant);
+    if (hold.id) metadata.hold = hold.id;
+  }
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [line],
       metadata,
+      ...(hold ? { expires_at: hold.expires } : {}),
       /* THE CHARGE CARRIES ITS OWN LABEL, not just the session.
          Session metadata does NOT propagate to the charge, so anything reading the
          balance later — the earnings statement, an accountant, Stripe's own export —
@@ -386,6 +417,7 @@ const main = async (req) => {
     // return trip fails (INVARIANT 5c)
     return json({ ok: true, url: session.url, id: session.id });
   } catch (e) {
+    if (hold && hold.id) await releaseHold(aid, hold.id).catch(() => {});   // no checkout, no hold
     return bad(e.message || 'stripe error', 502);
   }
 };

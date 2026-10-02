@@ -64,6 +64,34 @@ export async function tellOrder(owner, o) {
   } catch { /* an alert that fails is never the order's problem */ }
 }
 
+/* SOLD OUT BEFORE THE MONEY LANDED (decision 0178). The order was refunded in full the
+   moment it came in short, and two people need to know: the seats that fulfil orders
+   (so nobody goes looking for a shirt that is not there — the same `{ tab: 'merch' }`
+   as a new order), and the buyer, whose card was charged and is being paid back. The
+   buyer's address is the one on the Stripe session in hand, used for this one letter
+   and never stored (0bu); without it, the return page says it and Stripe's own receipt
+   does. Same rules as an order: once, time-boxed, never thrown. */
+export async function tellShort(owner, o, buyerEmail = '') {
+  try {
+    if (!owner || !o) return;
+    const venue = String(owner).startsWith('v_');
+    const total = money(Math.round((Number(o.amount) || 0) * 100));
+    const jobs = [notify(owner, { title: 'Sold out before a payment landed', body: `${orderLine(o)} · ${total} refunded to the buyer`,
+                                  url: venue ? '/venues?tab=merch' : '/studio?tab=merch', tag: 'short-' + (o.code || '') }, { tab: 'merch' })];
+    if (emailReady() && buyerEmail) {
+      let who = '';
+      if (venue) {
+        const { getVenueProfile } = await import('./_venues.mjs');
+        who = await getVenueProfile(String(owner).slice(2)).then((p) => (p && p.name) || '').catch(() => '');
+      } else who = await artistById(owner).then((a) => (a && a.name) || '').catch(() => '');
+      jobs.push(sendMail(buyerEmail, `${orderLine(o)} sold out — your ${total} is on its way back`,
+        [`The last one went to someone else while you were paying, so ${who || 'the seller'} couldn’t fill your order.`,
+         `Your ${total} has gone back to your card. It can take 5–10 days to show.`, 'There’s nothing you need to do.'], { who }));
+    }
+    await within(Promise.allSettled(jobs), ORDER_NOTE_MS);
+  } catch { /* the refund is made; a letter is a courtesy */ }
+}
+
 /* A TIP FOR A VENUE'S STAFF TELLS THE VENUE (decision 0127): a push to every venue
    seat, opening the Merch tab where the tips are listed. Same rules as an order: the
    fresh claim only, time-boxed, never thrown, nothing about the tipper but the note. */

@@ -1454,6 +1454,10 @@ async function redeem(sid){
     const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${Q==='?'?'':'&'+Q.slice(1)}`);
     const d=await r.json();
     if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){}
+      /* sold out before the money landed: refunded in full, nothing to pick up (0178) */
+      if(d.short){ const app=$('#app'); const card=document.createElement('div'); card.className='receipt';
+        card.innerHTML=`<b>Sold out — you’ve been refunded</b>The last one went to someone else while you were paying. Your money is on its way back to your card.`;
+        app.insertBefore(card,app.firstChild); return true; }
       if(d.kind==='merch'&&d.order){ const o=d.order;
         rememberOrder({sid,slug:SLUG,venue:VENUE,item:String(o.item||''),title:String(o.title||'Your order'),qty:Number(o.qty)||1,variant:String(o.variant||''),ship:o.ship==='ship'?'ship':'pickup',
           cents:o.cents!=null?Number(o.cents):null,post:Number(o.post)||0,code:String(o.code||''),at:Number(o.at)||Date.now()});

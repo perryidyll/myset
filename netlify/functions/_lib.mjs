@@ -654,8 +654,10 @@ export async function carryFans(aid, show) {
           const pledged = Math.max(0, bag[id].pledged || 0);
           const carry = Math.max(0, unspentPaid(bag[id], show, id) - pledged);
           const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show, id)) : 0);
-          // `gr` rides along: it is what makes a paid grant idempotent (_pay.mjs)
-          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-GR_KEEP) };
+          // `gr` rides along: it is what makes a paid grant idempotent (_pay.mjs);
+          // `rb` too, the receipts for votes a refund took back (_refunds.mjs, 0177)
+          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-GR_KEEP),
+                                     ...(bag[id].rb ? { rb: bag[id].rb } : {}) };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;
@@ -896,19 +898,23 @@ export function paidVoteCounts(fans, tippers = new Set()) {
   return counts;
 }
 
+/* `lost` (cents) is what a refund or a chargeback took back off a tip (decision 0177):
+   a tip that went back in full is no tip, and one that went back in part counts what
+   stayed. */
+const tipGone = (t) => (Number(t.lost) || 0) > 0 && (Number(t.lost) || 0) >= Math.round((Number(t.amount) || 0) * 100);
 /** Who tipped since the show started. `meta.tips` is the account's whole history,
  *  so the night boundary is the show's `startedAt`; a tip with no fan id (an old
  *  row, a session the return page could not attribute) belongs to nobody. */
 export function tippersTonight(tips, since) {
   const from = Number(since) || 0, out = new Set();
-  for (const t of tips || []) if (t && t.fan && Number(t.at) >= from) out.add(String(t.fan));
+  for (const t of tips || []) if (t && t.fan && Number(t.at) >= from && !tipGone(t)) out.add(String(t.fan));
   return out;
 }
 /** Tonight's card tips, in dollars, and how many — the same window as above. */
 export function tipsTonight(tips, since) {
   const from = Number(since) || 0;
   let total = 0, count = 0;
-  for (const t of tips || []) if (t && Number(t.at) >= from) { total += Number(t.amount) || 0; count++; }
+  for (const t of tips || []) if (t && Number(t.at) >= from && !tipGone(t)) { total += (Number(t.amount) || 0) - (Number(t.lost) || 0) / 100; count++; }
   return { total: Math.round(total * 100) / 100, count };
 }
 

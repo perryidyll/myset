@@ -175,15 +175,89 @@ export const canTakeMoney = (aid, show) =>
   (isPlatformOwner(aid) || !!(show && show.pay && show.pay.ready));
 
 /* The artist's profile or the venue's, by the owner id's shape (`v_<vid>` is a venue,
-   cleanOwnerId). Imported lazily: _profile and _venues both import _lib, as this does. */
-async function takeStockFor(owner, item, qty, variant) {
-  const { takeStock } = await import('./_profile.mjs');
+   cleanOwnerId). Imported lazily: _profile and _venues both import _lib, as this does.
+
+   SHORT IS DECIDED IN THE SAME WRITE THAT TAKES THE STOCK (decision 0178). The count,
+   less every OTHER buyer's live hold, must cover this order — this order's own hold
+   (`hold`, the id pay.mjs minted) is the stock it is paying for. Short, nothing is
+   taken and the answer is `true`: the buyer is refunded (settleShort). Two payments
+   for the last one meet in this compare-and-set, so only one can take it. The holds
+   are read just before; a read that fails counts as no holds, which can only ever
+   refuse the OTHER buyer at their own payment, never sell one item twice. */
+async function takeStockFor(owner, item, qty, variant, hold = '') {
+  const { takeStock, stockShort, readHolds } = await import('./_profile.mjs');
+  const holds = await readHolds(owner).catch(() => ({}));
+  let short = false;
+  const take = (p) => {
+    short = false;
+    if (stockShort(p.merch, item, qty, variant, holds, hold)) { short = true; return false; }
+    return takeStock(p.merch, item, qty, variant);
+  };
   if (String(owner).startsWith('v_')) {
     const { mutateVenueProfile } = await import('./_venues.mjs');
-    return mutateVenueProfile(String(owner).slice(2), (p) => takeStock(p.merch, item, qty, variant));
+    await mutateVenueProfile(String(owner).slice(2), take);
+  } else {
+    const { mutateProfile } = await import('./_profile.mjs');
+    await mutateProfile(owner, take);
   }
-  const { mutateProfile } = await import('./_profile.mjs');
-  return mutateProfile(owner, (p) => takeStock(p.merch, item, qty, variant));
+  return short;
+}
+
+/* ---------- SOLD OUT BEFORE THE MONEY LANDED (decision 0178) ----------
+   The order is already written (it is written in the claim, before the stock is
+   checked), so first it is CLOSED — done, `short` — so nobody hands over what is
+   being refunded; the marker goes undelivered while the refund is owed. Then the
+   whole payment goes back through the account it was paid on (stripeFor, 0183), once
+   (the session id is the idempotency key), MySet's own fee with it on a connected
+   account: nothing was sold. Then the marker is delivered — a refund is this order's
+   delivery — with `lost` and `told` set, so the `charge.refunded` that follows
+   (_refunds.mjs) finds nothing new to say. A refund that fails is noted owed and
+   thrown: the bell, Stripe's redelivery and the sweep all come back here (a retry of
+   an undelivered `short` marker), and the key makes a second try the same refund. */
+async function settleShort(aid, session, row) {
+  const sid = session.id, paid = Math.max(0, Number(session.amount_total) || 0);
+  const pre = (await readMeta(aid)).paid[sid] || {};
+  if (pre.short && pre.delivered !== false) return { short: true, refunded: true };
+  await casDoc(KEY.meta(aid), emptyMeta, (m) => {
+    m.paid ||= {}; m.orders ||= [];
+    const p = m.paid[sid]; if (!p) return false;
+    let w = false;
+    if (!p.short) { p.short = true; p.delivered = false; w = true; }
+    const o = m.orders.find((x) => x && x.sid === sid);
+    if (o && !o.short) { o.short = true; if (o.status !== 'done') { o.status = 'done'; o.doneAt = Date.now(); } w = true; }
+    return w;
+  });
+  const { stripeFor } = await import('./_connect.mjs');
+  const { stripe, opts } = await stripeFor(aid);
+  const pi = typeof session.payment_intent === 'string' ? session.payment_intent : ((session.payment_intent || {}).id || '');
+  try {
+    if (!stripe || !pi) throw new Error('nothing to refund it through');
+    await stripe.refunds.create({ payment_intent: pi, metadata: { myset_reason: 'sold-out', myset_session: sid },
+                                  ...(opts.stripeAccount ? { refund_application_fee: true } : {}) },
+                                { ...opts, idempotencyKey: `myset-short-${sid}`.slice(0, 200) });
+  } catch (e) {
+    await noteOwed(aid, sid).catch(() => {});
+    throw new Error(`the sold-out refund for ${sid} (${aid}) did not go through; the bell will retry it: ${String((e && e.message) || e)}`);
+  }
+  let first = false, order = row;
+  await casDoc(KEY.meta(aid), emptyMeta, (m) => {
+    m.paid ||= {}; m.orders ||= [];
+    first = false;
+    const p = m.paid[sid]; if (!p || p.delivered !== false) return false;
+    p.delivered = true; p.deliveredAt = Date.now(); p.settledBy = 'short';
+    p.refunded = Math.max(Number(p.refunded) || 0, paid);
+    p.lost = Math.min(paid, Math.max(Number(p.lost) || 0, p.refunded));
+    p.told = `${p.lost}|${(p.dispute && p.dispute.status) || ''}`;
+    const o = m.orders.find((x) => x && x.sid === sid);
+    if (o) { o.refunded = true; o.lost = p.lost; order = o; }
+    first = true;
+    return true;
+  }, (m) => !!(m && m.paid && m.paid[sid] && m.paid[sid].delivered === true));
+  if (first && order) {
+    const email = (session.customer_details && session.customer_details.email) || '';
+    await import('./_ordernote.mjs').then(({ tellShort }) => tellShort(aid, order, email)).catch(() => {});
+  }
+  return { short: true, refunded: true };
 }
 
 /* THE "DELIVERED" FLIP IS CHECKED (decision 0180). It was written once with its
@@ -194,13 +268,17 @@ async function takeStockFor(owner, item, qty, variant) {
    the owed list, where the bell retries it within minutes: the retry finds the
    receipt on the fan, grants nothing, and makes the flip. The buyer is never told
    about any of this — their votes are already on their phone. */
-async function markDelivered(aid, sid) {
+/* `also` rides in the same write: `{ wallet: true }` when song votes went to the
+   fan's wallet (0182), which is what lets a refund later know there are wallet votes
+   to take back rather than ballot entries it must leave alone (decision 0177). */
+async function markDelivered(aid, sid, also = null) {
   try {
     await casDoc(KEY.meta(aid), emptyMeta, (m) => {
       m.paid ||= {};
       if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
       m.paid[sid].delivered = true;
       m.paid[sid].deliveredAt = Date.now();
+      if (also) Object.assign(m.paid[sid], also);
       return true;
     }, (m) => !!(m && m.paid && m.paid[sid] && m.paid[sid].delivered === true));
   } catch (e) {
@@ -238,7 +316,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
   const who = cleanFanId(md.fan) || cleanFanId(fallbackFan);
   const amount = (session.amount_total || 0) / 100;
   const at = (session.created ? session.created * 1000 : Date.now());
-  let granted = 0, already = false, orderRow = null;
+  let granted = 0, already = false, orderRow = null, shortGot = null;
 
   /* Claim first so a double-tap or a webhook race cannot grant twice — but claim it
      as UNDELIVERED, so a failure below leaves work to be picked up rather than a
@@ -248,8 +326,9 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       if (m.paid[sid] && m.paid[sid].delivered !== false) { already = true; return false; }
       if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
       if (md.kind === 'song_votes') granted = parseInt(md.votes, 10) || 0;
-      // the night it was tagged with rides along (0095) so the app's own record can say which show a tip or a pack belonged to without asking Stripe
-      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at, show: String(md.show || '').slice(0, 40) });
+      // the night it was tagged with rides along (0095) so the app's own record can say which show a tip or a pack belonged to without asking Stripe;
+      // the session id too, so a refund can find the row it takes back (0177)
+      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at, show: String(md.show || '').slice(0, 40), sid });
       /* MERCH. What the buyer bought is an ORDER the artist fulfils by hand, so the
          order record IS the delivery — written inside this same claim, so a session
          can never be claimed without it. Nothing about the buyer is stored: their
@@ -286,15 +365,22 @@ export async function redeemSession(aid, session, fallbackFan = '') {
        made"). Best-effort and after the money is safe: a lost write here leaves the
        count one high and the artist corrects it in the Studio; a double write is
        impossible because only the fresh claim reaches this line. An item that is
-       not counting (stock null) is left alone. */
-    if (orderRow) await takeStockFor(aid, orderRow.item, orderRow.qty, orderRow.variant).catch(() => {});
+       not counting (stock null) is left alone. Short — the count, less the other
+       buyers' holds, cannot cover it — takes nothing and refunds this buyer (0178);
+       either way this checkout's own hold is let go. */
+    let short = false;
+    if (orderRow) short = await takeStockFor(aid, orderRow.item, orderRow.qty, orderRow.variant, String(md.hold || '')).catch(() => false);
+    if (orderRow && md.hold) await import('./_profile.mjs').then(({ releaseHold }) => releaseHold(aid, String(md.hold))).catch(() => {});
+    if (short) shortGot = await settleShort(aid, session, orderRow);
     /* …and the owner hears about it (the founder, 2026-09-27): a push and an email,
        once, from this fresh claim only — time-boxed, never thrown (_ordernote.mjs). */
-    if (orderRow) await import('./_ordernote.mjs').then(({ tellOrder }) => tellOrder(aid, orderRow)).catch(() => {});
+    else if (orderRow) await import('./_ordernote.mjs').then(({ tellOrder }) => tellOrder(aid, orderRow)).catch(() => {});
     if (md.kind === 'tip' && String(aid).startsWith('v_')) await import('./_ordernote.mjs').then(({ tellVenueTip }) => tellVenueTip(aid, amount, md.note)).catch(() => {});
   } else {
     granted = Number(pre.paid[sid].granted)
       || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);
+    // a sold-out refund still owed (0178): this retry is the refund, made once by its key
+    if (md.kind === 'merch' && pre.paid[sid].short) shortGot = await settleShort(aid, session, orderOf(pre, sid));
   }
 
   /* SONG VOTES THE ROOM CAN NO LONGER GIVE (decision 0182). pay.mjs checks the replay
@@ -335,8 +421,11 @@ export async function redeemSession(aid, session, fallbackFan = '') {
               && (me.gr || []).includes(sid))
     );
     /* Only now is it delivered. If this flip is lost the marker stays undelivered and
-       the sweep tries again — which is safe, because of the guard above. */
-    await markDelivered(aid, sid);
+       the sweep tries again — which is safe, because of the guard above. Song votes
+       that went to the wallet say so, but only from the call that granted them: a
+       retry cannot tell which road the first grant took, and leaving the flag off
+       means a refund takes nothing back, never the wrong thing (0177). */
+    await markDelivered(aid, sid, asCredits && !alreadyGranted ? { wallet: true } : null);
   }
   if (md.kind === 'song_votes' && !asCredits && who && granted && md.song) {
     /* These dollars were offered for one specific replay. They become ballot
@@ -350,7 +439,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
      `pre`, already read. */
   const order = md.kind === 'merch' ? pubOrder(orderRow || orderOf(pre, sid)) : null;
   return { ok: true, kind: md.kind || 'unknown', amount, granted, song: md.song || '', fan: who, at,
-           redelivered: retrying || undefined, asCredits: asCredits || undefined, ...(order ? { order } : {}) };
+           redelivered: retrying || undefined, asCredits: asCredits || undefined, ...(order ? { order } : {}), ...(shortGot || {}) };
 }
 
 /* ---------- A PAYMENT STILL OWED (decision 0138) ----------

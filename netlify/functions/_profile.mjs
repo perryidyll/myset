@@ -1,4 +1,4 @@
-import { readDoc, KEY } from './_lib.mjs';
+import { readDoc, casDoc, own, KEY } from './_lib.mjs';
 import { casKeep } from './_versions.mjs';
 import { parseMedia, embedSrc, linkOut, embedShape } from './_embeds.mjs';
 
@@ -86,6 +86,126 @@ export function takeStock(list, id, qty, variant = '') {
   if (v && v.stock != null) { v.stock = Math.max(0, v.stock - n); return true; }
   if (m.stock == null) return false;
   m.stock = Math.max(0, m.stock - n); return true;
+}
+
+/* ---------- STOCK HELD WHILE A BUYER IS ON STRIPE'S PAGE (decision 0178) ----------
+
+   Stock was checked when checkout opened and taken when the money landed, with
+   nothing in between: two fans could both open checkout on the last tee, both pay,
+   and the artist had one shirt and two orders. The founder's recommended answer
+   (pending his word) is "Hold for 30 minutes, refund if still short":
+
+     · opening checkout HOLDS the quantity, per item and per size — on the same
+       counter takeStock would take it from — and the checkout expires on Stripe's
+       side about half an hour later (`checkoutExpiry`, Stripe's minimum plus a
+       margin, so a slow request or a skewed clock is never refused);
+     · a hold stops counting a few minutes after its checkout expires (HOLD_GRACE_MS,
+       for a payment made in the last second and delivered a moment later), whether
+       or not `checkout.session.expired` ever arrives — a lost event cannot strand
+       stock, because an expired hold is simply not counted, and the next write to
+       the document drops it;
+     · the money landing takes the stock and lets the hold go; if the count, less
+       every OTHER live hold, still cannot cover the order, the buyer is refunded in
+       full at once (_pay.mjs settleShort). Never two orders for the last one.
+
+   The holds are one small document per owner, `mhold_<owner>` — computable, no
+   list() (INVARIANT 1). A row is `{ i: item, z: size (lowercased, '' for none),
+   q: quantity, x: the checkout's expiry (seconds), f: the device, hashed, at }`, keyed by a
+   hold id pay.mjs mints from the tap, so the same tap retried finds its own hold and
+   its own clock. An item nobody is counting needs no hold. */
+export const HOLD_KEY = (owner) => `mhold_${owner}`;
+export const HOLD_GRACE_MS = 5 * 60e3;
+export const MAX_HOLDS = 300;
+/* Stripe refuses an `expires_at` under thirty minutes from creation, measured on its
+   own clock. The next whole minute plus thirty-one: between thirty-one and thirty-two
+   minutes away, and the same figure for every retry of a tap inside that minute, so
+   an idempotent retry sends identical parameters. */
+export const checkoutExpiry = (now = Date.now()) => Math.floor(now / 60e3) * 60 + 32 * 60;
+const holdLive = (r, now) => !!r && (Number(r.x) || 0) * 1000 + HOLD_GRACE_MS > now;
+const emptyHolds = () => ({ v: 1, h: {} });
+/** The counter an order of this size comes off — the size's count when it is
+ *  counting, else the item's — and what is on it; null when nobody is counting.
+ *  The same choice takeStock makes. */
+export function stockCounter(item, label = '') {
+  const want = String(label || '').toLowerCase();
+  const v = want ? (item.variants || []).find((x) => x && String(x.label).toLowerCase() === want) : null;
+  if (v && v.stock != null) return { key: 'v:' + want, left: v.stock };
+  if (item.stock != null) return { key: 'i', left: item.stock };
+  return null;
+}
+/** What live holds, other than `except`, have on this item's counter. */
+export function heldOn(holds, item, key, now = Date.now(), except = '') {
+  let n = 0;
+  for (const [id, r] of Object.entries(holds || {})) {
+    if (id === except || !r || r.i !== item.id || !holdLive(r, now)) continue;
+    const c = stockCounter(item, r.z);
+    if (c && c.key === key) n += Math.max(1, parseInt(r.q, 10) || 1);
+  }
+  return n;
+}
+/** Would this paid quantity leave its counter short once every OTHER live hold is
+ *  counted? Only a counted item can be short. */
+export function stockShort(list, id, qty, variant = '', holds = {}, except = '', now = Date.now()) {
+  const m = (list || []).find((x) => x && x.id === id); if (!m) return false;
+  const c = stockCounter(m, variant); if (!c) return false;
+  return c.left - heldOn(holds, m, c.key, now, except) < Math.max(1, parseInt(qty, 10) || 1);
+}
+export async function readHolds(owner) {
+  const { data } = await readDoc(HOLD_KEY(owner), null);
+  return (data && data.h && typeof data.h === 'object') ? data.h : {};
+}
+/**
+ * Hold `qty` of an item (and size) for checkout `id`. Returns `{ id, expires }` —
+ * `id` empty when nothing needed holding — or `{ refused: true, left, size }` when
+ * the count less the other live holds cannot cover it (`size`: the count was the
+ * size's own). The same device's earlier hold
+ * on the same item and size gives way first: a buyer who backed out of Stripe's
+ * page and tapped Buy again must not be blocked by their own first tap. A store
+ * that cannot be written never refuses a sale (`unheld`): the refund at payment
+ * still stops a second order for the last one.
+ */
+export async function holdStock(owner, item, label, qty, id, fan = '', now = Date.now()) {
+  const expires = checkoutExpiry(now);
+  const c = stockCounter(item, label);
+  if (!c || !id) return { id: '', expires };
+  const z = String(label || '').toLowerCase(), n = Math.max(1, parseInt(qty, 10) || 1);
+  let out = null;
+  try {
+    await casDoc(HOLD_KEY(owner), emptyHolds, (d) => {
+      out = null;
+      d.h = d.h && typeof d.h === 'object' ? d.h : {};
+      let pruned = false;
+      for (const [k, r] of Object.entries(d.h)) if (!holdLive(r, now)) { delete d.h[k]; pruned = true; }
+      const mine = own(d.h, id);
+      if (mine) { out = { id, expires: Number(mine.x) || expires }; return pruned; }   // the same tap again: the same hold, the same clock
+      for (const [k, r] of Object.entries(d.h)) if (fan && r && r.f === fan && r.i === item.id && r.z === z) delete d.h[k];
+      const left = c.left - heldOn(d.h, item, c.key, now, id);
+      if (left < n) { out = { refused: true, left: Math.max(0, left), size: c.key !== 'i' }; return false; }
+      d.h[id] = { i: item.id, z, q: n, x: expires, f: String(fan || '').slice(0, 64), at: now };
+      const ids = Object.keys(d.h);
+      if (ids.length > MAX_HOLDS) {
+        ids.sort((a, b) => (d.h[a].at || 0) - (d.h[b].at || 0));
+        for (const k of ids.slice(0, ids.length - MAX_HOLDS)) delete d.h[k];
+      }
+      out = { id, expires };
+      return true;
+    });
+  } catch (e) {
+    console.error(`holdStock: no hold for ${owner} ${item.id} — the refund at payment is the backstop:`, String((e && e.message) || e));
+    return { id: '', expires, unheld: true };
+  }
+  return out || { id: '', expires };
+}
+/** Let a hold go — the money landed, or the checkout expired. Expired holds go with it. */
+export async function releaseHold(owner, id, now = Date.now()) {
+  if (!owner || !id) return;
+  await casDoc(HOLD_KEY(owner), emptyHolds, (d) => {
+    d.h = d.h && typeof d.h === 'object' ? d.h : {};
+    let changed = false;
+    if (own(d.h, id)) { delete d.h[id]; changed = true; }
+    for (const [k, r] of Object.entries(d.h)) if (!holdLive(r, now)) { delete d.h[k]; changed = true; }
+    return changed;
+  });
 }
 const normImgs = (m) => {
   const own = (u) => typeof u === 'string' && u.startsWith('/api/img?') && u.length <= 300;

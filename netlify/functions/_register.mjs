@@ -215,7 +215,8 @@ export function buildRow(aid, artist, n, ctx, venues, { observed = null, hidden 
   const liveRsvps = gig ? num((((ctx.rsvp && ctx.rsvp.occ) || {})[`${gig.eventId}|${gig.date}`] || {}).n) : 0;
   const rsvps = up(up(n.rsvps, liveRsvps), observed && observed.rsvps);
 
-  const orders = ((ctx.meta && ctx.meta.orders) || []).filter((o) => o && o.show === n.showId);
+  // an order refunded in full was never a sale (0177); a part-refund still counts at its price
+  const orders = ((ctx.meta && ctx.meta.orders) || []).filter((o) => o && o.show === n.showId && !o.refunded);
   const inWindow = (o) => s0 && Number(o.at) >= s0 && Number(o.at) <= (e0 || s0) + 3600e3;
   const feat = gig ? ((ctx.feats && ctx.feats.list) || []).filter((f) => f && !f.owed && ((f.key && f.key === gig.key) || (f.eventId === gig.eventId && f.date === gig.date))) : [];
   const known = m.source === 'stripe';
