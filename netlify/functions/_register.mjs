@@ -80,6 +80,7 @@ export const RECHECK_AFTER_MS = 10 * 3600e3;     // ask Stripe once more for a n
 export const RECHECK_UNTIL_MS = 4 * 86400e3;     // …and not for a night older than this
 export const RECHECKS_PER_RING = 2;
 export const FEE_ASKS_PER_RING = 2;          // older nights asked once for their exact Stripe fee (EVS-005)
+export const PARTIALS_PER_RING = 2;          // nights whose count was cut short, carried on until whole (0153)
 export const SHARD_BYTES = 700 * 1024;           // a month past this spills into parts named by the head
 export const TOP_SONGS = 25;
 export { EARLY_MS, MIN_NIGHT_H, MAX_NIGHT_H, LOADTEST_PHONES };
@@ -557,7 +558,16 @@ function slimFromKept(r) {
 /** A night's money asked of Stripe once more, the morning after (late tips). Bounded per ring; never inside a hot path. */
 export async function recheckSome(rows, work, now, deadline = Infinity) {   // exported for test/stripefees.mjs
   if (!process.env.STRIPE_SECRET_KEY) return [];
-  const late = rows.filter((r) => r.status === 'counted' && r.endedAt && now - r.endedAt > RECHECK_AFTER_MS && now - r.endedAt < RECHECK_UNTIL_MS && !(work.rechecked || {})[r.id])
+  /* A COUNT CUT SHORT IS FINISHED HERE (decision 0153, INVARIANT 0ii). A night filed as
+     'stripe-partial' — its End ran out of time, or Stripe stopped answering part-way —
+     is carried on from its place-marker (`priceNight`), a few a ring, whatever its age
+     or status, and is never marked as asked: it comes back every ring until Stripe says
+     there is nothing left. Its morning-after ask (below) waits until then, so that ask
+     is spent on a whole count. */
+  const partial = rows.filter((r) => r.money && r.money.source === 'stripe-partial')
+    .sort((a, b) => (a.endedAt || 0) - (b.endedAt || 0)).slice(0, PARTIALS_PER_RING);
+  const late = rows.filter((r) => r.status === 'counted' && r.endedAt && now - r.endedAt > RECHECK_AFTER_MS && now - r.endedAt < RECHECK_UNTIL_MS && !(work.rechecked || {})[r.id]
+      && !(r.money && r.money.source === 'stripe-partial'))
     .sort((a, b) => a.endedAt - b.endedAt).slice(0, RECHECKS_PER_RING);
   /* EVS-005: a counted night whose room money Stripe answered but whose exact fee was
      never read (filed before fees were) is asked once more, whatever its age, a few a
@@ -568,16 +578,17 @@ export async function recheckSome(rows, work, now, deadline = Infinity) {   // e
   const feeless = rows.filter((r) => r.status === 'counted' && r.money && r.money.known && r.money.stripeFees == null && r.endedAt
       && ((work.rechecked || {})[r.id] || now - r.endedAt >= RECHECK_UNTIL_MS) && !(work.feesAsked || {})[r.id] && !late.includes(r))
     .sort((a, b) => b.endedAt - a.endedAt).slice(0, FEE_ASKS_PER_RING);
-  const due = [...late, ...feeless];
+  const due = [...partial, ...late, ...feeless];
   const done = [];
   for (const r of due) {
     if (Date.now() > deadline) break;                           // the ring's time box: the rest wait for the next ring
     try {
-      const { reconcileShow, refreshShowFees } = await import('./_history.mjs');
-      const ask = late.includes(r) ? reconcileShow : refreshShowFees;
-      for (const id of r.mergedFrom || [r.showId]) await ask(r.artist.id, id);   // a merged night is asked for each of its records
+      const { reconcileShow, refreshShowFees, priceNight } = await import('./_history.mjs');
+      const ask = partial.includes(r) ? priceNight : late.includes(r) ? reconcileShow : refreshShowFees;
+      for (const id of r.mergedFrom || [r.showId]) await ask(r.artist.id, id, { deadline });   // a merged night is asked for each of its records
       done.push(r.artist.id);
     } catch (e) { console.error('register: re-check failed', r.id, e && e.message); }
+    if (partial.includes(r)) continue;                          // asked again next ring until it is whole
     if (late.includes(r)) (work.rechecked ||= {})[r.id] = now; else (work.feesAsked ||= {})[r.id] = now;
   }
   return done;

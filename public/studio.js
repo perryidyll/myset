@@ -2557,6 +2557,7 @@ function render(){
         <div class="c"><b class="mono">$${(T.amount||0).toFixed(2)}</b><span>${T.count||0} tip${T.count===1?'':'s'}</span></div>
       </div>
       ${M.source==='stripe-unreachable'?`<p class="muted" style="font-size:12px;padding:12px 18px 0">Couldn’t reach Stripe for this one — the money figures may be stale.</p>`:''}
+      ${M.source==='stripe-partial'?`<p class="muted" style="font-size:12px;padding:12px 18px 0">Stripe hasn’t finished counting this night’s payments, so these figures are short. Re-check carries on from where it stopped.</p>`:''}
       ${M.unattributed?`<p class="muted" style="font-size:12px;padding:12px 18px 0">$${M.unattributed.toFixed(2)} came in during this window but isn’t tagged to a show — it predates show tracking.</p>`:''}
       ${T.recent&&T.recent.length?`<div class="sec"><span class="kick">Tips</span></div>
         ${T.recent.map(t=>`<div class="tip"><span>$${Number(t.amount).toFixed(2)}${t.note?' · “'+esc(t.note)+'”':''}</span><span class="muted">${dstamp(t.at)}</span></div>`).join('')}`:''}
@@ -2593,6 +2594,7 @@ function render(){
           <div class="c"><b class="mono">${L.totalVotes||0}</b><span>Votes</span></div>
           <div class="c"><b class="mono acc">$${(L.gross||0).toFixed(2)}</b><span>Taken</span></div>
         </div>
+        ${L.partial?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Still counting: Stripe had more payments than it could answer in time, so this is part of the night. Open Money again for the rest.</p>`:''}
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Start the next one from the Live tab when the gig begins.':'Tonight gets filed away when you end the show or start a new one.'}</p>
         ${biz&&done&&window.Money?bizSafe(()=>Money.tonight(L)):''}

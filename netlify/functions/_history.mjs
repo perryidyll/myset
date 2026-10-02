@@ -114,9 +114,23 @@ function addFee(fees, s) {
 /* Stripe stays the source of truth for money (INVARIANT 5d); this is a cache of
    it that the artist can re-pull at any time. Bounded to the show's own window
    and auto-paged, because sessions.list() does NOT paginate on its own and a
-   busy month would silently truncate. */
-export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = false } = {}) {
+   busy month would silently truncate.
+
+   A COUNT CUT SHORT SAYS SO, AND CARRIES ON LATER (decision 0153, INVARIANT 0ii). One
+   ask reads at most MONEY_PAGES pages and stops at `deadline` (checked between pages,
+   so a slow page can run past it by its own length). This used to be ten pages and
+   nothing else: past a thousand payments in the window — and on the platform's own
+   account the window holds every artist's payments — the rest were dropped and the
+   night was filed as `source: 'stripe'`, complete. Now a count that stops with pages
+   left is `source: 'stripe-partial'` with a `partial` block (the last session read,
+   the window, how many pages), so every reader that asks "is this Stripe's answer"
+   (`source === 'stripe'`) treats it as not known yet; and `resume` takes that block
+   and goes on from the session after it, adding to the sums it already holds. A
+   resumed ask that cannot reach Stripe gives back what it was given, unchanged. */
+export const MONEY_PAGES = 10;
+export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = false, deadline = Infinity, resume = null } = {}) {
   const key = process.env.STRIPE_SECRET_KEY;
+  const going = resume && resume.source === 'stripe-partial' && resume.partial && resume.partial.after ? resume : null;
   /* `votes.paid` is how many votes the room BOUGHT that night (the packs' `votes`
      metadata summed) and `requests` the paid song requests the artist accepted
      (a request_hold is only `paid` once captured) — the two figures the business
@@ -135,7 +149,9 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
        still settling); the figure is exact only when it is 0. */
     fees: { usd: 0, charges: 0, missing: 0 },
   };
-  if (!key) return out;
+  if (!key) return going || out;
+  // carrying on: the sums so far are the starting point, and the window is the one it began with
+  if (going) Object.assign(out, JSON.parse(JSON.stringify(going)), { reconciledAt: Date.now() });
 
   const end = toMs || Date.now();
   /* A show with no startedAt has no window, and asking Stripe for "everything since
@@ -143,15 +159,16 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
      and reported all of it as this night's untagged money. A day is the widest a
      single night can honestly be. */
   const start = fromMs || (end - 24 * 3600e3);
-  const gte = Math.floor(start / 1000) - 300;                  // 5 min of slack
-  const lte = Math.floor(end / 1000) + 3600;                   // and an hour after
+  const gte = going ? going.partial.gte : Math.floor(start / 1000) - 300;   // 5 min of slack
+  const lte = going ? going.partial.lte : Math.floor(end / 1000) + 3600;    // and an hour after
   /* UNTAGGED money is a window figure, and when the window is closed by the NEXT
      night's start (reconcileShow) the hour of slack would lay the two nights' windows
      over each other and count the same untagged payment on both. A tagged payment
      names its night and is untouched; an untagged one made after the next night began
      belongs to that window, not this one (0095). */
-  const untaggedUntil = closedByNext ? end : Infinity;
-  let after = null;
+  const untaggedUntil = going ? (going.partial.until ?? Infinity) : closedByNext ? end : Infinity;
+  let after = going ? going.partial.after : null;
+  let asked = 0, complete = false;
   try {
     /* Scoped, for the same reason revenue.mjs is: without it a connected artist's
        night was archived as gross 0 with source:'stripe' — claiming Stripe was asked
@@ -163,13 +180,24 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
     const [{ stripeFor, scope }, { default: Stripe }] = await Promise.all([import('./_connect.mjs'), import('stripe')]);
     const { stripe: scoped, opts: sOpts } = await stripeFor(aid);
     const stripe = scoped || new Stripe(key);
-    for (let page = 0; page < 10; page++) {
+    for (;;) {
+      // out of pages for one ask, or out of time: stop, and say so below — never before the first page
+      if (asked >= MONEY_PAGES || (asked > 0 && Date.now() > deadline)) break;
       const ask = (expand) => stripe.checkout.sessions.list({
         limit: 100, created: { gte, lte }, ...(after ? { starting_after: after } : {}), ...(expand ? { expand: [FEE_EXPAND] } : {}),
       }, ...scope(sOpts));
       /* the fee is extra: if Stripe ever refuses the expansion, the night's money is still
          read — its fees then come back missing, never its takings */
-      const r = await ask(true).catch((e) => { console.error('moneyForShow: fee expansion refused, reading without it', e && e.message); return ask(false); });
+      let r;
+      try { r = await ask(true).catch((e) => { console.error('moneyForShow: fee expansion refused, reading without it', e && e.message); return ask(false); }); }
+      catch (e) {
+        if (!asked) throw e;
+        /* Stripe stopped answering part-way: the pages already added are kept and the
+           count carries on from the last one, rather than throwing them all away */
+        console.error('moneyForShow: Stripe stopped answering part-way; the rest is counted later', e && e.message);
+        break;
+      }
+      asked += 1;
       for (const s of r.data || []) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};
@@ -196,11 +224,21 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
           out.tips.recent.push({ amount: amt, note: md.note || '', at: (s.created || 0) * 1000 });
         }
       }
-      if (!r.has_more || !r.data.length) break;
+      if (!r.has_more || !(r.data || []).length) { complete = true; break; }
       after = r.data[r.data.length - 1].id;
     }
   } catch {
+    // nothing could be read: carrying on, the count stays exactly where it was
+    if (going) return going;
     out.source = 'stripe-unreachable';
+  }
+  if (out.source !== 'stripe-unreachable') {
+    if (complete) { out.source = 'stripe'; delete out.partial; }
+    else {
+      out.source = 'stripe-partial';
+      out.partial = { after, gte, lte, until: untaggedUntil === Infinity ? null : untaggedUntil,
+                      pages: ((going && Number(going.partial.pages)) || 0) + asked };
+    }
   }
   out.tips.recent = out.tips.recent.sort((a, b) => b.at - a.at).slice(0, 12);
   return out;
@@ -235,8 +273,10 @@ async function countRsvps(aid, autoKey) {
 
 /* Snapshot a finished show. MUST run before wipeFans()/clearAllFanVotes(),
    because those destroy the only copy of the tally. Idempotent: re-archiving an
-   already-archived show only refreshes its money block. */
-export async function archiveShow(aid, show, fans) {
+   already-archived show only refreshes its money block. `deadline` bounds the
+   pricing (decision 0153): a count it cuts short is filed as 'stripe-partial' and
+   finished later by `priceNight`. */
+export async function archiveShow(aid, show, fans, { deadline = Infinity } = {}) {
   const showId = show && show.showId;
   if (!showId) return null;
 
@@ -289,7 +329,7 @@ export async function archiveShow(aid, show, fans) {
   const endedAt = Date.now();
 
   const room = roomCounts(fans || {});
-  const money = await moneyForShow(aid, showId, show.startedAt, endedAt);
+  const money = await moneyForShow(aid, showId, show.startedAt, endedAt, { deadline });
   const [filedRequests, filedRsvps] = await Promise.all([countRequests(aid, showId), countRsvps(aid, show.autoKey)]);
 
   const doc = {
@@ -773,6 +813,11 @@ export async function refreshShowMoney(aid, showId, money) {
     if (!d || !d.showId) return false;
     d.money = money; return true;
   }).catch(() => {});
+  return writeMoneyRow(aid, showId, money);
+}
+/* The index-row half of the above, on its own for `priceNight`, which writes the
+   detail under its own guard first. */
+async function writeMoneyRow(aid, showId, money) {
   let kept = null;
   await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
     const row = (idx.shows || []).find((x) => x.showId === showId);
@@ -793,13 +838,14 @@ export async function refreshShowMoney(aid, showId, money) {
    Anything else (Stripe unreachable, a connected account asked on the wrong side, a
    window that now reads differently) writes nothing: a fee is never allowed to rewrite
    a night's money. Returns the fee written, or null. */
-export async function refreshShowFees(aid, showId) {
+export async function refreshShowFees(aid, showId, { deadline = Infinity } = {}) {
   const doc = await readHistShow(aid, showId);
   if (!doc || !doc.money || doc.money.source !== 'stripe') return null;
   const idx = await readHistIndex(aid);
   const i = (idx.shows || []).findIndex((x) => x.showId === showId);
   const closedByNext = i > 0 && !!(idx.shows[i - 1].startedAt || idx.shows[i - 1].endedAt);
-  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId), { closedByNext });
+  // a count cut short is not Stripe's whole answer, so `same` below refuses it
+  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId), { closedByNext, deadline });
   const same = money.source === 'stripe' && round(money.gross) === round(Number(doc.money.gross) || 0) && round(money.unattributed || 0) === round(Number(doc.money.unattributed) || 0);
   if (!same || !money.fees || money.fees.missing) return null;
   await casDoc(HIST(aid, showId), () => ({}), (d) => {
@@ -814,13 +860,54 @@ export async function refreshShowFees(aid, showId) {
   return money.fees.usd;
 }
 
-export async function reconcileShow(aid, showId) {
+export async function reconcileShow(aid, showId, { deadline = Infinity } = {}) {
   const doc = await readHistShow(aid, showId);
   if (!doc) return null;
+  /* A count that was cut short carries on from where it stopped (0153): starting it
+     again from the top would spend the same pages and could be cut short at the same
+     place for ever. */
+  if (doc.money && doc.money.source === 'stripe-partial' && doc.money.partial) {
+    const r = await priceNight(aid, showId, { deadline });
+    return { ...doc, money: (r && r.money) || doc.money };
+  }
   const idx = await readHistIndex(aid);
   const i = (idx.shows || []).findIndex((x) => x.showId === showId);
   const closedByNext = i > 0 && !!(idx.shows[i - 1].startedAt || idx.shows[i - 1].endedAt);
-  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId), { closedByNext });
+  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId), { closedByNext, deadline });
   await refreshShowMoney(aid, showId, money);
   return { ...doc, money };
+}
+
+/* FINISHING A COUNT THAT WAS CUT SHORT (decision 0153, INVARIANT 0ii). A night filed
+   as 'stripe-partial' is carried on from its place-marker (`money.partial.after`),
+   adding only the pages after it, until Stripe says there are none left; then it is
+   'stripe' and the marker is gone. Callers: the register's bell (`recheckSome`, a few
+   a ring, until done) and Re-check on the night (`reconcileShow`).
+
+   NEVER THE SAME PAGES TWICE. The detail is written only if its marker is still the
+   one this run started from: two of these at once (the bell and a tap) both read
+   from the same place, the first to write moves the marker, and the second finds it
+   moved and writes nothing — its pages are not added on top. The row follows the
+   detail. A row still flagged when its detail is finished (a row write that was lost)
+   is put right from the detail. Returns { done, moved, money } or null. */
+export async function priceNight(aid, showId, { deadline = Infinity } = {}) {
+  const doc = await readHistShow(aid, showId);
+  if (!doc || !doc.money) return null;
+  const was = doc.money;
+  if (was.source !== 'stripe-partial' || !was.partial) {
+    const row = (await readHistIndex(aid)).shows.find((x) => x.showId === showId);
+    if (row && row.source === 'stripe-partial') await writeMoneyRow(aid, showId, was);
+    return { done: was.source === 'stripe', moved: false, money: was };
+  }
+  const money = await moneyForShow(aid, showId, doc.startedAt, doc.endedAt, { resume: was, deadline });
+  if (money.partial && money.partial.after === was.partial.after) return { done: false, moved: false, money: was };
+  let landed = false;
+  await casDoc(HIST(aid, showId), () => ({}), (d) => {
+    const m = d && d.showId && d.money;
+    if (!m || m.source !== 'stripe-partial' || !m.partial || m.partial.after !== was.partial.after) return false;
+    d.money = money; landed = true; return true;
+  });
+  if (!landed) return { done: false, moved: false, money: was };
+  await writeMoneyRow(aid, showId, money);
+  return { done: money.source === 'stripe', moved: true, money };
 }

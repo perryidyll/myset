@@ -163,6 +163,9 @@ echo
 echo "── a tip after the show is still that night's money ──"
 node --import ./test/register.mjs test/latetips.mjs
 echo
+echo "── the room stops first; the night is priced after, on a clock (0153) ──"
+node --import ./test/register.mjs test/endfirst.mjs
+echo
 echo "── the first gig: the sign, the count, the morning-after note ──"
 node --import ./test/register.mjs test/firstgig.mjs
 echo
