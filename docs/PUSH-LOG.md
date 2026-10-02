@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 04:04 — 4499b59 — scale-paidarc@fix/paid-archive (60 files since origin/main)
+**tl;dr:** No change for people yet: old payment records now wait 130 days, not 90, before moving to the archive
+**Other sessions:** #236: PAID_KEEP_DAYS 130, PAID_ARC_MARGIN_MS 120 days — a dispute (Stripe: up to 120 days) must find its marker in meta, where #238's handlers write.
+
 ### 2026-10-03 03:36 — b1b3bba — scale-paidarc@fix/paid-archive (60 files since origin/main)
 **tl;dr:** The payments file stops growing forever: payment records older than 90 days move to a yearly archive, and every check that stops a pack being granted twice still finds them (0193)
 **Other sessions:** NOT MERGED, stacked on #227. New key family paidarc_<owner>_<YYYY> (MIRRORED; in keysFor/keysForVenue). readPaidAll()/archivedMarker()/archivePaid() in _pay.mjs; autocron step after heal (PAIDARC_BUDGET_MS 1.5 s, paidarcCursor). Any reader that needs lifetime payments must use readPaidAll, not meta.paid (INVARIANT 0ih). Touches _warehouse.mjs line 524, _metrics.mjs, _register.mjs (old nights), tools/metrics.mjs.
