@@ -165,7 +165,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0181](0181-the-artist-s-sweep-redeems-only-what-is-owed-on-a-clock.md) | The artist's sweep redeems only what is owed, newest first, on a clock | 2026-10-03 | money | decided | claude |
 | [0182](0182-money-is-not-taken-for-what-the-room-can-no-longer-give.md) | Money is not taken for what the room can no longer give | 2026-10-03 | money | decided | claude |
 | [0183](0183-stripe-reads-follow-the-account-the-money-lives-on.md) | Stripe reads follow the account the money lives on, even while Stripe has paused it | 2026-10-03 | money | decided | claude |
-| [0184](0184-a-paid-plan-is-applied-before-it-is-marked-synced.md) | A paid plan is applied before it is marked synced, grace counts from the failed renewal, and Stripe is asked before a second subscription | 2026-10-03 | plans | decided | perry-confirmed |
+| [0184](0184-a-paid-plan-is-applied-before-it-is-marked-synced.md) | A paid plan is applied before it is marked synced, grace counts from the failed renewal, and Stripe is asked before a second subscription | 2026-10-03 | plans | decided | claude |
 | [0188](0188-a-fan-s-stripe-call-has-a-ten-second-clock.md) | A fan's Stripe call has a ten-second clock | 2026-10-03 | money | decided | claude |
 
 ## By area
