@@ -95,6 +95,10 @@ await AS(TB, 'planCheckout', { plan: 'plus' });
 eq('a second artist reuses the Plus price', __stripe.calls.filter((c) => c.method === 'prices.create').length, before);
 
 console.log('\nA PROMO CODE BELOW 100% BECOMES A COUPON');
+/* The fake "pays" the moment a checkout is created. Bo walked away from that
+   first one, so it is the subscription an abandoned Checkout leaves behind — and
+   Stripe, now asked before a second checkout (0184), must not count it as live. */
+for (const s of __stripe.subs.values()) if (s.customer === (await readBilling(bo.artistId)).customerId) s.status = 'incomplete_expired';
 await mutateArtists((reg) => { reg.byId[bo.artistId].discountPct = 50; reg.byId[bo.artistId].discountCode = 'HALF'; return true; });
 await AS(TB, 'planCheckout', { plan: 'pro' });
 created = lastCall('checkout.sessions.create');
@@ -136,6 +140,80 @@ await mutateArtists((reg) => { reg.byId[bo.artistId].plan = 'pro'; reg.byId[bo.a
 const { syncSubscription } = await import('../netlify/functions/_billing.mjs');
 await syncSubscription(bo.artistId, 'sub_nope').catch(() => {});
 eq('a failed sync leaves a comp alone', (await readArtists()).byId[bo.artistId].plan, 'pro');
+
+console.log('\nPLAN BILLING DOES NOT LEAK  (decision 0184)');
+{
+  const { __failWrites } = await import('./blobs-fake.mjs');
+  const dee = await createArtist({ email: 'dee@example.com', name: 'Dee Okafor', slug: 'dee-okafor' });
+  const TD = await signToken('dee@example.com', revOf(await readArtists(), dee.artistId));
+  ok('Dee’s Pro checkout opens', (await AS(TD, 'planCheckout', { plan: 'pro' })).ok);
+  const session = __stripe.sessions.get([...__stripe.sessions.keys()].pop()).session;
+  const deeSub = __stripe.subs.get(session.subscription);
+  const wh = (evt) => hit(webhookFn, 'https://x/api/webhook', evt, null, { 'stripe-signature': 'sig' });
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+
+  /* 1 · A PAID UPGRADE IS NEVER MARKED DONE BEFORE IT LANDS. The sync stamped
+     itself first and swallowed the registry's failure, so Stripe was told
+     "received" and the next look was six hours away — with fans paying the old cut. */
+  __failWrites(/^artists$/);
+  r = await wh({ type: 'checkout.session.completed', data: { object: session } });
+  __failWrites(null);
+  ok('a plan write that fails answers Stripe with an error, so Stripe sends it again', r.status >= 500, r);
+  ok('the plan has not moved', (await readArtists()).byId[dee.artistId].plan !== 'pro');
+  eq('and the sync is not stamped as done, so the next Studio boot re-reads Stripe', (await readBilling(dee.artistId)).lastSyncAt, 0);
+  r = await wh({ type: 'checkout.session.completed', data: { object: session } });
+  ok('Stripe’s redelivery lands', r.received, r);
+  eq('she is on Pro', (await AS(TD, 'planGet')).plan, 'pro');
+  ok('and only now is the sync stamped', (await readBilling(dee.artistId)).lastSyncAt > 0);
+
+  /* 2 · THREE DAYS MEANS THREE DAYS. After a declined renewal Stripe has already
+     moved the period on, so "period end + 3 days" was a month and more. */
+  const day = 86400;
+  const now = Math.floor(Date.now() / 1000);
+  const decline = (startedDaysAgo) => {
+    deeSub.status = 'past_due';
+    deeSub.current_period_start = now - startedDaysAgo * day;      // the renewal that failed
+    deeSub.current_period_end = deeSub.current_period_start + 30 * day;
+    return wh({ type: 'invoice.payment_failed', data: { object: { subscription: deeSub.id,
+      subscription_details: { metadata: { owner: dee.artistId } } } } });
+  };
+  r = await decline(1);
+  ok('a declined renewal is received', r.received, r);
+  r = await AS(TD, 'planGet');
+  eq('a day in, she keeps Pro', r.plan, 'pro');
+  eq('until three days after the renewal that failed', r.until, (deeSub.current_period_start + 3 * day) * 1000);
+  eq('and the Studio names that same day', r.billing.graceUntil, r.until);
+  await decline(5);
+  r = await AS(TD, 'planGet');
+  eq('five days in, the grace is over — not a month after the new period ends', r.plan, 'free');
+  ok('the banner says it ran out', r.billing.pastDue && r.billing.graceUntil < Date.now(), r.billing);
+  deeSub.status = 'active';
+  await wh({ type: 'customer.subscription.updated', data: { object: { id: deeSub.id, metadata: { owner: dee.artistId } } } });
+  eq('a retry that goes through brings Pro back', (await AS(TD, 'planGet')).plan, 'pro');
+  ok('to the end of the period plus three days', (await AS(TD, 'planGet')).until === (deeSub.current_period_end + 3 * day) * 1000);
+  delete process.env.STRIPE_WEBHOOK_SECRET;
+
+  /* 3 · TWO TABS, ONE SUBSCRIPTION. Eli pays in one tab; before the webhook or the
+     return trip lands, the other tab still shows Upgrade. The record says nothing
+     yet — Stripe does. */
+  const eli = await createArtist({ email: 'eli@example.com', name: 'Eli Brandt', slug: 'eli-brandt' });
+  const TE = await signToken('eli@example.com', revOf(await readArtists(), eli.artistId));
+  ok('Eli’s first tab opens checkout', (await AS(TE, 'planCheckout', { plan: 'plus' })).ok);
+  const eliCus = (await readBilling(eli.artistId)).customerId;
+  eq('he pays; his record has not heard yet', (await readBilling(eli.artistId)).subId, '');
+  const opened = __stripe.calls.filter((c) => c.method === 'checkout.sessions.create').length;
+  r = await AS(TE, 'planCheckout', { plan: 'pro' });
+  eq('the second tab is refused — change the plan instead', [r.status, /already have a subscription/.test(r.error)], [400, true]);
+  eq('no second checkout is opened', __stripe.calls.filter((c) => c.method === 'checkout.sessions.create').length, opened);
+  eq('Stripe was asked about every subscription on his customer', [lastCall('subscriptions.list').args.customer, lastCall('subscriptions.list').args.status], [eliCus, 'all']);
+  eq('and his record learned the one he has', (await AS(TE, 'planGet')).plan, 'plus');
+  eq('one live subscription on his card, not two', [...__stripe.subs.values()].filter((s) => s.customer === eliCus && s.status === 'active').length, 1);
+  const asked = __stripe.calls.filter((c) => c.method === 'subscriptions.list').length;
+  const fay = await createArtist({ email: 'fay@example.com', name: 'Fay Lin', slug: 'fay-lin' });
+  const TF = await signToken('fay@example.com', revOf(await readArtists(), fay.artistId));
+  ok('somebody with no customer yet goes straight to checkout', (await AS(TF, 'planCheckout', { plan: 'plus' })).ok);
+  eq('without asking Stripe about subscriptions she cannot have', __stripe.calls.filter((c) => c.method === 'subscriptions.list').length, asked);
+}
 
 console.log('\nTHE PORTAL');
 r = await AS(TA, 'planPortal');
