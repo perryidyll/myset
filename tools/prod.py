@@ -88,8 +88,8 @@ def report():
     print(f'  {"TOTAL":<14} {len(ks)}')
 
     print('\nTHINGS WORTH KNOWING')
-    print('  spreadsheet export .. there is NO Google Sheet and never was;'
-          ' nothing is mirrored outside Netlify')
+    print('  off-site copy ....... mirrorcron copies every document to R2 once a day'
+          ' (decisions 0069, 0146); `python3 tools/backup.py --coverage` names what it has not')
     if not any(k.startswith('connect_') for k in ks):
         print('  Stripe Connect ...... no artist has started it, so nothing can'
               ' auto-verify and no artist can take money yet')
