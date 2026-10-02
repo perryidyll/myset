@@ -226,6 +226,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
     if (fresh) {
       show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
       show.log = [];
+      show.col = {};                 // last night's marks; `plays` itself only ever counts up (0147)
       show.showId = freshId;
       show.startedAt = now;
       show.windowOpen = true;

@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
+import { COUNTDOWN_MS, getShow, mutateShow, readFans, liveFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk,
@@ -2001,9 +2001,13 @@ const main = async (req) => {
   let err = null, playedNow = null, clearBoard = false, note = null;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
-  let counts = null, firstAt = null, votersNow = 0;
+  let counts = null, firstAt = null, votersNow = 0, showBefore = null;
   if (action === 'play' || action === 'playTop') {
-    const f = await readFans(aid);
+    // what the board shows: without the votes a song already collected (0147).
+    // The show read is the one `prevShow` below would have made, moved up — not a new one.
+    const [f0, sh0] = await Promise.all([readFans(aid), getShow(aid)]);
+    showBefore = sh0;
+    const f = liveFans(f0, sh0);
     counts = voteCounts(f); firstAt = firstVotedAt(f);
     votersNow = Object.values(f).filter((x) => (x.v || []).length).length;
   }
@@ -2055,7 +2059,7 @@ const main = async (req) => {
      still wants the pre-mutation show for `logPlay`, and the release note below
      compares the playable set before and after. */
   const NEEDS_BEFORE = new Set(['play', 'playTop', 'freeCredits', 'replayCost']);
-  const prevShow = NEEDS_BEFORE.has(action) ? await getShow(aid) : null;
+  const prevShow = NEEDS_BEFORE.has(action) ? (showBefore || await getShow(aid)) : null;
   /* setCode's deny-list refuses the page's own name, which is a registry read and
      so is taken before the CAS. `show.slug` was never a field, so that refusal
      silently never fired until 2026-09-28 (0110). */
@@ -2112,6 +2116,11 @@ const main = async (req) => {
          play past the two-hundredth is still filed there. */
       if (show.log.length > 200) show.log = show.log.slice(-200);
     };
+    /* THE SONG COLLECTS ITS VOTES IN THIS WRITE (decision 0147). Every vote row
+       says how many songs had started when it was cast; marking this song with the
+       new count makes every row stamped lower one this song has collected —
+       including a vote still on its way that lands after the sweep below. */
+    const collect = (id) => { show.plays = (show.plays || 0) + 1; show.col[id] = show.plays; };
 
     switch (action) {
       /* A DOUBLE START IS ALWAYS A MISTAKE. No musician starts two songs eight
@@ -2133,6 +2142,7 @@ const main = async (req) => {
         show.nowPlaying = id || null;
         show.nowPlayingAt = Date.now();
         show.windowOpen = true; playedNow = id;
+        collect(id);
         break;
       }
       case 'playTop': {
@@ -2161,6 +2171,7 @@ const main = async (req) => {
         show.nowPlaying = pool[0].id;
         show.nowPlayingAt = Date.now();
         show.windowOpen = true; playedNow = pool[0].id;
+        collect(pool[0].id);
         break;
       }
       case 'endSong': {

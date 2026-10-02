@@ -1,6 +1,6 @@
 import { COUNTDOWN_MS, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, countInRoom, pollFloorFor, boardLimitFor, tipsTonight,
-         GENRES, playable, votable } from './_lib.mjs';
+         GENRES, playable, votable, liveFan, liveFans } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { VIBE_OPTIONS } from './_requests.mjs';
@@ -51,6 +51,7 @@ export function buildBoard({ aid, show, fans, flags, meta = null, at = Date.now(
   const roomCap = Number(show.roomCap) > 0 ? Number(show.roomCap) : null;
   const live = show.status === 'live';
   const heads = live ? countInRoom(fans, show) : 0;
+  liveFans(fans, show);            // a vote its song has already collected is not on the board (0147)
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
 
@@ -226,7 +227,7 @@ export function crowdNumbers(show, fans, counts, meta, live) {
 /** What is true of ONE phone and nobody else. Reads nothing: the caller hands it
  *  the fan's own record, which came out of one shard. */
 export function buildMe({ show, fanId, me, myAsks }) {
-  const rec = me || { v: [], extra: 0 };
+  const rec = liveFan(me, show) || { v: [], extra: 0 };      // without what its song collected (0147)
   const mine = rec.v || [];
   const total = show.freeCredits + (rec.extra || 0);
   const used = creditsUsed(rec, show);

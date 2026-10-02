@@ -1,6 +1,6 @@
 import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, tipsTonight, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME, liveFans } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
@@ -46,6 +46,7 @@ export async function stagePayload(aid, seat) {
      refund affordances in the inactive Studio payload. A fresh show performs the
      durable carry/reset at the true night boundary. */
   const live = show.status === 'live';
+  liveFans(fans, show);            // the Studio's queue is the room's board: nothing a song already collected (0147)
   const counts = live ? voteCounts(fans) : {};
   // a tipper's votes are paid votes too (decision 0079) — the pill on every song card
   const paidCounts = live ? paidVoteCounts(fans, tippersTonight(meta.tips, show.startedAt)) : {};
