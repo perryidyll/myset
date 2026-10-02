@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
+**tl;dr:** Docs: scale-audit week one recorded as live
+**Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
+
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
 **Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.
