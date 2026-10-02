@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
+**tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
+**Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
+
 ### 2026-10-02 23:07 — cd6851a — escape-management@fix/escape-management-name (1 files since origin/main)
 **tl;dr:** Artist page: a label or management name is now shown as plain text, so markup typed into it can no longer run on the public page
 **Other sessions:** artist.html only: esc(P.management) in the links pill. Scale audit week one (session cdfdf5) has more coming: webhook.mjs, _feesplit.mjs, _auto.mjs, _lib.mjs readDoc/publicArtist, vote.html — see the sessions board row before touching those.
