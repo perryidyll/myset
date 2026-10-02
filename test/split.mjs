@@ -344,6 +344,138 @@ console.log('\nTHE PAGE PAINTS THE BOARD FIRST AND ASKS FOR ITSELF RARELY  (deci
      /const meWait=!ME&&!ME_SEEN;/.test(page) && /\$\{meWait\?'<span class="sk"/.test(page));
 }
 
+console.log('\nTHE PAGE READS THE SONG LIST ONCE AND POLLS ONLY THE TALLIES  (decision 0192)');
+/* The page half of decision 0150. load() is lifted as above and run against stubs
+   shaped like both servers: today's (no `songsV`) and one that names its song list.
+   Forty songs; the full board is cut to fifteen with a tail, the way a big room's is. */
+{
+  const s = page.indexOf('const ME_EVERY='), e = page.indexOf('/* The board and this phone\'s half');
+  ok('vote.html has the song-list code inside the lifted slice', page.slice(s, e).includes('function fromList(b,L)') && page.slice(s, e).includes('async function listed(b)'));
+  const song = (i) => ({ id: 's' + i, title: 'Song ' + String(i).padStart(2, '0'), artist: 'T', cost: 1, tags: i % 2 ? ['rock'] : [] });
+  const TAGS = [{ id: 'rock', label: 'Rock' }];
+  const listAt = (v, played = []) => ({ ok: true, v, songs: Array.from({ length: 40 }, (_, i) => song(i)).filter((x) => !played.includes(x.id)),
+    played: played.map((id) => ({ ...song(Number(id.slice(1))), cost: 5 })), tags: TAGS });
+  const voted = (i) => ({ ...song(i), votes: 20 - i, firstAt: 1000 + i });           // s0..s19 hold votes, in rank order
+  const fullAt = (v) => ({ ok: true, showId: 's1', updatedAt: v, status: 'live',          // a new version is an artist action: updatedAt moves with it
+    ...(v ? { songsV: v } : {}),
+    songs: Array.from({ length: 15 }, (_, i) => voted(i)), board: 15,
+    tail: [15, 16, 17, 18, 19].map((i) => [song(i).id, 20 - i, 1000 + i]), played: [], tags: TAGS });
+  const leanAt = (v, tally) => { const { songs, played, tail, tags, ...rest } = fullAt(v);
+    return { ...rest, tally: tally || Array.from({ length: 20 }, (_, i) => [song(i).id, 20 - i, 1000 + i]) }; };
+  const rig = () => {
+    const log = [];
+    const net = { board: () => fullAt(null), lean: () => null, songs: () => null, me: () => ({ ok: true, showId: 's1', lastAt: 0, votes: {}, credits: {} }) };
+    const reply = (body) => body === null ? Promise.reject(new Error('down'))
+      : Promise.resolve({ json: async () => body, headers: { get: () => '0' } });
+    const timed = (u) => {
+      if (/what=songs/.test(u)) { const v = new URL(u, 'https://x').searchParams.get('v'); log.push('songs:' + v); return reply(net.songs(v)); }
+      const k = /what=board/.test(u) ? (/lean=1/.test(u) ? 'lean' : 'board') : 'me';
+      log.push(k); return reply(net[k]());
+    };
+    const app = { classList: { add() {}, remove() {} }, set innerHTML(v) { log.push('noboard'); } };
+    const make = new Function('timed', 'within', 'paint', 'hideIntro', '$', 'API', 'AQ', 'AQ1', 'FAN', 'window',
+      `let BOARD=null, ME=null, CAST_AT=0, FAILS=0, BOOTED=false;\n${page.slice(s, e)}\n` +
+      'return { load, fromList, get BOARD(){return BOARD;}, get LIST(){return LIST;}, missAge(ms){ if(LIST_MISS) LIST_MISS.at-=ms; } };');
+    const p = make(timed, (x) => x, (fresh) => log.push('paint:' + fresh), () => {}, () => app, '/api', '', '', 'f1', {});
+    return { p, log, net };
+  };
+  const ids = (list) => list.map((x) => x.id);
+
+  { // today's server
+    const { p, log, net } = rig();
+    await p.load(); await p.load();
+    eq('today\'s server (no songsV): exactly #228\'s calls — no list, no lean board', log.splice(0), ['board', 'paint:true', 'me', 'paint:false', 'board', 'paint:true']);
+    eq('and the board is drawn as it came: fifteen songs, the cut said out loud', [p.BOARD.songs.length, p.BOARD.board], [15, 15]);
+    ok('nothing was invented for it', p.BOARD.tail.length === 5 && !('tally' in p.BOARD) && p.LIST === null);
+    net.board = () => ({ ...fullAt(null), tally: [['s0', 1, null]] });                 // a server that sent a tally without a version
+    await p.load();
+    eq('a tally with no version is never taken for a board', [log.splice(0), p.BOARD.songs.length], [['board', 'paint:false'], 15]);
+  }
+
+  { // a server that names its list
+    const { p, log, net } = rig();
+    net.board = () => fullAt('v1'); net.lean = () => leanAt('v1'); net.songs = (v) => listAt('v1');
+    await p.load();
+    eq('first load: today\'s board painted at once, then the list at the version it names, painted again, then the personal call',
+       log.splice(0), ['board', 'paint:true', 'songs:v1', 'paint:false', 'me', 'paint:false']);
+    const B = p.BOARD;
+    eq('every song is drawn — forty, not fifteen — and nothing claims a cut', [B.songs.length, B.board, B.tail], [40, null, null]);
+    eq('voted songs in the tally\'s rank order, then the rest of the list by title, at 0',
+       ids(B.songs), [...Array.from({ length: 20 }, (_, i) => 's' + i), ...Array.from({ length: 20 }, (_, i) => 's' + (i + 20))]);
+    ok('with their tallies and first-vote times from the board, titles and prices from the list',
+       B.songs[16].votes === 4 && B.songs[16].firstAt === 1016 && B.songs[16].title === 'Song 16' && B.songs[39].votes === 0 && B.songs[39].firstAt === null && B.songs[39].cost === 1);
+    eq('genre chips from the list', B.tags, TAGS);
+    await p.load(); await p.load();
+    eq('then every poll is the lean board alone — the list is not asked for again', log.splice(0), ['lean', 'paint:true', 'lean', 'paint:true']);
+    eq('and draws the same forty songs as the full board did', ids(p.BOARD.songs), ids(B.songs));
+    ok('the lean board\'s own fields still reach the page', p.BOARD.showId === 's1' && p.BOARD.status === 'live' && !('tally' in p.BOARD));
+
+    /* SEARCH reaches every song: the merged board carries all forty, and render()
+       filters the songs and the played list together with this one `match`. */
+    const merged = onPhone(p.BOARD, { ok: true, showId: 's1', lastAt: 0, votes: {} });
+    const matchSrc = (page.match(/const match=s=>[^\n]*/) || [''])[0];
+    ok('render() lists and searches the songs and the played list together', /const all=\[\.\.\.\(d\.songs\|\|\[\]\),\.\.\.\(d\.played\|\|\[\]\)\];/.test(page) && /\(SORT==='votes'\?rank\(all\):all\)\.filter\(match\)/.test(page));
+    const found = new Function('q', 'all', `${matchSrc}; return all.filter(match).map(s=>s.id);`)('song 39', [...merged.songs, ...merged.played]);
+    eq('a search finds a song nobody has voted for, far below the old cut', found, ['s39']);
+
+    /* The artist starts a song: the version moves, s0 goes to played at the replay price. */
+    net.lean = () => leanAt('v2', [...Array.from({ length: 19 }, (_, i) => [song(i + 1).id, 19 - i, 1001 + i]), ['s0', 2, 999]]);
+    net.songs = (v) => listAt('v2', ['s0']);
+    await p.load();
+    eq('songsV moved: the lean board, the list at the new version once, then the paint', log.splice(0), ['lean', 'songs:v2', 'paint:true', 'me', 'paint:false']);
+    eq('the played song left the list and sits in played with its tally, at the replay price',
+       [p.BOARD.songs.length, ids(p.BOARD.played), p.BOARD.played[0].votes, p.BOARD.played[0].cost], [39, ['s0'], 2, 5]);
+    await p.load();
+    eq('and the next poll is lean again, with no refetch', log.splice(0), ['lean', 'paint:true']);
+
+    /* THE LIST CANNOT BE HAD: the full board, which is today's page. */
+    net.lean = () => leanAt('v3'); net.board = () => fullAt('v3'); net.songs = () => null;
+    await p.load();
+    eq('a list that fails: the full board is fetched in the same load and drawn as it came',
+       [log.splice(0), p.BOARD.songs.length, p.BOARD.board], [['lean', 'songs:v3', 'board', 'paint:true', 'me', 'paint:false'], 15, 15]);
+    await p.load();
+    eq('the next polls are the full board, and the failed version is not asked for again at once', log.splice(0), ['board', 'paint:true']);
+    p.missAge(61000); net.songs = (v) => listAt('v3');
+    await p.load();
+    eq('a minute on, it is tried again, and the page draws from the list', [log.splice(0), p.BOARD.songs.length], [['board', 'paint:true', 'songs:v3', 'paint:false'], 40]);
+    await p.load();
+    eq('and polls lean again', log.splice(0), ['lean', 'paint:true']);
+
+    /* A TALLY NAMING A SONG THE LIST LACKS: not this list. */
+    net.lean = () => leanAt('v3', [['s1', 3, 1], ['ghost', 9, 2]]);
+    await p.load();
+    eq('a tally that names a song the list lacks: the full board, at once', [log.splice(0), p.BOARD.songs.length, p.BOARD.board], [['lean', 'board', 'paint:true'], 15, 15]);
+    ok('and the list is let go', p.LIST === null);
+    await p.load();
+    eq('the polls stay on the full board', log.splice(0), ['board', 'paint:true']);
+
+    /* A LIST NEWER THAN THE BOARD (the edge's board is a poll old): kept, not drawn under it. */
+    p.missAge(61000); net.board = () => fullAt('v4'); net.songs = () => listAt('v5');
+    await p.load();
+    eq('a list whose version is not the board\'s is not drawn', [log.splice(0), p.BOARD.board], [['board', 'paint:true', 'songs:v4', 'me', 'paint:false'], 15]);
+    net.board = () => fullAt('v5');
+    await p.load();
+    eq('the next board names it: drawn from the list it already holds, with no fetch', [log.splice(0), p.BOARD.songs.length], [['board', 'paint:true', 'me', 'paint:false'], 40]);
+
+    /* A lean board whose fallback board does not arrive either is a load with no board (0143). */
+    net.lean = () => leanAt('v6'); net.songs = () => null; net.board = () => null;
+    await p.load();
+    eq('lean board, no list, no full board: the kept board stays and nothing else is asked', [log.splice(0), p.BOARD.songs.length], [['lean', 'songs:v6', 'board', 'paint:false'], 40]);
+  }
+
+  /* ONE DEFINITION. The phone's rebuild of a board from a tally and a list is the
+     server's own board, on the real small-room board this file voted onto above. */
+  {
+    const { p } = rig();
+    const b = b1.body;                                  // eight songs, three voted, no cut
+    const pick = (x) => ({ id: x.id, title: x.title, artist: x.artist, cost: x.cost, tags: x.tags });
+    const L = { ok: true, v: 'x', songs: [...b.songs].sort((a, c) => a.title.localeCompare(c.title)).map(pick), played: b.played.map(pick), tags: b.tags };
+    const sorted = (o) => JSON.parse(JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [c]) => a.localeCompare(c))) : v));
+    const d = p.fromList({ ...b, songsV: 'x' }, L);
+    eq('a tally plus the list draws the server\'s own board, song for song', sorted([d.songs, d.played, d.tags]), sorted([b.songs, b.played, b.tags]));
+  }
+}
+
 console.log('\nTHE SCREEN COMING ON FETCHES A STALE BOARD AFTER A RANDOM 0–1.5 s, AND SAYS IT IS OLD MEANWHILE  (decision 0185)');
 {
   const s = page.indexOf('let CATCHUP=null;');
