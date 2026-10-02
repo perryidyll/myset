@@ -900,7 +900,7 @@ function tipsSection(){
     </div>
     <div class="list">${recent.length?recent.map(t=>`<div class="row"><div class="m">
         <div class="t mono">${vm$(Math.round(t.amount*100))}</div>
-        <div class="s">${t.note?`“${esc(t.note)}” · `:''}${vdate(new Date(t.at).toISOString())}</div></div></div>`).join('')
+        <div class="s">${t.lost?`<span style="color:var(--accent)">${vm$(t.lost)} went back</span> · `:''}${t.note?`“${esc(t.note)}” · `:''}${vdate(new Date(t.at).toISOString())}</div></div></div>`).join('')
       :`<div class="row muted">Your page shows <b>&nbsp;Tip the staff&nbsp;</b> — the first one lands here.</div>`}</div>
     <p class="muted" style="font-size:12px;padding:10px 20px 0">Tips land in your Stripe account${pct!=null?`, less MySet’s ${pct}% fee`:''}. Share them however your team does.${V.slug&&!SAMPLE?` <a href="/v/${esc(V.slug)}" style="color:var(--accent);font-weight:600">See your page ↗</a>`:''}</p>`;
 }

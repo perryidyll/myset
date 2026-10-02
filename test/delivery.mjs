@@ -344,6 +344,33 @@ console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (deci
   const ring2 = await archiveDue({ now: NOW, deadline: 0 });
   ok('with no time left it still does one chunk, so a pass always moves', ring2.looked >= 1, ring2);
   eq('PAID_KEEP_DAYS is 130 — a dispute (up to 120 days) always finds its marker in meta', PAID_KEEP_MS, 130 * DAY);
+
+console.log('\nTHE MONEY TAB IS NET OF WHAT WENT BACK  (decision 0194, after 0177)');
+{
+  const id = 'cs_refund_tip';
+  const session = { id, payment_status: 'paid', amount_total: 1500, created: RECENT,
+    metadata: { fan: 'jo', kind: 'tip', artist: 'perry-idyll' } };
+  __stripe.sessions.set(id, { session, onAccount: '' });
+  await redeemSession('perry-idyll', session);
+  const get = async () => (await revFn(new Request('https://x/api/revenue?code=devlocal'))).json();
+  const before = await get();
+  const row0 = before.payments.find((p) => p.id === id);
+  eq('untouched: the row reads its full price, nothing went back', [row0.amount, row0.gross, row0.lost, row0.refunded, row0.dispute], [15, 15, 0, 0, '']);
+  await casDoc('meta_perry-idyll', () => ({}), (m) => { m.paid[id].lost = 500; m.paid[id].refunded = 500; return true; });
+  const after = await get();
+  const row = after.payments.find((p) => p.id === id);
+  eq('THE FIX: $5 refunded reads $5 less on its row', row.amount, 10);
+  eq('and gross keeps the original charge', row.gross, 15);
+  eq('the row carries what went back', [row.lost, row.refunded, row.dispute], [500, 500, '']);
+  eq('the total is $5 less', Math.round((before.totals.all - after.totals.all) * 100), 500);
+  eq('and so are the tips', Math.round((before.totals.tips - after.totals.tips) * 100), 500);
+  eq('the total is the sum of the net rows', after.totals.all, Math.round(after.payments.reduce((a, p) => a + p.amount, 0) * 100) / 100);
+  await casDoc('meta_perry-idyll', () => ({}), (m) => {
+    m.paid[id].dispute = { id: 'dp_1', status: 'needs_response', cents: 1000 }; m.paid[id].lost = 1500; return true; });
+  const disp = (await get()).payments.find((p) => p.id === id);
+  eq('a chargeback on the rest: nothing left, gross unchanged, the status carried', [disp.amount, disp.gross, disp.lost, disp.dispute], [0, 15, 1500, 'needs_response']);
+  await casDoc('meta_perry-idyll', () => ({}), (m) => { m.paid[id].lost = 99999; return true; });
+  eq('a marker can never take back more than was charged', (await get()).payments.find((p) => p.id === id).amount, 0);
 }
 
 delete process.env.STRIPE_WEBHOOK_SECRET;

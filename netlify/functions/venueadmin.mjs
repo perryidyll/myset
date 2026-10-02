@@ -432,12 +432,17 @@ const main = async (req) => {
     /* The staff's tips (decision 0127), read off the venue's own meta: the amounts, the
        notes and when — never who. */
     const { readMeta } = await import('./_lib.mjs');
-    const list = ((await readMeta(owner).catch(() => null)) || {}).tips || [];
+    const all = ((await readMeta(owner).catch(() => null)) || {}).tips || [];
+    /* Net of what went back (decision 0194): a tip row carries `lost`, the cents a refund
+       or a chargeback took (0177). A tip gone in full is off the count and the totals;
+       the recent list still shows it, at what is left, with what went back. */
+    const net = (t) => Math.max(0, Math.round((Number(t.amount) || 0) * 100) - (Number(t.lost) || 0)) / 100;
+    const list = all.filter((t) => !((Number(t.lost) || 0) > 0 && net(t) <= 0));
     const month = new Date().toISOString().slice(0, 7);
-    const sum = (a) => Math.round(a.reduce((n, t) => n + (Number(t.amount) || 0), 0) * 100) / 100;
+    const sum = (a) => Math.round(a.reduce((n, t) => n + net(t), 0) * 100) / 100;
     const thisMonth = list.filter((t) => new Date(Number(t.at) || 0).toISOString().slice(0, 7) === month);
     const tips = { count: list.length, total: sum(list), month: { count: thisMonth.length, total: sum(thisMonth) },
-                   recent: list.slice(-10).reverse().map((t) => ({ amount: Number(t.amount) || 0, note: String(t.note || '').slice(0, 120), at: Number(t.at) || 0 })) };
+                   recent: all.slice(-10).reverse().map((t) => ({ amount: net(t), lost: Number(t.lost) || 0, note: String(t.note || '').slice(0, 120), at: Number(t.at) || 0 })) };
     return json({ ok: true, pay: await connectStatus(owner), tips });
   }
   if (action === 'payStart') {

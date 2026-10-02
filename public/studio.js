@@ -2671,7 +2671,7 @@ function render(){
           <div class="m">
             <div class="t">$${p.amount.toFixed(2)} · ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
             <div class="by">${esc(p.email||'—')}${p.note?' · “'+esc(p.note)+'”':''}</div>
-            <div class="s">${dstamp(p.at)}${p.redeemed?'':' · not delivered'}</div>
+            <div class="s">${dstamp(p.at)}${p.redeemed?'':' · not delivered'}${lossNote(p)}${p.lost?` · was $${(+p.gross||0).toFixed(2)}`:''}</div>
           </div>
           <span class="cnt" style="font-size:15px;color:${p.redeemed?'var(--good)':'var(--accent)'}">${p.redeemed?'✓':'!'}</span>
         </div>`).join('')||'<div class="row muted">No payments yet.</div>'}${foldMore(R.payments,'pays')}</div>
@@ -4578,7 +4578,7 @@ function earnChart(L){
 }
 
 /* Votes against tips — the split the ledger does not carry. REV is the Checkout view
-   (dollars, gross, 180 days), so it is labelled as such and fails the same way the
+   (dollars, before fees, less refunds and lost disputes (0194), 180 days), so it is labelled as such and fails the same way the
    payments list above it does. */
 function revDonut(R){
   const head=`<div class="sec"><span class="kick">Where it came from · 180 days</span></div>`;
