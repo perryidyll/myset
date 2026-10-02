@@ -13,6 +13,9 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
 **tl;dr:** Docs: scale-audit week one recorded as live
 **Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
+### 2026-10-03 04:09 — eba38db — scale-p2@test/contention-sim (54 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test no longer runs slower on GitHub's machine than on a Mac
+**Other sessions:** tools/roomsim.mjs registers test/hooks.mjs's redirect() through module.registerHooks when present (Node >= 22.15), falling back to register(); test/hooks.mjs exports redirect(spec).
 
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
