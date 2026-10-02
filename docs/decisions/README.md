@@ -152,6 +152,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) | A read that failed is an error, never an empty document | 2026-10-02 | storage | decided | perry-confirmed |
 | [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md) | The vote page waits longer when the room cannot be reached, and sends a busy vote again | 2026-10-02 | scale | decided | perry-confirmed |
 | [0144](0144-every-pull-request-runs-the-suite.md) | Every pull request runs the suite | 2026-10-02 | ops | decided | perry-confirmed |
+| [0145](0145-the-suite-runs-a-traffic-jam.md) | The suite runs a traffic jam — a big room on a virtual clock, on every run | 2026-10-02 | scale | decided | perry-confirmed |
+| [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) | Every kind of document has a second home or a stated reason, and the off-site copy has been read back | 2026-10-02 | storage | decided | perry-confirmed |
 | [0157](0157-somebody-is-told-when-production-breaks.md) | Somebody is told when production breaks | 2026-10-02 | ops | decided | perry-confirmed |
 | [0158](0158-an-about-is-two-sentences-with-a-space-between.md) | An About is two sentences, with a space between them and no line | 2026-10-02 | ui | decided | perry |
 | [0159](0159-a-sample-s-cover-is-chosen-twice.md) | A sample's cover is chosen twice — the best four side by side — and live videos past the top three give frames | 2026-10-02 | factory | decided | perry |
@@ -192,11 +194,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md) · [0123](0123-asking-a-venue-for-a-spot-is-a-conversation-in-messages.md) · [0124](0124-a-venue-s-phones-get-push-alerts-a-new-ask-to-play.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) · [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md) · [0160](0160-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) · [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md) · [0145](0145-the-suite-runs-a-traffic-jam.md) · [0160](0160-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md)
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
-**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md)
+**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md)
 
 **studio, money** — [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md)
 

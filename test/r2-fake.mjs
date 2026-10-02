@@ -74,6 +74,7 @@ function verifyQuery(method, url, now) {
   return signature === q.get('X-Amz-Signature') ? null : 'signature mismatch';
 }
 
+const LIST_PAGE = 25;
 const keyOf = (url) => {
   const p = decodeURIComponent(url.pathname);
   const pre = `/${ENV.R2_BUCKET}/`;
@@ -95,6 +96,24 @@ export async function r2Fetch(input, init = {}) {
   const method = (init.method || 'GET').toUpperCase();
   const headers = new Headers(init.headers || {});
   if (down) throw new TypeError('fetch failed');
+  /* The bucket's listing (ListObjectsV2), which only tools/r2pull.mjs asks for: the
+     functions never list live data (INVARIANT 1). Signed like any other call, and
+     paged small so a caller that forgets the continuation token loses keys here
+     rather than in a real restore. */
+  if (method === 'GET' && decodeURIComponent(url.pathname) === `/${ENV.R2_BUCKET}` && url.searchParams.get('list-type') === '2') {
+    if (failing) return reply(method, '', 503);
+    const bad = verifyHeaders(method, url, headers);
+    if (bad) return reply(method, '', 403, bad);
+    const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const all = [...objects.keys()].filter((k) => k.startsWith(url.searchParams.get('prefix') || '')).sort();
+    const from = Number(url.searchParams.get('continuation-token') || 0);
+    const part = all.slice(from, from + LIST_PAGE);
+    const more = from + LIST_PAGE < all.length;
+    return reply(method, '', 200, `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult>` +
+      part.map((k) => `<Contents><Key>${esc(k)}</Key><Size>${objects.get(k).bytes.length}</Size></Contents>`).join('') +
+      `<IsTruncated>${more}</IsTruncated>${more ? `<NextContinuationToken>${from + LIST_PAGE}</NextContinuationToken>` : ''}</ListBucketResult>`,
+      { 'content-type': 'application/xml' });
+  }
   const key = keyOf(url);
   if (key === null) return reply(method, '', 404);
   if (failing) return reply(method, key, 503);

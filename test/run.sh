@@ -12,6 +12,10 @@
 # behave the way production does.
 set -e
 cd "$(dirname "$0")/.."
+# Every test process appends the keys it wrote here; the last step reads them all
+# (test/keyfamilies.mjs): no kind of document without a second home, or a reason.
+MYSET_KEYLOG="$(mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX")"
+export MYSET_KEYLOG
 echo "── syntax ──"
 node --import ./test/register.mjs test/syntax.mjs
 echo
@@ -38,6 +42,9 @@ node test/qr.mjs
 echo
 echo "── how big a room can get ──"
 node --import ./test/register.mjs test/roomsize.mjs
+echo
+echo "── a traffic jam: many phones writing the same file at once ──"
+node test/contention.mjs
 echo
 echo "── cross-tenant isolation ──"
 node --import ./test/register.mjs test/tenancy.mjs
@@ -227,3 +234,7 @@ node test/seatstudio.mjs
 echo
 echo "── push alerts per seat: who hears what, and a sign-out ends them (0114) ──"
 node --import ./test/register.mjs test/pushseats.mjs
+
+echo
+echo "── no kind of document without a second home, or a reason (0146) ──"
+node --import ./test/register.mjs test/keyfamilies.mjs
