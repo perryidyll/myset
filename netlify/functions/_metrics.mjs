@@ -43,10 +43,14 @@ export function artistPart(aid, { idx, meta, posts, rsvp, ev }) {
   }).sort((a, b) => a.startedAt - b.startedAt);
   const money = [];
   const m = meta || {};
-  for (const t of m.tips || []) if (t && t.at) money.push({ aid, t: t.at, kind: 'tip', amount: Number(t.amount) || 0 });
+  /* Net of what went back (decision 0194): the tip row and the marker carry `lost`, the
+     cents a refund or a chargeback took (0177). A payment gone in full is not money. */
+  const net = (x) => Math.max(0, Math.round((Number(x.amount) || 0) * 100) - (Number(x.lost) || 0)) / 100;
+  const gone = (x) => (Number(x.lost) || 0) > 0 && net(x) <= 0;
+  for (const t of m.tips || []) if (t && t.at && !gone(t)) money.push({ aid, t: t.at, kind: 'tip', amount: net(t) });
   for (const p of Object.values(m.paid || {})) {
-    if (!p || !p.at || p.kind === 'tip') continue;
-    money.push({ aid, t: p.at, kind: p.kind === 'merch' ? 'order' : (p.kind === 'votes' || p.kind === 'song_votes' ? 'pack' : String(p.kind || 'paid')), amount: Number(p.amount) || 0, votes: p.granted || 0 });
+    if (!p || !p.at || p.kind === 'tip' || gone(p)) continue;
+    money.push({ aid, t: p.at, kind: p.kind === 'merch' ? 'order' : (p.kind === 'votes' || p.kind === 'song_votes' ? 'pack' : String(p.kind || 'paid')), amount: net(p), votes: p.granted || 0 });
   }
   const postsOut = ((posts && posts.list) || []).filter((p) => p && p.at).map((p) => ({ aid, t: p.at, stars: p.stars || null, hidden: !!p.hidden }));
   const rsvps = [];
