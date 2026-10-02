@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, jsonCached } from './_lib.mjs';
 import { venueBySlug, venueById, getVenueProfile, shapeVenue, sameVenue } from './_venues.mjs';
 import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
@@ -21,7 +22,7 @@ import { readGigOk, gigStatus, gigKey } from './_gigok.mjs';
 const HORIZON = 60;              // days ahead
 const MAX_ARTISTS = 60;          // per city, per page view
 
-export default async (req) => {
+const main = async (req) => {
   const url = new URL(req.url);
   const slug = url.searchParams.get('v') || '';
   if (!slug) return bad('which venue?', 400);
@@ -139,3 +140,5 @@ export async function gigRules(vid) {
     startsAt: L.nights[0].startsAt,
   })).sort((a, b) => a.startsAt - b.startsAt);
 }
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('venue', main);

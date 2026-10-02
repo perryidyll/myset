@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { bad, cleanArtistId } from './_lib.mjs';
 import { getClip, clipUrl, CLIP_ID } from './_video.mjs';
 import { CACHE_SECS } from './_r2.mjs';
@@ -26,7 +27,7 @@ import { artistBySlug } from './_auth.mjs';
    the browser half (session 2026-09-11-clips-to-r2.md). On the Blobs path the
    bytes are already in memory, so a range is a slice; without this the feature
    simply does not work on most of the phones in a bar. */
-export default async (req) => {
+const main = async (req) => {
   const q = new URL(req.url).searchParams;
   const clip = q.get('c') || '';
   if (!CLIP_ID.test(clip)) return bad('unknown clip', 404);
@@ -97,3 +98,5 @@ function serve(got, range) {
     headers: { ...HEAD(got.type, slice.length), 'content-range': `bytes ${start}-${end}/${n}` },
   });
 }
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('vid', main);

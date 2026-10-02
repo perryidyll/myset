@@ -382,7 +382,14 @@ async function api(p,o={}){
   if(!o.quiet) busy(true);
   try{
     const r=await (early||fetch(API+p,{...o,headers:h}));
-    return await r.json();
+    const j=await r.json();
+    /* A SERVER IN TROUBLE IS NOT A SIGN-OUT EITHER (decision 0142). When the store
+       does not answer, every door now says 503 "busy" instead of acting on an empty
+       document — and load() sent anything that was not ok to the sign-in screen,
+       stopping the refresh timer with it. A 5xx is marked the way a dropped
+       connection is, so the last good screen stays and the next poll tries again. */
+    if(r.status>=500&&j&&j.ok===false) j.offline=true;
+    return j;
   // `offline` distinguishes "the network failed" from "the server said no".
   // load() used to treat both as an auth failure and throw the artist out to the
   // sign-in screen mid-gig, killing the refresh timer with it. INVARIANT 16.
