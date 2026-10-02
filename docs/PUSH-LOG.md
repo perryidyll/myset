@@ -39,6 +39,10 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
 **Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
 
+### 2026-10-03 04:02 — dbae03a — scale-p2-money@fix/refunds-and-stock (76 files since origin/main)
+**tl;dr:** MySet now hears refunds and chargebacks: the night's money drops, only unspent paid votes are taken back; the last merch items are held while a buyer pays, and a payment that still comes up short is refunded at once (0177, 0178)
+**Other sessions:** STACKED on week one's #227. New _refunds.mjs. NEW FIELDS: lost (cents) on payment markers, tip rows and order rows — anything summing money subtracts lost (_evlog, _metrics, warehouse export, venue tip list, revenue.mjs still read face value); refunded/dispute on markers; refunded/dispute/short on orders; wallet on song-vote markers; sid on tip rows; rb receipts on fan records (carryFans carries them). New key mhold_<owner> (FAMILIES skip). Needs 5 Stripe events on BOTH webhook destinations: charge.refunded, charge.dispute.created, charge.dispute.closed, charge.dispute.funds_withdrawn, checkout.session.expired.
+
 ### 2026-10-03 03:02 — 0fc2913 — scale-money@fix/money-path (22 files since origin/main)
 **tl;dr:** Payments are harder to lose or double: a lost 'delivered' mark is caught and fixed by the scheduler, song votes bought for a replay that already started go to the fan's wallet, a full request queue is said before the card, a paused Stripe account still finds its payments, the Money tab's sweep does only what's owed, plan billing stops leaking, and every fan Stripe call has a 10 s clock (0180–0184, 0188)
 **Other sessions:** NOT MERGED — waits on the founder's word. _lib.mjs: GR_KEEP=40 (one receipt cap), carryFans settles gr receipts into meta before deleting (INVARIANT 0ia — anything that deletes a fan record must too). _pay.mjs markDelivered (verified flip → noteOwed). stripeFor scopes by c.acct even when charges are paused (0ic; every caller must only READ). STRIPE_OPTS in _connect.mjs. _billing: plan written before lastSyncAt; handleBillingEvent throws (webhook 500). confirm answers asCredits.
@@ -207,7 +211,6 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
 **tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
 **Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
-
 
 
 ### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
