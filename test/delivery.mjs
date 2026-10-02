@@ -114,6 +114,62 @@ ok('accepted', tip.ok, tip);
 eq('delivered immediately', (await marker('cs_tip')).delivered, true);
 eq('and it reached the tips ledger', (await readMeta('perry-idyll')).tips.slice(-1)[0].amount, 20);
 
+console.log('\nTHE WEBHOOK SAYS SO WHEN A GRANT FAILS  (decision 0138)');
+/* It used to catch the failure and answer 200, so Stripe — told "received" — never
+   sent the event again. A failed grant must answer non-2xx, and must be written down
+   for the bell to retry, because Stripe's own retries back off over hours. */
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+const hookFn = (await import('../netlify/functions/webhook.mjs')).default;
+const { redeliverOwed, noteOwed, OWED, OWED_KEEP_MS } = await import('../netlify/functions/_pay.mjs');
+const { readDoc } = await import('../netlify/functions/_lib.mjs');
+const hook = (event) => hookFn(new Request('https://x/api/webhook', { method: 'POST',
+  headers: { 'content-type': 'application/json', 'stripe-signature': 't=1,v1=testsig' }, body: JSON.stringify(event) }));
+const owed = async () => (((await readDoc(OWED, null)).data || {}).rows) || {};
+const paidEvent = (id, fan, votes) => {
+  const session = { ...sess(id, fan, votes), metadata: { fan, kind: 'votes', votes: String(votes), artist: 'perry-idyll' } };
+  __stripe.sessions.set(id, { session, onAccount: '' });
+  return { type: 'checkout.session.completed', data: { object: session } };
+};
+
+const good = await hook(paidEvent('cs_hook_ok', 'eve', 3));
+eq('a grant that lands answers 200', good.status, 200);
+eq('eve has her three', await extraOf('eve'), 3);
+eq('and nothing is owed', Object.keys(await owed()).length, 0);
+
+__failWrites(/^f\d+_/);
+const lost = await hook(paidEvent('cs_hook_lost', 'fay', 7));
+ok('THE FIX: a grant that fails answers an error, so Stripe sends it again', lost.status >= 500, lost.status);
+eq('fay has nothing yet', await extraOf('fay'), 0);
+ok('and the payment is written down as owed', !!(await owed()).cs_hook_lost, await owed());
+eq('to the right artist', ((await owed()).cs_hook_lost || {}).aid, 'perry-idyll');
+
+console.log('\nTHE BELL RETRIES WHAT IS OWED');
+let ring = await redeliverOwed({});
+eq('while the store is still failing, nothing is delivered', ring.delivered, 0);
+ok('and the row stays, with the try counted', ((await owed()).cs_hook_lost || {}).tries === 1, await owed());
+__failWrites(null);
+ring = await redeliverOwed({});
+eq('once the store is healthy, the next ring delivers it', ring.delivered, 1);
+eq('fay has her seven', await extraOf('fay'), 7);
+eq('the marker is delivered', (await marker('cs_hook_lost')).delivered, true);
+eq('and nothing is owed any more', Object.keys(await owed()).length, 0);
+
+console.log('\nSTRIPE’S OWN REDELIVERY AND THE BELL CANNOT GRANT TWICE');
+const replay = await hook(paidEvent('cs_hook_lost', 'fay', 7));
+eq('the redelivered event answers 200', replay.status, 200);
+eq('and fay still has exactly seven', await extraOf('fay'), 7);
+await noteOwed('perry-idyll', 'cs_hook_lost', '');
+ring = await redeliverOwed({});
+eq('a stale owed row is cleared without granting again', await extraOf('fay'), 7);
+eq('cleared', Object.keys(await owed()).length, 0);
+
+console.log('\nAN OWED ROW IS NOT KEPT FOR EVER');
+await noteOwed('perry-idyll', 'cs_never', '', Date.now() - OWED_KEEP_MS - 1000);
+ring = await redeliverOwed({});
+eq('after three days it is dropped, not retried for ever', Object.keys(await owed()).length, 0);
+ok('without asking Stripe for it', ![...__stripe.calls].some((c) => c.method === 'checkout.sessions.retrieve' && c.args.id === 'cs_never'));
+
+delete process.env.STRIPE_WEBHOOK_SECRET;
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

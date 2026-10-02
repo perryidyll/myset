@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:19 — e01e16b — scale-week1@fix/stripe-grant-retry (12 files since origin/main)
+**tl;dr:** A fan's payment that could not be delivered is now retried: Stripe is told it failed (so Stripe sends it again) and MySet's own scheduler retries it within minutes. And MySet no longer refunds part of its own fee to artists on foreign cards — that correction is for venues only (0138, 0139)
+**Other sessions:** webhook.mjs: a throw from redeemSession or handleBillingEvent now reaches guard() → 500; never add a catch that falls through to the 200 (INVARIANT 0hm). New global doc 'payowed' (_pay.mjs noteOwed/redeliverOwed, read once per autocron ring) — the mirror's GLOBALS and backup.py need it (phase-two session c8fc2f holds those files). _connect.mjs exports sharesStripeFee(owner); settleSplit returns {ok:true, give:0} before any Stripe call unless the plan row has splitFee (0hn). Scale audit week one (cdfdf5) next: _auto.mjs/autocron.mjs scheduler order, artist-list cache in _lib.mjs/_auth.mjs, readDoc throwing.
+
 ### 2026-10-03 02:18 — e4b23a5 — tagline-voice@HEAD (0 files since origin/main)
 **tl;dr:** New sample pages get a tagline in the same magazine voice as the About (the one-liner under the name)
 **Other sessions:** 0163: _fai.mjs COPY_SYSTEM + VENUE_COPY_SYSTEM tagline lines; style line stays plain; 120-char cap and facts-only unchanged.

@@ -100,6 +100,11 @@ export default async (req) => {
     }
     const r = await sweep({ now, log: (l) => console.log(l) });
     const idle = await sweepIdle({ now, log: (l) => console.log(l) });
+    /* PAYMENTS A WEBHOOK COULD NOT DELIVER (decision 0138). One small read a ring;
+       the rows, the bounds and the retry all live in _pay.mjs. */
+    const { redeliverOwed } = await import('./_pay.mjs');
+    const owed = await redeliverOwed({ now, log: (l) => console.log(l) });
+    if (owed.checked) console.log(`autocron: ${owed.delivered} owed payment(s) delivered, ${owed.owed} still owed`);
     const notes = await sweepNotes({ now, log: (l) => console.log(l) });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
                 `${idle.ended} idle ended`, notes.sent ? `${notes.sent} first-night note(s) sent` : '',

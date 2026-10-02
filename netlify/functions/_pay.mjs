@@ -323,3 +323,89 @@ export async function redeemSession(aid, session, fallbackFan = '') {
   return { ok: true, kind: md.kind || 'unknown', amount, granted, song: md.song || '', fan: who, at,
            redelivered: retrying || undefined, ...(order ? { order } : {}) };
 }
+
+/* ---------- A PAYMENT STILL OWED (decision 0138) ----------
+
+   The webhook is the path that runs whatever the buyer's phone does, and it used to
+   answer 200 after a grant had failed — so Stripe, told "received", never came back,
+   and the only roads left were the buyer returning to the page or the artist
+   pressing the sweep. Now a failed grant answers 500, which is the one thing that
+   makes Stripe redeliver. But Stripe's retries back off over hours, and a fan at a
+   gig has minutes. So the failure is also written HERE, one small global document,
+   and the bell (autocron, every two minutes) retries it from the scheduler.
+
+   The row is a pointer, not a payment: the session id, whose it is, and which
+   Stripe account it lives on. The session is read back from Stripe on every try, so
+   nothing here can grant what Stripe does not say was paid, and `redeemSession`'s
+   own claim and per-fan receipt make a row that is retried twice — or retried
+   after Stripe's own redelivery already landed — a no-op (INVARIANT 5c, 7b).
+
+   Bounded: OWED_MAX rows, three days each. Three days is how long Stripe itself
+   keeps trying; after that the Money tab still shows the payment as not delivered
+   and the Studio's sweep still recovers it. */
+export const OWED = 'payowed';
+export const OWED_KEEP_MS = 3 * 86400e3;
+const OWED_MAX = 500;
+const emptyOwed = () => ({ v: 1, rows: {} });
+
+/** Remember that this paid session has not been delivered. */
+export async function noteOwed(aid, sid, acct = '', now = Date.now()) {
+  if (!aid || !sid) return;
+  await casDoc(OWED, emptyOwed, (d) => {
+    d.rows ||= {};
+    if (d.rows[sid]) return false;
+    d.rows[sid] = { aid, acct: String(acct || ''), at: now, tries: 0, lastAt: 0 };
+    const ids = Object.keys(d.rows);
+    if (ids.length > OWED_MAX) {
+      ids.sort((a, b) => (d.rows[a].at || 0) - (d.rows[b].at || 0));
+      for (const id of ids.slice(0, ids.length - OWED_MAX)) delete d.rows[id];
+    }
+    return true;
+  });
+}
+
+/**
+ * Retry what is owed. Called by the bell; bounded by `limit` and by `deadline` (a
+ * real clock time), least-recently-tried first so one stuck row cannot starve the
+ * rest. Never throws.
+ */
+export async function redeliverOwed({ now = Date.now(), limit = 10, deadline = Date.now() + 8000, log = () => {} } = {}) {
+  let rows = [];
+  try { rows = Object.entries((((await readDoc(OWED, null)).data || {}).rows) || {}); }
+  catch (e) { console.error('redeliver: could not read what is owed:', String((e && e.message) || e)); return { checked: 0, delivered: 0 }; }
+  if (!rows.length) return { checked: 0, delivered: 0 };
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return { checked: 0, delivered: 0 };
+  const stripe = new (await import('stripe')).default(key);
+  rows.sort((a, b) => (a[1].lastAt || 0) - (b[1].lastAt || 0));
+  const done = [], again = [];
+  let delivered = 0;
+  for (const [sid, r] of rows.slice(0, limit)) {
+    if (Date.now() > deadline) break;
+    if (now - (Number(r.at) || 0) > OWED_KEEP_MS) {
+      console.error(`redeliver: gave up on ${sid} for ${r.aid} after three days — the Studio's sweep still recovers it`);
+      done.push(sid); continue;
+    }
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sid, r.acct ? { stripeAccount: r.acct } : {});
+      if (session && session.payment_status === 'paid') {
+        const got = await redeemSession(r.aid, session);
+        // `already` is Stripe's own redelivery, or the buyer's return trip, having got there first
+        if (got && got.ok && !got.already) { delivered += 1; log(`autocron: delivered a payment that was still owed to ${r.aid}`); }
+      }
+      done.push(sid);
+    } catch (e) {
+      again.push(sid);
+      console.error(`redeliver: ${sid} for ${r.aid} failed again:`, String((e && e.message) || e));
+    }
+  }
+  if (done.length || again.length) {
+    await casDoc(OWED, emptyOwed, (d) => {
+      d.rows ||= {};
+      for (const sid of done) delete d.rows[sid];
+      for (const sid of again) if (d.rows[sid]) { d.rows[sid].tries = (d.rows[sid].tries || 0) + 1; d.rows[sid].lastAt = now; }
+      return true;
+    }).catch(() => {});
+  }
+  return { checked: done.length + again.length, delivered, owed: rows.length - done.length };
+}
