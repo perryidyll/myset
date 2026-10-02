@@ -18,7 +18,7 @@
 [functions.artistpage]
   included_files = ["public/artist.html"]
 
-# TWO RATE RULES (decision 0160) — the two the plan allows. Netlify counts requests
+# THREE RATE RULES (decisions 0160, 0191). The Pro plan allows five. Netlify counts requests
 # per address per window at its edge and answers 429 for a minute once a window is
 # over. Both are sized so that a real room can never meet them:
 #
@@ -32,8 +32,24 @@
 #               _lib.mjs). So this never sees a room; it caps what one machine can
 #               spend. Widen it before lowering a poll floor — never the reverse.
 #
-# The specific rule has to sit ABOVE the general one: the first redirect that
+#   /api/confirm 1,000 a minute per address (decision 0191). The return trip from
+#               Checkout needs no sign-in and asks Stripe up to three times a call,
+#               so it was the cheapest way to spend someone else's Stripe quota. A
+#               room's busiest buying minute on one wifi — 5,000 phones, a tenth of
+#               them paying, each page confirming twice — is 1,000; a script is held
+#               to about 17 a second.
+#
+# The specific rules have to sit ABOVE the general one: the first redirect that
 # matches is the one that serves, and its limit is the one that counts.
+[[redirects]]
+  from = "/api/confirm"
+  to = "/.netlify/functions/confirm"
+  status = 200
+  [redirects.rate_limit]
+    window_limit = 1000
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
 [[redirects]]
   from = "/api/auth"
   to = "/.netlify/functions/auth"
