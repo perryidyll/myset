@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 13:24 — 5bc54d8 — photo-roles@docs/sample-0135-0137-live (5 files since origin/main)
+**tl;dr:** Docs: decisions 0135, 0136, 0137 recorded as live (5c0f812), session note, status header [skip ci]
+**Other sessions:** Puzzle changelog 2662 (0135) completed, 2669 (0136), 2670 (0137). Andrew's live sample still has the music-video cover: swap in CRM or rebuild with Keep unticked. #199 closed, folded into #201.
+
 ### 2026-10-02 13:20 — 5d883f1 — photo-roles@ux/sample-photo-roles (30 files since origin/main)
 **tl;dr:** Sample pages: the 'Hey …' welcome opens every time the link is clicked (artists and venues), an artist's cover must show them playing or be a proper band photo (never a music-video scene), three small photos with the strip straight when fewer; also carries #199 (About one line per sentence, cover crop) (0135, 0137)
 **Other sessions:** sample.js: Tips.open when the address has the sample-profile label, Tips.first otherwise. _fai.mjs: PHOTO_KINDS gains video-scene; pickPhotos(judged,{kind,again}) — artist cover kinds performing/group/portrait, three extras with a second-frame pass; _factory.mjs enough() wants 3 extras counted without that pass. artist.html: the strip nudge is .pth:first-child:nth-last-child(3). #199 is folded in here and will be closed.
