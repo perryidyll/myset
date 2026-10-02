@@ -9,7 +9,11 @@
 
    Each room is its own process (the virtual clock and the store are process-wide)
    and a seeded run repeats exactly, so a number that moves here moved because the
-   code did.
+   code did. Exactly from Node 24 on: on Node 20 and 22 the module loader's first
+   use of a dynamically imported module takes a varying number of event-loop turns,
+   which moves a little work from one virtual millisecond to the next. There the
+   same seed gives the same outcome (every answer, every vote landed or lost), not
+   the same timings, and that is what is compared.
 
    WHAT IS ASSERTED IS THE SHAPE, NOT THE SPEED. The store's real write time has
    never been measured (ledger P3-005); the simulator assumes 42 ms reads and 80 ms
@@ -46,7 +50,11 @@ ok('every vote was answered yes', said(pub, 200) === 90, pub.vote);
 ok('and every one is on the board', pub.votesLanded === 90 && pub.votesLost === 0, pub);
 ok('with nobody kept waiting', pub.vote.p99 < 2000, pub.vote);
 console.log('    ' + times(pub.vote));
-ok('the same seed gives the same night, to the byte', room({ P: 200, burst: 90, burstSec: 10 }).raw === pub.raw);
+const EXACT = Number(process.versions.node.split('.')[0]) >= 24;
+const outcome = (d) => JSON.stringify([d.vote && d.vote.status, d.votesLanded, d.votesLost, d.unfinished]);
+const again = room({ P: 200, burst: 90, burstSec: 10 });
+if (EXACT) ok('the same seed gives the same night, to the byte', again.raw === pub.raw);
+else ok(`the same seed gives the same outcome (to the byte from Node 24; this is ${process.version})`, outcome(again) === outcome(pub), [outcome(again), outcome(pub)]);
 ok('and another seed gives another', room({ P: 200, burst: 90, burstSec: 10, seed: 7 }).raw !== pub.raw);
 
 console.log('\nA BIG ROOM: 5,000 PHONES, 75 VOTES A SECOND FOR 20 SECONDS');

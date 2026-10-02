@@ -30,6 +30,7 @@
    casDoc, the fan files or the vote path. */
 import { register } from 'node:module';
 import { mock } from 'node:test';
+import { readdirSync } from 'node:fs';
 register(new URL('../test/hooks.mjs', import.meta.url));
 
 const A = JSON.parse(process.argv[2] || '{}');
@@ -64,6 +65,12 @@ const me = (await import(F + 'me.mjs')).default;
 const admin = (await import(F + 'admin.mjs')).default;
 const lib = await import(F + '_lib.mjs');
 const auth = await import(F + '_auth.mjs');
+/* Every module a handler may import on first use is loaded now, on the real clock.
+   A first dynamic import reads a file from disk, and how many turns of the event
+   loop that takes is up to the disk: inside the rush it would move work from one
+   virtual millisecond to the next, and a seeded run would not repeat (it did not,
+   on Node 20 and 22). */
+for (const f of readdirSync(new URL(F, import.meta.url)).filter((n) => n.endsWith('.mjs')).sort()) await import(F + f);
 
 // ---- the room, built with no latency on the real clock ----
 const a = await auth.createArtist({ email: 'sim@example.com', name: 'Sim', slug: 'sim' });
