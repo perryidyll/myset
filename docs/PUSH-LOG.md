@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:36 — b1b3bba — scale-paidarc@fix/paid-archive (60 files since origin/main)
+**tl;dr:** The payments file stops growing forever: payment records older than 90 days move to a yearly archive, and every check that stops a pack being granted twice still finds them (0193)
+**Other sessions:** NOT MERGED, stacked on #227. New key family paidarc_<owner>_<YYYY> (MIRRORED; in keysFor/keysForVenue). readPaidAll()/archivedMarker()/archivePaid() in _pay.mjs; autocron step after heal (PAIDARC_BUDGET_MS 1.5 s, paidarcCursor). Any reader that needs lifetime payments must use readPaidAll, not meta.paid (INVARIANT 0ih). Touches _warehouse.mjs line 524, _metrics.mjs, _register.mjs (old nights), tools/metrics.mjs.
+
 ### 2026-10-03 03:02 — 0fc2913 — scale-money@fix/money-path (22 files since origin/main)
 **tl;dr:** Payments are harder to lose or double: a lost 'delivered' mark is caught and fixed by the scheduler, song votes bought for a replay that already started go to the fan's wallet, a full request queue is said before the card, a paused Stripe account still finds its payments, the Money tab's sweep does only what's owed, plan billing stops leaking, and every fan Stripe call has a 10 s clock (0180–0184, 0188)
 **Other sessions:** NOT MERGED — waits on the founder's word. _lib.mjs: GR_KEEP=40 (one receipt cap), carryFans settles gr receipts into meta before deleting (INVARIANT 0ia — anything that deletes a fan record must too). _pay.mjs markDelivered (verified flip → noteOwed). stripeFor scopes by c.acct even when charges are paused (0ic; every caller must only READ). STRIPE_OPTS in _connect.mjs. _billing: plan written before lastSyncAt; handleBillingEvent throws (webhook 500). confirm answers asCredits.
