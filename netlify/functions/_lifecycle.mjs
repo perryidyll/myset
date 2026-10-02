@@ -206,7 +206,8 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
     } catch { /* an expiring authorization must never block a new show */ }
     try {
       const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-      await archiveShow(aid, prev, fans);
+      // the same bound on pricing as the end (0153): a count cut short is finished later
+      await archiveShow(aid, prev, fans, { deadline: Date.now() + moneyAtEndMs() });
     } catch { /* never block starting a show on the archive */ }
   }
 
@@ -295,9 +296,16 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   return { ok: true, err: null, note, already };
 }
 
+/* HOW LONG THE END MAY SPEND PRICING THE NIGHT (decision 0153). The room has already
+   stopped by then; this only bounds how long the tap (or the bell's ring) waits for
+   Stripe. A count it cuts short is filed as 'stripe-partial' and finished later
+   (`priceNight`). Read per call so the suite can shorten it; production never sets it. */
+const moneyAtEndMs = () => Number(process.env.MYSET_MONEY_AT_END_MS ?? 3000);
+
 /**
- * End a show. Archives first, always; idempotent (ending an ended show refreshes
- * the archive and changes nothing else). `by` is stamped for the Studio.
+ * End a show. The room stops first, then the night is filed; idempotent (ending an
+ * ended show refreshes the archive and changes nothing else). `by` is stamped for
+ * the Studio.
  */
 export async function endShow(aid, { by = 'artist', title = '', discard = false, ack = '' } = {}) {
   /* A discard of a real night is asked about FIRST, before anything is released or
@@ -313,29 +321,21 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
         return { ok: false, err: ['This was a real show. Check what discarding it means first.', 409], confirm: { ...verdict, cap: gigCap, used: sh.gigCount }, note: null };
     }
   }
-  /* Ending the night is not the same as finishing the current song. Anything the
-     artist never explicitly completed is released, never charged. */
-  try {
-    const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
-    await completeSongRequests(aid, '');
-    await cancelOpenPledges(aid);
-  } catch { /* Stripe will release an uncaptured authorization at expiry */ }
+  /* THE ROOM STOPS FIRST, THEN THE NIGHT IS FILED (decision 0153, INVARIANT 0ii). This
+     released the request holds and priced the whole night from Stripe — up to ten
+     pages — BEFORE the show was flipped to ended: a slow Stripe kept the room voting
+     after the artist had tapped End, and a tap that ran out of time ended nothing.
+     The flip is now the first write. Ending wipes no tally (only a fresh start does,
+     17c), so the archive below still files the whole night, and it reads the fans
+     AFTER the flip, when no more votes can land. Whether a calendar night was quiet
+     (0120) is still decided before the flip, because the flip gives it back. */
   let quiet = false;
   if (!discard) try {
-    const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-    quiet = quietAutoNight(prev, fans);
-    const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
-    // `endedBy` is written on the show record below, after the archive — so the filed night is told here (0095)
-    const filed = await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100), endedBy: by }, fans);
-    /* The first night on file gets the morning-after note. archiveShow returns
-       the index it wrote; one row means this was the first. */
-    if (filed && filed.indexed) {
-      /* The count rides on meta so the stage payload can say "first gig" for free. */
-      await mutateMeta(aid, (m) => { if (m.nights === filed.nights) return false; m.nights = filed.nights; return true; }).catch(() => {});
-      if (filed.nights === 1) await queueFirstNightNote(aid, prev.showId, Date.now());
-    }
-  } catch { /* never block ending a show on the archive */ }
-  await mutateShow(aid, (show) => {
+    const prev = await getShow(aid);
+    // quietAutoNight only ever says yes for a night the calendar began, so only that one needs the fans
+    if (prev.freeNight && prev.freeNight.auto && prev.freeNight.id === prev.showId) quiet = quietAutoNight(prev, await readFans(aid));
+  } catch { /* the end goes ahead, as it always did when this read failed */ }
+  const flipped = await mutateShow(aid, (show) => {
     hadNight = !!(show.freeNight && show.freeNight.id === show.showId);
     if (quiet || (discard && (!verdict || verdict.outcome === 'warned'))) uncountGig(show);
     if (discard && verdict && verdict.outcome === 'warned') show.discardWarnedAt = Date.now();
@@ -346,6 +346,7 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
     show.endedAt = Date.now();
     return true;
   });
+  const ended = flipped && flipped.data;
   await unmarkLive(aid);
   /* Every free-plan discard is written down (0122), so a pattern shows on the Sheet's
      Discards tab: when, how long, how many votes, what it took, and what happened. */
@@ -357,6 +358,29 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
       return true;
     }).catch(() => {});
   }
+  /* Ending the night is not the same as finishing the current song. Anything the
+     artist never explicitly completed is released, never charged. After the flip, so
+     no new hold can arrive (a request needs a live show), and before the archive, so
+     a hold captured here is in the night's money. */
+  try {
+    const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
+    await completeSongRequests(aid, '');
+    await cancelOpenPledges(aid);
+  } catch { /* Stripe will release an uncaptured authorization at expiry */ }
+  if (!discard && ended) try {
+    const fans = await readFans(aid);
+    const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
+    // the record already says who ended it (0095): the flip above wrote `endedBy`
+    const filed = await archiveShow(aid, { ...ended, archiveTitle: String(title || fallback).slice(0, 100) }, fans,
+      { deadline: Date.now() + moneyAtEndMs() });
+    /* The first night on file gets the morning-after note. archiveShow returns
+       the index it wrote; one row means this was the first. */
+    if (filed && filed.indexed) {
+      /* The count rides on meta so the stage payload can say "first gig" for free. */
+      await mutateMeta(aid, (m) => { if (m.nights === filed.nights) return false; m.nights = filed.nights; return true; }).catch(() => {});
+      if (filed.nights === 1) await queueFirstNightNote(aid, ended.showId, Date.now());
+    }
+  } catch { /* never block ending a show on the archive: it is ended already, and a fresh start files it (17c) */ }
   const note = verdict && verdict.outcome === 'counted' ? `Discarded — it still counts as one of your ${gigCap} free shows.` : null;
   return { ok: true, err: null, note };
 }
