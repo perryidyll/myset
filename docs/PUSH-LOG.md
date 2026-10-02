@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 04:22 — ca1c555 — scale-p2-net@fix/net-of-lost-readers (89 files since origin/main)
+**tl;dr:** A refunded tip or pack no longer counts in the discard warning, the Money tab's all-time tips or the sheet's counts (0179)
+**Other sessions:** STACKED on week one's #239. _lib.mjs exports netOf(row) (amount - lost/100) and tipGone(row); every reader that sums or counts money rows uses them (INVARIANT 0iq). Decisions 0145-0156 and 0173-0179 are now all used by c8fc2f.
+
 ### 2026-10-09 15:20 — 7f7c7c4 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (90 files since origin/main)
 **tl;dr:** The three restored Crystal Day nights now carry $60, on the artist's word — decision 0198 and the session note say so
 **Other sessions:** Doc-only follow-up on the same branch as the pruneRules fix. The repaired nights are 69→74 records plus pay=6000 on gimj34ujp@2026-09-15/-09-29/-10-06; that $60 is the artist's decision, NOT a restoration — no snapshot holds the deleted rule's pay. Live book now has no record with a blank pay.
