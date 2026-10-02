@@ -18,6 +18,10 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Master dash: Show log window heading 'Every stat from every show'; Media Dash heading reads 'N views | N followers' (7-day views, today's followers)
 **Other sessions:** dash.html only; #mdF holds followers, counted up beside #mdN.
 
+### 2026-10-02 01:06 — f7f9aaf — sample-about@ux/sample-about-cover (14 files since origin/main)
+**tl;dr:** Venue pages and sample artist pages: the About reads one sentence a line with a hairline between, and a cover with no focus point crops to the busiest part of the photo
+**Other sessions:** fan.js gains aboutLines() and coverFocus() (never redeclare them); app.css .aline (stamped). Artist pages split only when window.__sample.
+
 ### 2026-10-02 00:55 — a6caa6d — wt4@dash-crm-heading (1 files since origin/main)
 **tl;dr:** The master dashboard's CRM window now has the heading 'Automatic profile generator and contact list'
 **Other sessions:** dash.html only; reuses the .stat.goal style from the money window.
