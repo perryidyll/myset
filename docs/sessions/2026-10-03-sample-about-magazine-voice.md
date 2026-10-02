@@ -25,3 +25,9 @@
 - Andrew's page at phone width: checked by screenshot.
 
 **Not checked:** a real (paid) generator run in the new voice.
+
+## Later the same night: the live example button (0162)
+
+- **The button:** every artist sample ends with "View the founder's profile as a live example", linking to `/perryidyll` (`sample.js` `decorate`, `.sbx-eg`). Live as `dae1080` from PR #220. The merge subject says "#218" by mistake.
+- **Verified on production:** Andrew's sample loads `sample.js?v=10397a11`, and the button sits under the preview note. This browser first served the old page from its own cache; a reload fixed it.
+- **Andrew's tagline:** hand-edited to the magazine voice: "Romantic rock 'n' roll from New York, with a guitar, a loop pedal and a soft spot for late-night singalongs."
