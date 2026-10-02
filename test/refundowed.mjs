@@ -138,5 +138,28 @@ console.log('\nA MARK FROM ANOTHER NIGHT IS DROPPED, NEVER PAID AGAINST TONIGHT\
   eq('and the stale mark is gone', (await owed()).alpha, undefined);
 }
 
+console.log('\nA REFUND THAT FAILS HAS STOPPED WRITING BY THE TIME IT ANSWERS');
+{
+  /* One fan file fails, another is slow. With Promise.all the decline answered the
+     moment the first failed, and the slow file's refund landed afterwards — after the
+     artist could have shown the song again. Seen on GitHub's runner, 2026-10-03. */
+  const { shardOf } = await import('../netlify/functions/_lib.mjs');
+  const { __slowReads } = await import('./blobs-fake.mjs');
+  await A('status', { status: 'live' });
+  await A('addSong', { title: 'Foxtrot', artist: 'Artist' });
+  const fox = (await stage()).songs.find((s) => s.title === 'Foxtrot').id;
+  let f1 = null, f2 = null;
+  for (let i = 0; !f2; i++) { const id = 'fx' + i; if (!f1) f1 = id; else if (shardOf(id) !== shardOf(f1)) f2 = id; }
+  ok('two fans in two files vote on Foxtrot', (await vote(f1, fox, 1)).ok && (await vote(f2, fox, 1)).ok);
+  __failReads(new RegExp(`^f${shardOf(f1)}_`));
+  __slowReads(400, new RegExp(`^f${shardOf(f2)}_`));
+  const r = await A('declineSong', { song: fox });
+  __slowReads(0); writesWork();
+  eq('the decline does not report success', r.status, 503);
+  const atAnswer = (await credits(f2)).used;
+  await new Promise((done) => setTimeout(done, 700));
+  eq('THE FIX: nothing more lands after it answered', (await credits(f2)).used, atAnswer);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
