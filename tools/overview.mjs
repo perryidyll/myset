@@ -146,7 +146,10 @@ async function facts() {
                 netCodesPerHour: auth.NET_CODES_PER_HOUR,
                 payBurst: payLim.PAY_BURST, payPerMin: payLim.PAY_PER_MIN, payNetBurst: payLim.PAY_NET_BURST, payNetPerMin: payLim.PAY_NET_PER_MIN,
                 rsvpPerNetwork: rsvpLim.RSVP_PER_NETWORK, feedbackPerNetworkPerDay: fbLim.FEEDBACK_PER_NETWORK_PER_DAY,
-                bugPerNetworkPerHour: errLim.BUG_PER_NETWORK_PER_HOUR },
+                bugPerNetworkPerHour: errLim.BUG_PER_NETWORK_PER_HOUR,
+                /* how long a delivered payment marker stays in the payments document, and from
+                   what age every claim check also looks in its year's archive (decision 0193) */
+                paidKeepDays: payLim.PAID_KEEP_DAYS, paidArcMarginDays: payLim.PAID_ARC_MARGIN_MS / 86400e3 },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -388,6 +391,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
 | Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |
 | …and a whole network — sized so a packed bar on one wifi never meets it (\`PAY_NET_BURST\`, \`PAY_NET_PER_MIN\`) | ${f.security.payNetBurst} / ${f.security.payNetPerMin} |
+| A delivered payment marker stays in \`meta_<aid>\` / every claim check also reads its year's archive for a session older than (\`PAID_KEEP_DAYS\`, \`PAID_ARC_MARGIN_MS\`, decision 0193) | ${f.security.paidKeepDays} days / ${f.security.paidArcMarginDays} days |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (\`NET_CODES_PER_HOUR\`) | ${f.security.netCodesPerHour} |
 | Phones one network may put on one night's RSVP count (\`RSVP_PER_NETWORK\`) | ${f.security.rsvpPerNetwork} |
 | Ratings one network may leave for one artist in a day (\`FEEDBACK_PER_NETWORK_PER_DAY\`) | ${f.security.feedbackPerNetworkPerDay} |

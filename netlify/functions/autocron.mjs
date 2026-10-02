@@ -31,6 +31,8 @@ const RUN_LOCK_MS = 4 * 60e3;
    unit of work in hand — one show starting, one chunk of the daily pass — room to
    finish inside the smaller figure. */
 export const RING_BUDGET_MS = 7000;
+/* The payment archive's own share of a ring (decision 0193): housekeeping, so small. */
+export const PAIDARC_BUDGET_MS = 1500;
 
 export default async (req) => {
   let marker = null;
@@ -110,6 +112,19 @@ async function ring(now, marker) {
     if (left() && now - (Number(state.healedAt) || 0) > HEAL_EVERY_MS) {
       const h = await step('heal', () => heal({ now, deadline }));
       if (h) console.log(`autocron: heal looked at ${h.looked} of ${h.of}${h.complete ? '' : ' (continues next ring)'}`);
+    }
+    /* OLD PAYMENT MARKERS MOVE TO THEIR YEAR (decision 0193). Once a day, after the
+       heal, on its own cursor and a small clock of its own: every artist's and venue's
+       delivered markers older than ninety days leave the payments document for
+       `paidarc_<owner>_<YYYY>`. The work and its safety live in _pay.mjs; this only
+       keeps the place. A pass too big for one ring carries on at the next. */
+    if (left() && now - (Number(state.paidarcAt) || 0) > HEAL_EVERY_MS) {
+      const a = await step('payment archive', async () => (await import('./_pay.mjs')).archiveDue({
+        now, deadline: Math.min(deadline, Date.now() + PAIDARC_BUDGET_MS), cursor: state.paidarcCursor }));
+      if (a) {
+        await casDoc(SCHED, emptySched, (d) => { d.paidarcCursor = a.next; if (a.done) d.paidarcAt = now; return true; }).catch(() => {});
+        console.log(`autocron: payment archive moved ${a.moved} marker(s) for ${a.looked} of ${a.of}${a.done ? '' : ' (continues next ring)'}`);
+      }
     }
     /* ACCOUNTS THAT ASKED TO LEAVE, THIRTY DAYS AGO. One per ring, on an hourly
        watermark, so this costs 24 reads a day rather than 720 and can never eat a

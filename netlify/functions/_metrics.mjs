@@ -23,7 +23,7 @@ import { occurrences, placeNight, happened, judgeRow, EARLY_MS } from './_nightr
 export { occurrences, placeNight, happened, EARLY_MS };
 
 /** One artist's documents → their part of the snapshot. */
-export function artistPart(aid, { idx, meta, posts, rsvp, ev }) {
+export function artistPart(aid, { idx, meta, arc, posts, rsvp, ev }) {
   const rows = ((idx && idx.shows) || []).filter((r) => r && r.showId && r.startedAt);
   const span = rows.length ? [Math.min(...rows.map((r) => r.startedAt)), Math.max(...rows.map((r) => r.endedAt || r.startedAt))] : [Date.now(), Date.now()];
   const occs = occurrences((ev && ev.list) || [], Math.min(span[0], Date.now() - 120 * 86400e3), Math.max(span[1], Date.now() + 30 * 86400e3));
@@ -44,7 +44,12 @@ export function artistPart(aid, { idx, meta, posts, rsvp, ev }) {
   const money = [];
   const m = meta || {};
   for (const t of m.tips || []) if (t && t.at) money.push({ aid, t: t.at, kind: 'tip', amount: Number(t.amount) || 0 });
-  for (const p of Object.values(m.paid || {})) {
+  /* `arc` is the owner's payment archives (`paidarc_<aid>_<YYYY>`, decision 0193):
+     delivered markers older than ninety days leave `meta.paid` for them, so the
+     money series is the archives and meta together — meta's copy wins for a marker
+     caught half-way through its move, so it is never counted twice. */
+  const paid = Object.assign({}, ...(arc || []).map((d) => (d && d.paid) || {}), m.paid || {});
+  for (const p of Object.values(paid)) {
     if (!p || !p.at || p.kind === 'tip') continue;
     money.push({ aid, t: p.at, kind: p.kind === 'merch' ? 'order' : (p.kind === 'votes' || p.kind === 'song_votes' ? 'pack' : String(p.kind || 'paid')), amount: Number(p.amount) || 0, votes: p.granted || 0 });
   }
