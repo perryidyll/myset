@@ -2381,6 +2381,7 @@ function render(){
       <div class="stage-song-actions"><button class="chartbtn" data-act="lyrics" data-id="${esc(now.id)}"><svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>Lyrics</button>
       <button class="chartbtn" data-act="autochords" data-id="${esc(now.id)}">♬ Auto chords</button>
       <button class="chartbtn" data-act="chart" data-id="${esc(now.id)}">☰ My chart</button></div></div>`:''}
+    ${owedPanel()}
     ${asksPanel()}
     ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}
 
@@ -3349,6 +3350,19 @@ function pitchPanel(){
       </div>`;}).join('')}</div>`;
 }
 
+/* A "Decline + refund" whose votes have not all gone back yet (decision 0155). The
+   song is hidden, so its own row and its Decline button are gone; this is the button
+   that finishes it. The server runs the same decline again, which can only give back
+   what has not been given back yet. */
+function owedPanel(){
+  const owed=(D&&D.owed)||[];
+  if(!owed.length) return '';
+  return `<div class="askpanel rise">
+    <div class="ah"><b>Votes still owed back</b><span>The refund didn’t finish</span></div>
+    ${owed.map(o=>`<div class="arow"><div class="m"><div class="t">${esc(o.title||'A declined song')}</div>
+      <div class="s">Declined · its votes haven’t all gone back to the room yet</div></div>
+      <button class="act pri" onclick="act('declineSong',{song:'${o.id}'})">Finish the refund</button></div>`).join('')}</div>`;
+}
 function asksPanel(){
   const all=(D&&D.asks)||[];
   if(!all.length) return '';

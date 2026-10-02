@@ -162,6 +162,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0152](0152-the-personal-poll-asks-for-the-show-on-condition.md) | The personal poll asks for the show on condition, so an unchanged record sends no body; the separate "hot" show record is designed and not built | 2026-10-03 | scale | proposed | agent-recommended |
 | [0153](0153-the-room-stops-first-and-the-night-is-priced-after-on-a-clock.md) | The room stops first, and the night is priced after, on a clock — a count Stripe did not finish is flagged and finished later | 2026-10-03 | money | proposed | agent-recommended |
 | [0154](0154-one-live-mark-per-artist-and-a-walk-finds-who-is-live.md) | One live mark per artist — no start or end writes a shared document; a walk from the registry finds who is live | 2026-10-03 | scale | proposed | agent-recommended |
+| [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md) | A refund owed is written down before it is paid — "Decline + refund" can be finished, and never pays twice | 2026-10-03 | voting | proposed | agent-recommended |
 | [0157](0157-somebody-is-told-when-production-breaks.md) | Somebody is told when production breaks | 2026-10-02 | ops | decided | perry-confirmed |
 | [0158](0158-an-about-is-two-sentences-with-a-space-between.md) | An About is two sentences, with a space between them and no line | 2026-10-02 | ui | decided | perry |
 | [0159](0159-a-sample-s-cover-is-chosen-twice.md) | A sample's cover is chosen twice — the best four side by side — and live videos past the top three give frames | 2026-10-02 | factory | decided | perry |
@@ -216,7 +217,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **venues** — [0127](0127-venue-plans-tips-for-the-staff-25-and-5-percent-fi.md) · [0128](0128-a-venue-approves-the-shows-artists-list-at-its-pla.md) · [0129](0129-a-venue-page-leads-with-its-photos-and-its-next-th.md) · [0131](0131-a-venue-page-s-header-a-cover-always-four-doors-be.md) · [0134](0134-a-venue-sample-carries-its-hours-menu-link-and-goo.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md)
 
 ## What counts as a decision
 
