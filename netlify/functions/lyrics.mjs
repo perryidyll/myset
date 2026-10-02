@@ -1,10 +1,11 @@
+import { guard } from './_errlog.mjs';
 import { getShow, publicArtist, json, bad } from './_lib.mjs';
 import { getLyrics } from './_lyrics.mjs';
 
 /* Public, but deliberately narrow: one song at a time, and only a song that is
    actually in tonight's setlist. No browsing, no search, no library — that is
    both the licensing posture and, in a bar, the better product. */
-export default async (req) => {
+const main = async (req) => {
   const id = (new URL(req.url).searchParams.get('song') || '').slice(0, 60);
   if (!id) return bad('missing song');
 
@@ -26,3 +27,5 @@ export default async (req) => {
     source: d.source || 'lrclib',
   });
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('lyrics', main);

@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, requireArtist, readMeta, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
@@ -6,7 +7,7 @@ import { redeemSession } from './_pay.mjs';
    only ever be a cache of it. GET lists what Stripe actually charged and flags
    anything the app failed to grant. POST redeems those, so a payment can never be
    silently kept without the buyer getting what they bought. */
-export default async (req) => {
+const main = async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
   /* THE MONEY TAB'S, NOT EVERY SEAT'S (decision 0105). This had no role check at all,
@@ -110,3 +111,5 @@ export default async (req) => {
     },
   });
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('revenue', main);

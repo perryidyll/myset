@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { jsonCached } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
@@ -10,7 +11,7 @@ import { mapLinks, resolveShortMapPlace } from './_maps.mjs';
 
 /* Public artist directory. Only fields already intended for public profiles and
    calendars leave this endpoint; account emails, roles and billing never do. */
-export default async (req) => {
+const main = async (req) => {
   const wantsMaps = !!(req && new URL(req.url).searchParams.get('maps'));
   const registry = await readArtists();
   /* Find artists is a trust surface, not the complete account registry. The same
@@ -92,3 +93,5 @@ export default async (req) => {
      in it, so a shared copy leaks nothing a direct call would not. */
   return jsonCached({ ok: true, artists }, 60);
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('artists', main);

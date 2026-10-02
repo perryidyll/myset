@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { bad } from './_lib.mjs';
 import profile from './profile.mjs';
 import events from './events.mjs';
@@ -39,7 +40,7 @@ import mapconfig from './mapconfig.mjs';
    and are shared for a minute. */
 const DOORS = { profile, events, board, me, community, venue, diary, artists, mapconfig };
 
-export default async (req, ctx) => {
+const main = async (req, ctx) => {
   const what = new URL(req.url).searchParams.get('what') || '';
   if (what === 'warm') {
     return new Response('warm', { status: 200, headers: {
@@ -49,3 +50,5 @@ export default async (req, ctx) => {
   if (!door) return bad('unknown read', 404);
   return door(req, ctx);
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('fan', main);

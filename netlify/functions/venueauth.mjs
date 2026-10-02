@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, emailReady,
          signTicket, readTicket, cleanSlug, codeSendAllowed } from './_auth.mjs';
@@ -26,7 +27,7 @@ async function openV(req, body, vid, email, rev) {
   return token;
 }
 
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
@@ -339,3 +340,5 @@ export default async (req) => {
       .map(async ([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email, pw: await hasPassword(owner, e) }))),
     emailReady: emailReady() });
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('venueauth', main);

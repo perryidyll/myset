@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { bad, jsonCached, publicArtist, getShow } from './_lib.mjs';
 import { getProfile, firstOf } from './_profile.mjs';
 import { planOf } from './_plan.mjs';
@@ -11,7 +12,7 @@ import { readDiary, shapePages } from './_diary.mjs';
    opening one artist's diary in the same quarter-minute shares one run of the
    four reads. Nothing here varies by who is asking, and nothing here is the
    audience poll. A hidden page never leaves the server. */
-export default async (req) => {
+const main = async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
   const { artistById } = await import('./_auth.mjs');
@@ -26,3 +27,5 @@ export default async (req) => {
     pages: shapePages(d.pages, show.songs),
   }, 15);
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('diary', main);

@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, jsonCached, publicArtist, getShow, playable } from './_lib.mjs';
 import { getProfile, shapeMedia, firstOf } from './_profile.mjs';
 import { readHistIndex } from './_history.mjs';
@@ -44,7 +45,7 @@ export function commentsOf(posts) {
 
 /* Public. Everything here is already validated at write time; embeds are rebuilt
    from literal templates on every read so a stored record can never become a src. */
-export default async (req) => {
+const main = async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
   /* Fifteen seconds at the edge (jsonCached): everybody opening this artist in
@@ -133,3 +134,5 @@ export async function profilePayload(aid, { who: given = null } = {}) {
     updatedAt: p.updatedAt,
   };
 }
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('profile', main);

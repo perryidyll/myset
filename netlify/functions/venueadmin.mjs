@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
@@ -20,7 +21,7 @@ const evOwner = (vid) => `v_${vid}`;
 /* Everything a venue can change about its own page. A venue session can only
    ever reach its own records — the id comes from the token, never the body. */
 
-export default async (req) => {
+const main = async (req) => {
   const me = await requireVenue(req, { sample: true });
   if (!me) return bad('unauthorized', 401);
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -686,3 +687,5 @@ export default async (req) => {
 
   return bad('unknown action');
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('venueadmin', main);

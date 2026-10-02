@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { bad } from './_lib.mjs';
 import { qrSvg } from './_qr.mjs';
 import { artistBySlug, cleanSlug, artistById } from './_auth.mjs';
@@ -25,7 +26,7 @@ const KINDS = {
 /** Which registry the slug has to exist in. `home` needs none. */
 const REALM = { profile: 'artist', vote: 'artist', invite: 'artist', venue: 'venue' };
 
-export default async (req) => {
+const main = async (req) => {
   const q = new URL(req.url).searchParams;
   const kind = q.get('k') || 'home';
   if (!KINDS[kind]) return bad('unknown code', 404);
@@ -64,3 +65,5 @@ export default async (req) => {
     },
   });
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('qr', main);

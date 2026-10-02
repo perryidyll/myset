@@ -811,6 +811,21 @@ $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;h
    a tap goes to /api/vote, which is the truth about credits regardless of what is
    on screen. */
 let BOARD=null, ME=null, CAST_AT=0;
+/* EVERY REQUEST ON THIS PAGE HAS A CLOCK (decision 0143). A fetch has no timeout of
+   its own: one call that never answers held the poll loop for as long as the phone
+   cared to wait, and held a song's button with it. `timed` gives up after `ms` and
+   rejects, which every caller here already treats as "couldn't reach the room".
+   `within` is the same clock for a request somebody else started (the two the
+   <head> fires before this script has parsed). */
+function timed(url,opts,ms){
+  if(typeof AbortController!=='function') return fetch(url,opts||{});
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),ms||10000);
+  return fetch(url,{...(opts||{}),signal:c.signal}).finally(()=>clearTimeout(t));
+}
+const within=(p,ms)=>new Promise((yes,no)=>{ const t=setTimeout(()=>no(new Error('timeout')),ms);
+  p.then(v=>{clearTimeout(t);yes(v);},e=>{clearTimeout(t);no(e);}); });
+/* How many loads in a row came back without a board. schedule() reads it. */
+let FAILS=0;
 async function load(){
   /* The board fetch is NOT `cache:'no-store'` on purpose: that mode makes the
      browser send `Cache-Control: no-cache`, which some edges honour as "skip the
@@ -819,8 +834,8 @@ async function load(){
      how old the edge's copy is, and the countdown is corrected by it. */
   const E=window.__early||{}; window.__early=null;     // the head started these; see <head>
   const [b,m]=await Promise.all([
-    (E.board||fetch(`${API}/fan?what=board${AQ1.replace('?','&')}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
-    (E.me||fetch(`${API}/fan?what=me&fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
+    (E.board?within(E.board,10000):timed(`${API}/fan?what=board${AQ1.replace('?','&')}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
+    (E.me?within(E.me,10000):timed(`${API}/fan?what=me&fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
   ]);
   /* A personal reply can have left the server before this phone's last cast landed
      (it was already in flight when the tap happened), so its `lastAt` may be older
@@ -828,11 +843,17 @@ async function load(){
   if(m&&m.ok){ ME=m; ME.lastAt=Math.max(Number(ME.lastAt)||0,CAST_AT); }
   const fresh=!!(b&&b.d&&b.d.ok);
   if(fresh){ BOARD=b.d; BOARD.age=b.age; }
+  /* A board that did not arrive — unreachable, timed out, or the server saying
+     "busy" — is counted, and the poll slows down for it (schedule). A board that
+     did arrive puts the count back to nothing. */
+  FAILS=fresh?0:FAILS+1;
   if(!BOARD){
     /* Nothing to draw yet — the logo screen goes and the page says so, rather than
-       staying bare; the poll and a pull both try again. */
+       staying bare; the poll and a pull both try again. This tested for an EMPTY
+       #app, which the grey skeleton above never is, so the words were never shown:
+       a phone that could not reach the room sat on the skeleton for good. */
     hideIntro();
-    if(!BOOTED&&!$('#app').firstElementChild) $('#app').innerHTML=`<div class="noboard"><b>Couldn’t reach the room</b><p>Check the wifi, then pull down to try again.</p></div>`;
+    if(!BOOTED) $('#app').innerHTML=`<div class="noboard"><b>Couldn’t reach the room</b><p>Check the wifi, then pull down to try again.</p></div>`;
     return;
   }
   try{
@@ -986,7 +1007,7 @@ async function bugSend(){
   closeSheet();
   toast('Thank you \u2014 the artist will see it');
   try {
-    await fetch(`${API}/bug${AQ1}`, { method: 'POST',
+    await timed(`${API}/bug${AQ1}`, { method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ fan: FAN, note, page: location.pathname, ua: navigator.userAgent, recent: RECENT }) });
   } catch (e) { /* the thank-you already happened */ }
@@ -998,7 +1019,7 @@ async function fbSend(){
   closeSheet();
   toast('Thank you \u2014 that really helps');
   try {
-    await fetch(`${API}/feedback${AQ1}`, { method: 'POST',
+    await timed(`${API}/feedback${AQ1}`, { method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ fan: FAN, stars: FB_STARS, note }) });
   } catch (e) { /* their thank-you already happened; this is not worth a retry */ }
@@ -1133,21 +1154,26 @@ async function vote(id,n,castId){
     // what this phone just showed itself — a cached board may not know yet (mergeBoard)
     SHOWN[id]={votes:s.votes,mine:s.mineCount}; SHOWN_T=Date.now();
     POP=id; buzz(18); render(); POP=null; }
-  /* RETRY ONCE, with the SAME cast id — which is the entire point of having one.
-     Nothing used to reuse it, so the idempotency was real on the server and never
-     exercised: a dropped response on bar wifi just lost the vote. The server answers
-     a repeat from memory, so this cannot double-charge. */
+  /* UP TO FOUR SENDS, ALL WITH THE SAME cast id — which is the entire point of
+     having one. The server answers a repeat from memory, so this cannot
+     double-charge. It used to try again only when the connection dropped; a server
+     that ANSWERED "busy" (the room's files were contended, or the store did not
+     answer) rolled the vote back and showed the fan the word "busy". That is the
+     one answer most worth sending again: the vote was refused whole, nothing was
+     spent, and a moment later it lands (decision 0143). A real no — out of votes,
+     voting closed — is never retried. */
   const body=JSON.stringify({fan:FAN,song:id,n:q,op:'cast',cast:castId||''});
-  const post=()=>fetch(`${API}/vote${AQ1}`,{method:'POST',
-    headers:{'content-type':'application/json'},body}).then(r=>r.json());
+  const post=()=>timed(`${API}/vote${AQ1}`,{method:'POST',
+    headers:{'content-type':'application/json'},body},10000).then(r=>r.json());
   let d=null;
-  try{ d=await post(); }
-  catch(e){
-    try{ await new Promise(r=>setTimeout(r,900)); d=await post(); }
-    catch(e2){ noteFail('vote: unreachable'); toast('Couldn’t reach the room — try again'); }
+  for(let i=0;i<4;i++){
+    if(i) await new Promise(r=>setTimeout(r,[0,700,1600,3200][i]+Math.random()*500));
+    try{ d=await post(); }catch(e){ d=null; }
+    if(d&&(d.ok||d.error!=='busy')) break;
   }
+  if(!d){ noteFail('vote: unreachable'); toast('Couldn’t reach the room — try again'); }
   if(d&&!d.ok){ noteFail('vote: '+d.error); if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
-    else toast(d.error||'Could not save that vote'); }
+    else toast(d.error==='busy'?'The room is very busy and that vote didn’t land — tap it again':(d.error||'Could not save that vote')); }
   if(d&&d.ok) applyCast(id,q,s,d);
   else delete SHOWN[id];       // refused or unreachable: the board's number is the truth again
   busy.delete(id); wakeUp(true); load();
@@ -1249,7 +1275,7 @@ let GIGS=null, GIGS_ASKED=false, NEXT_TIMER=null;
 async function loadGigs(){
   if(GIGS_ASKED)return; GIGS_ASKED=true;
   /* `?a=` with nothing after it is the founding page's own gig list (events.mjs). */
-  try{ const d=await fetch(`${API}/fan?what=events${(AQ1||'?a=').replace('?','&')}&n=2`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
+  try{ const d=await timed(`${API}/fan?what=events${(AQ1||'?a=').replace('?','&')}&n=2`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
   catch(e){ GIGS=[]; }
   if(ST&&ST.status!=='live') render();          // draws the label and the venue line
 }
@@ -1652,7 +1678,7 @@ async function sendAsk(kind,withOffer=false){
       body.attempt='r'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-5);
       path='/pay';
     }
-    const r=await fetch(`${API}${path}${AQ1}`,{method:'POST',
+    const r=await timed(`${API}${path}${AQ1}`,{method:'POST',
       headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){
@@ -1685,7 +1711,7 @@ async function openLyrics(){
     <p class="lede">${esc(np.artist||'')}</p>
     <div class="lyr" id="lyrBody"><span class="spin"></span> Finding the words…</div>`);
   let d=null;
-  try{ d=await fetch(`${API}/lyrics?song=${encodeURIComponent(np.id)}${AQ}`).then(r=>r.json()); }catch(e){}
+  try{ d=await timed(`${API}/lyrics?song=${encodeURIComponent(np.id)}${AQ}`).then(r=>r.json()); }catch(e){}
   const el=$('#lyrBody'); if(!el)return;
   if(!d||!d.ok||!d.found){
     el.innerHTML=`<p style="font-size:15px;color:var(--muted);white-space:normal">
@@ -1720,7 +1746,7 @@ function openLeftover(n){
 async function decideLeftover(choice){
   closeSheet();
   try{
-    const r=await fetch(`${API}/gift${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},
+    const r=await timed(`${API}/gift${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({fan:FAN,choice})});
     const d=await r.json();
     if(!d.ok){toast('Couldn\u2019t save that \u2014 your votes are safe');return;}
@@ -1785,7 +1811,7 @@ async function checkout(kind){
     body.note=(($('#tipNote')||{}).value||'').slice(0,120);}
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Opening secure checkout…';}
   try{
-    const r=await fetch(`${API}/pay${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const r=await timed(`${API}/pay${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)},20000);
     const d=await r.json();
     if(d.ok&&d.url){
       // remember it BEFORE leaving. If the return trip fails (tab closed, flaky
@@ -1817,7 +1843,7 @@ function pendingSet(v){try{v?localStorage.setItem(PEND,JSON.stringify(v)):localS
 
 async function redeem(sid,loud){
   try{
-    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${AQ}`);
+    const r=await timed(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${AQ}`,null,20000);
     const d=await r.json();
     if(d.ok){
       /* Which song the pack was for is on the pending record — read it before the
@@ -1957,7 +1983,14 @@ function schedule(){
   /* The rungs are the same 3 / 10 / 25 shape they have always been, expressed as
      multiples of the floor so that a big room stretches all of them together.
      At the default floor this is exactly 3000 / 10000 / 25000 — unchanged. */
-  const base = QUIET<2 ? FLOOR
+  /* A ROOM THAT CANNOT BE REACHED IS ASKED LESS, NOT MORE (decision 0143). The
+     ladder below only climbs when a board arrives unchanged, so a phone with NO
+     board never climbed at all: it asked every three seconds for as long as it was
+     open, and five thousand of them did that to a backend that was already
+     failing. Each load in a row without a board doubles the wait, to a minute.
+     A tap, a pull or the screen coming on still tries soon (wakeUp). */
+  const base = FAILS ? Math.min(60000, FLOOR*Math.pow(2,Math.min(FAILS,5)))
+             : QUIET<2 ? FLOOR
              : QUIET<6 ? Math.round(FLOOR*10/3)
              : QUIET<20 ? Math.round(FLOOR*25/3)
              /* A TERMINAL RUNG. A phone left face-up on a table with nobody looking
@@ -1974,9 +2007,14 @@ function schedule(){
   const wait = Math.round(base * (0.8 + Math.random() * 0.4));
   TIMER=setTimeout(tick, wait);
 }
+let TICKING=false;
 async function tick(){
   if(document.hidden){ fbTick(); schedule(); return; }
-  await load();
+  /* One poll at a time. A wake re-arms the timer while a load is still out, and
+     on a slow network that stacked a second poll on the first. */
+  if(TICKING){ schedule(); return; }
+  TICKING=true;
+  try{ await load(); } finally{ TICKING=false; }
   fbMaybeAsk();                 // a natural pause: state has just refreshed
   /* In a room the server has decided is big (it has raised the floor above the
      ordinary three seconds), the tally moving is not a reason to speed everybody
@@ -1992,6 +2030,8 @@ async function tick(){
    poll every 3 seconds for the next minute. Measured before this: 66% of all polls
    were pinned to the fast rung by taps rather than by anything actually changing. */
 function wakeUp(full){
+  // somebody is here: one doubling, not a minute's wait (0143)
+  if(full&&FAILS>1) FAILS=1;
   if(full) QUIET=0;
   else if(QUIET>=6) QUIET=2;                 // out of deep sleep, into the middle rung
   else return;                               // already lively — leave the ladder alone

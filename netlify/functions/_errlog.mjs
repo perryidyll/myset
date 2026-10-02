@@ -1,4 +1,4 @@
-import { casDoc, readDoc, bad, roomHash } from './_lib.mjs';
+import { casDoc, readDoc, bad, roomHash, isStoreError } from './_lib.mjs';
 
 /* WHAT BROKE, KEPT PAST THE NIGHT.
 
@@ -56,6 +56,9 @@ export async function logErr(where, e, ctx = {}) {
     aid: cut(ctx.aid, 60), fan: cut(ctx.fan, 40), url: cut(ctx.url, 200).split('?')[0],
   };
   console.error(`[${row.where}]`, row.msg);
+  /* A store that did not answer is not written down IN that store (0142): the write
+     would wait on the same failure, and the caller is holding a reply for it. */
+  if (isStoreError(e)) return;
   try {
     await casDoc(hourKey(now), () => ({ v: 1, list: [] }), (d) => {
       d.list = Array.isArray(d.list) ? d.list : [];
@@ -78,6 +81,16 @@ export async function recentErrs(hours = BUG_HOURS, now = Date.now()) {
 export const guard = (where, h) => async (req, ctx) => {
   try { return await h(req, ctx); }
   catch (e) {
+    /* THE STORE DID NOT ANSWER (decision 0142). Not a bug to file — and filing it
+       is a write to the same store, which would hang this reply behind the thing
+       that is already failing. One console line, then the answer every page
+       already knows how to wait on: 503 "busy", never cached, never a sign-out. */
+    if (isStoreError(e)) {
+      console.error(`[${where}] the store did not answer for ${e.key}:`, String((e.cause && e.cause.message) || e.cause || ''));
+      const r = bad('busy', 503);
+      r.headers.set('retry-after', '5');
+      return r;
+    }
     await logErr(where, e, { url: req && req.url });
     return bad('Something went wrong on our side — it has been noted', 500);
   }

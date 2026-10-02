@@ -98,9 +98,14 @@ eq('a third attempt is a replay', replayAgain.replay, true);
 eq('still five', await votesOn('ret', 'charlie'), 5);
 
 console.log('\nAND THE PAGE ACTUALLY REUSES THE ID  (otherwise it is nominal)');
-ok('vote() retries once with the same body',
-   /let d=null;[\s\S]{0,240}d=await post\(\);[\s\S]{0,240}d=await post\(\);/.test(page0),
+/* The body — and so the cast id — is built ONCE, outside the loop that sends it, and
+   the loop goes round again on a dropped connection or a "busy" answer and stops on
+   any real answer (decision 0143). It used to send twice, on a dropped connection only. */
+ok('vote() builds the body once and sends it in a loop',
+   /const body=JSON\.stringify\(\{fan:FAN,song:id,n:q,op:'cast',cast:castId\|\|''\}\);[\s\S]{0,260}let d=null;\s*for\(let i=0;i<4;i\+\+\)\{[\s\S]{0,200}d=await post\(\);/.test(page0),
    'vote() must retry with the same cast id');
+ok('and goes round again on "busy", never on a real answer',
+   /if\(d&&\(d\.ok\|\|d\.error!=='busy'\)\) break;/.test(page0), 'the loop must stop on a real yes or a real no');
 
 console.log('\nA MALFORMED CAST ID IS REFUSED, NOT QUIETLY IGNORED');
 /* Dropping it silently left the request with no idempotency at all — the one thing
