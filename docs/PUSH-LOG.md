@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:08 — 28e64a8 — scale-ops@ops/small-leaks (25 files since origin/main)
+**tl;dr:** The page a fan returns to after paying can no longer be hammered by one machine: 1,000 a minute per address, far above a real room (0191)
+**Other sessions:** netlify.toml now has THREE rate rules: /api/confirm 1000/min and /api/auth 300/min above /api/* 60000/min (Pro allows five). Specific rules must stay above /api/*.
+
 ### 2026-10-03 03:03 — 03adb2e — scale-ops@ops/small-leaks (22 files since origin/main)
 **tl;dr:** Small fixes: shared page scripts stay fresh for ten minutes instead of one, 'near me' can ask for location, myset.vip/robots.txt is a real file, the home page has a share picture, a first-night letter can never go out twice, and the error log keeps counting during an incident (0186, 0187)
 **Other sessions:** NOT MERGED — waits on the founder's word. netlify.toml: /*.css and /*.js rules moved BELOW /:slug (later rule wins per header); Permissions-Policy geolocation=(self), artistpage.mjs SITE_HEADERS kept equal. _errlog: 4 shards/hour (shard 0 = old key), per-shard count n, readErrs(); _watch look() adds overflow. _auto sweepNotes claims before sending. README/GIG-NIGHT/SECURITY/PER-019 corrected.
