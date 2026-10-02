@@ -344,6 +344,7 @@ console.log('\nOLD MARKERS MOVE TO THEIR YEAR, AND STILL ANSWER "ALREADY"  (deci
   const ring2 = await archiveDue({ now: NOW, deadline: 0 });
   ok('with no time left it still does one chunk, so a pass always moves', ring2.looked >= 1, ring2);
   eq('PAID_KEEP_DAYS is 130 — a dispute (up to 120 days) always finds its marker in meta', PAID_KEEP_MS, 130 * DAY);
+}
 
 console.log('\nTHE MONEY TAB IS NET OF WHAT WENT BACK  (decision 0194, after 0177)');
 {
