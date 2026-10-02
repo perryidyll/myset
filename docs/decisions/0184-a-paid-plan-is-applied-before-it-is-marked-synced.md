@@ -87,6 +87,8 @@ founder. A referrer on a comp or on Free still gets their month.
 
 ## What this makes harder
 
+- A subscription Stripe answers `resource_missing` for is treated as nothing to sync, not an error: it can never succeed, and an error would have Stripe redeliver it for three days.
+
 - A sync that fails inside a webhook now shows as a failed delivery on Stripe's
   dashboard and is retried for up to three days. That is the point; it is also noise.
 - A subscription that Stripe cannot find (a test-mode id reaching live) is retried

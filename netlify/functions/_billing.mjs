@@ -209,7 +209,12 @@ export async function syncSubscription(owner, subId) {
   if (!id) return { ok: true, plan: null, none: true };
   let sub;
   try { sub = await stripe.subscriptions.retrieve(id); }
-  catch (e) { return { ok: false, error: e.message || 'could not read subscription' }; }
+  catch (e) {
+    /* A subscription Stripe says does not exist will never sync; answering an error
+       for it would only make Stripe redeliver the event for three days (0184). */
+    if (e && e.code === 'resource_missing') return { ok: true, plan: null, none: true, missing: true };
+    return { ok: false, error: e.message || 'could not read subscription' };
+  }
   const item = ((sub.items || {}).data || [])[0] || {};
   const key = (item.price && item.price.lookup_key) || '';
   const tier = planFromPriceKey(key);
