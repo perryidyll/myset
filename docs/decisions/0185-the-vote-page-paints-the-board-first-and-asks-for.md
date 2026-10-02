@@ -3,7 +3,7 @@ id: 0185
 title: The vote page paints the board first and asks for its own state only when something changed
 date: 2026-10-03
 status: decided
-decided_by: perry-confirmed
+decided_by: claude
 area: scale
 reverses:
 superseded_by:
