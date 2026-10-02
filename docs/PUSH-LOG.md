@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 02:07 — bb11de5 — founder-example@docs/founder-example-0162-live (2 files since origin/main)
+**tl;dr:** Docs: decision 0162 (founder's page as a live example) recorded as live as dae1080
+**Other sessions:** dae1080's subject says #218 but the PR is #220. Puzzle changelog for 0162 added. Next free decision: 0163.
+
 ### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
 **tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
 **Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
