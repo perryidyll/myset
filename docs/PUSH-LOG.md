@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:22 — 6ea0f6b — scale-songlist@fix/vote-song-list (47 files since origin/main)
+**tl;dr:** In a big room every song stays votable: the vote page fetches the song list once and then polls only the tallies (when the server supports it; otherwise exactly today's page) (0192)
+**Other sessions:** NOT MERGED. Stacked on #228; pairs with c8fc2f's #226 (0150). vote.html: detection = board carries songsV; lean=1 polls only while the held list matches songsV; fromList() rebuilds a today-shaped board from tally+list; falls back to the full board on list failure/5 s/version mismatch/unknown song. INVARIANT 0ig.
+
 ### 2026-10-03 03:03 — 1377ee2 — scale-vote@fix/vote-page-cadence (17 files since origin/main)
 **tl;dr:** The vote page asks the server less: it shows the board first, asks for the fan's own votes only after they act, on wake or once a minute, waits a random moment when a phone wakes in a big room, keeps the keyboard in search, warns inside Instagram's/TikTok's browser before a purchase, and says 'lots of people are buying' instead of 'payments broken' (0185)
 **Other sessions:** NOT MERGED — waits on the founder's word. vote.html: ME_DUE/ME_EVERY (60 s) cadence; <head> starts only the board; wake() jitter 0–1.5 s with a 'Catching up…' dim; WV moved from shop.html into fan.js (all fan pages re-stamped). _lib.mjs: mutateFan gains optional 5th arg tries; markPresence uses PRESENCE_TRIES=3 (INVARIANT 0if). Reads confirm's asCredits.
