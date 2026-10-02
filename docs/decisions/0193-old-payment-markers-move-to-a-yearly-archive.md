@@ -37,7 +37,7 @@ for him.
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
 | **A — chosen** | Delivered markers older than `PAID_KEEP_DAYS` move to `paidarc_<aid>_<YYYY>`, written and read back before they leave meta. Every claim check reads the archive for a session older than `PAID_ARC_MARGIN_MS`. | One meta read per owner per day; one or two archive reads per old-session claim | A key family, the bell's daily pass, `archivePaid`, `archivedMarker`, `readPaidAll` | A future reader of `meta.paid` that asks "was this paid" and forgets the archive (0ih names it) |
-| B | Delete delivered markers older than 90 days outright | Nothing | None | A sweep, a late webhook or the bell grants a pack a second time for any old session |
+| B | Delete delivered markers older than 130 days outright | Nothing | None | A sweep, a late webhook or the bell grants a pack a second time for any old session |
 | C | One document per session, `pay_<aid>_<sid>`, written `onlyIfNew` (the audit's structural fix) | A migration of every live marker; a read per session for every reader that totals money | Many | The right end state; too big to land beside the open money PR |
 | D — do nothing | — | — | — | The document grows without bound and every payment gets slower |
 
@@ -56,7 +56,7 @@ A. It removes the growth without opening a gap.
   and every delivery path looks for it in meta.
 - **The claim check consults the archive, and only when it could matter.**
   `redeemSession` reads the archive only when the marker is not in meta and the
-  session is older than the margin (80 days, ten inside the move, so clocks that
+  session is older than the margin (120 days, ten inside the move, so clocks that
   disagree cannot open a gap). The claim a fan is waiting on is always younger, so
   it costs nothing extra. The years read are the session's `created` year and the
   next; the archive is keyed by the marker's `at`, which IS `created`, so both sides
@@ -87,6 +87,8 @@ A. It removes the growth without opening a gap.
   `tools/backup.py` lists the store and needed no change.
 
 ## What this makes harder
+
+- The age is 130 days, not 90, so a dispute (Stripe allows 120 days) always finds its marker in meta where the refund and dispute handlers (0177) write. Raised before merging, when those handlers appeared.
 
 - Anything that asks "was this session paid for and delivered" must ask both places
   (INVARIANT 0ih). A grep for `\.paid\[` is the check.

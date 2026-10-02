@@ -77,7 +77,7 @@ const main = async (req) => {
      again. The bell retries what the webhook could not deliver (0138), so this is
      the artist's backstop, not the first road. */
   /* A MARKER MAY HAVE MOVED TO ITS YEAR (decision 0193). A delivered marker older than
-     ninety days lives in `paidarc_<aid>_<YYYY>`, so a session meta no longer holds is
+     130 days lives in `paidarc_<aid>_<YYYY>`, so a session meta no longer holds is
      looked for there before it is called unredeemed or swept — one read per year the
      window spans, at most two, and none when every session is in meta or too young
      to have moved. Without it the sweep would grant an old pack a second time. */
