@@ -1,4 +1,4 @@
-import { casDoc, readDoc, DEFAULT_ARTIST } from './_lib.mjs';
+import { casDoc, readDoc, DEFAULT_ARTIST, own, roomHash, clientIp } from './_lib.mjs';
 import { readArtists, mutateArtists } from './_auth.mjs';
 
 /* What each plan gets.
@@ -243,18 +243,62 @@ export async function readPromos() {
 export const mutatePromos = (fn) =>
   casDoc(PROMOS, emptyPromos, (d) => { d.codes ||= {}; return fn(d); });
 
+/* FIVE GUESSES AN HOUR (decision 0190). A code that comps a paid plan is worth
+   guessing, and nothing stopped a script trying codes as fast as it liked. Two token
+   buckets in one small global document, in the shape `payAllowed` uses (0111): one
+   per account and one per network, PROMO_TRIES each, refilling PROMO_TRIES an hour.
+   Every attempt with a code in it spends one from both. A refused attempt writes
+   nothing, and reads no code. Unlike the checkout limiter this one fails CLOSED: a
+   limiter that cannot be written refuses the try, because redeeming a code is never
+   on the way to a gig and an open door under contention is the door a script wants. */
+export const PROMO_TRIES = 5;
+const PROMOLIM = 'promolim';
+const MAX_PROMO_BUCKETS = 400;
+export async function promoTryAllowed(aid, req, now = Date.now()) {
+  const net = req ? roomHash('promo', clientIp(req)) : '';
+  let allowed = true;
+  try {
+    await casDoc(PROMOLIM, () => ({ v: 1, b: {} }), (d) => {
+      d.b = d.b && typeof d.b === 'object' ? d.b : {};
+      const take = (id) => {
+        const b = own(d.b, id) || { t: PROMO_TRIES, at: now };
+        const t = Math.min(PROMO_TRIES, (Number(b.t) || 0) + Math.max(0, now - (Number(b.at) || now)) / 3600e3 * PROMO_TRIES);
+        if (t < 1) return null;
+        return { t: t - 1, at: now };
+      };
+      const a = take('a:' + aid), n = net ? take('n:' + net) : true;
+      if (!a || !n) { allowed = false; return false; }
+      d.b['a:' + aid] = a;
+      if (net) d.b['n:' + net] = n;
+      const ids = Object.keys(d.b);
+      if (ids.length > MAX_PROMO_BUCKETS) {
+        ids.sort((x, y) => (d.b[x].at || 0) - (d.b[y].at || 0));
+        for (const id of ids.slice(0, ids.length - MAX_PROMO_BUCKETS)) delete d.b[id];
+      }
+      return true;
+    }, null, 5);
+  } catch { allowed = false; }
+  return allowed;
+}
+
 /** Applies a code to an artist. 100% comps the plan outright; anything less is
- *  recorded, and the next plan checkout applies it as a coupon (_billing.mjs). */
-export async function redeemPromo(aid, rawCode) {
+ *  recorded, and the next plan checkout applies it as a coupon (_billing.mjs).
+ *  Codes minted from here on should be 10+ random characters (decision 0190). */
+export async function redeemPromo(aid, rawCode, req = null) {
   const code = cleanCode(rawCode);
   if (!code) return { ok: false, error: 'Enter a code' };
+  if (!(await promoTryAllowed(aid, req)))
+    return { ok: false, limited: true, error: 'Too many tries — wait an hour and try again.' };
 
+  /* ONE ANSWER for a code that does not exist, is off, or is used up, so a guess
+     learns nothing about which codes are real (0190). */
+  const NO = 'That code can’t be used';
   let promo = null, why = null;
   await mutatePromos((d) => {
-    const c = d.codes[code];
-    if (!c) { why = 'That code isn’t recognised'; return false; }
-    if (c.revoked) { why = 'That code has been turned off'; return false; }
-    if (c.maxUses && (c.usedBy || []).length >= c.maxUses) { why = 'That code has been used up'; return false; }
+    const c = own(d.codes, code);
+    if (!c) { why = NO; return false; }
+    if (c.revoked) { why = NO; return false; }
+    if (c.maxUses && (c.usedBy || []).length >= c.maxUses) { why = NO; return false; }
     if ((c.usedBy || []).includes(aid)) { why = 'You’ve already used that code'; return false; }
     c.usedBy = [...(c.usedBy || []), aid];
     promo = { plan: c.plan, months: c.months, pct: c.pct };
