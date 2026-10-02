@@ -9,7 +9,7 @@ const { watch, look, WATCH, BELL_STALE_MS, OWED_STALE_MS, ERRS_PER_HOUR, AGAIN_M
 const healthFn = (await import('../netlify/functions/health.mjs')).default;
 const { casDoc, readDoc, DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
 const { noteOwed, OWED } = await import('../netlify/functions/_pay.mjs');
-const { logErr } = await import('../netlify/functions/_errlog.mjs');
+const { logErr, shardKeys } = await import('../netlify/functions/_errlog.mjs');
 const { __failReads } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
@@ -81,6 +81,11 @@ r = await watch({ now: Date.now(), tell });
 ok('a burst of server errors is seen', r.problems.includes('errors'), r.problems);
 ok('and told', told.slice(before).some((m) => /server errors in the last hour/.test(m.title)), told.slice(before));
 
+console.log('\nPAST A SHARD\'S CAP, STILL COUNTED  (decision 0187)');
+for (const k of shardKeys()) await casDoc(k, () => ({}), (d) => { d.list = []; d.n = 0; return true; });
+await casDoc(shardKeys()[2], () => ({}), (d) => { d.list = [{ at: Date.now(), where: 'x', msg: 'kept' }]; d.n = 400; return true; });
+eq('rows that fell off a full shard are still in the hour\'s count', (await look(Date.now())).errors, 400);
+
 console.log('\nTHE STORE DOES NOT ANSWER');
 __failReads(/^gigsched$/);
 const s = await hush(() => look(Date.now()));
@@ -92,7 +97,7 @@ __failReads(null);
 console.log('\nTHE WATCH ITSELF STOPS');
 await bell(Date.now() - 30e3);
 await casDoc(WATCH, () => ({}), (d) => { d.lastAt = Date.now() - 45 * 60e3; d.told = {}; return true; });
-await casDoc('err_' + new Date().toISOString().slice(0, 13), () => ({}), (d) => { d.list = []; return true; });
+for (const k of shardKeys()) await casDoc(k, () => ({}), (d) => { d.list = []; d.n = 0; return true; });
 h = await health();
 eq('the outside check can see it: 503', h.status, 503);
 eq('why: the watch has not run', h.why, ['watch']);

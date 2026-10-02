@@ -41,7 +41,7 @@ export const SITE_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'X-Content-Type-Options': 'nosniff',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()',
   'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://maps.googleapis.com https://maps.gstatic.com https://*.googleusercontent.com; media-src 'self' blob:; connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com; font-src 'self'; worker-src 'self'; manifest-src 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com https://embed.music.apple.com; object-src 'none'; base-uri 'self'",
 };

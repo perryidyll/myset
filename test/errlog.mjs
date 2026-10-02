@@ -16,7 +16,7 @@ const L      = await import('../netlify/functions/_lib.mjs');
 const E      = await import('../netlify/functions/_errlog.mjs');
 const { readFileSync } = await import('node:fs');
 const { src } = await import('./_src.mjs');
-const { __dump, __opsStart, __opsStop } = await import('./blobs-fake.mjs');
+const { __dump, __opsStart, __opsStop, __failWrites } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -78,8 +78,24 @@ console.log('\nERRORS LAND IN THE BLOB STORE, ONE DOCUMENT PER HOUR');
   const rows = await E.recentErrs(3);
   ok('it can be read back', rows.length === 1 && rows[0].msg === 'boom' && rows[0].where === 'test', rows);
   ok('with a stack, cut short', rows[0].stack.length > 0 && rows[0].stack.length <= 1200);
-  for (let i = 0; i < E.KEEP_PER_HOUR + 10; i++) await E.logErr('flood', 'e' + i);
-  ok('an hour never holds more than the cap', (await E.recentErrs(1)).length <= E.KEEP_PER_HOUR);
+  eq('an hour is ERR_SHARDS keys, the first the old single one', E.shardKeys(t), ['err_2026-09-11T14', 'err_2026-09-11T14_1', 'err_2026-09-11T14_2', 'err_2026-09-11T14_3']);
+  const quiet = console.error; console.error = () => {};
+  for (let i = 0; i < E.KEEP_PER_HOUR * E.ERR_SHARDS + 10; i++) await E.logErr('flood', 'e' + i);
+  console.error = quiet;
+  const hr = await E.readErrs(1);
+  ok('an hour never holds more than the cap on every shard', hr.rows.length <= E.KEEP_PER_HOUR * E.ERR_SHARDS, hr.rows.length);
+  ok('the rows are spread over the shards', E.shardKeys().filter((k) => __dump().has(k)).length === E.ERR_SHARDS);
+  eq('THE COUNT: every row is counted, the ones past the cap too (decision 0187)', hr.perHour[0].n, 1 + E.KEEP_PER_HOUR * E.ERR_SHARDS + 10);
+  ok('while the kept rows are the newest', hr.rows.some((x) => x.msg === 'e' + (E.KEEP_PER_HOUR * E.ERR_SHARDS + 9)));
+  /* THE INCIDENT (decision 0187): when errors pile up, every failing request fights
+     over the hour's document and most writes lose. One document, three tries on it,
+     and those rows were gone. Here every write to the hour's first key loses. */
+  for (const k of E.shardKeys()) if (__dump().has(k)) await L.casDoc(k, () => ({}), (d) => { d.list = []; d.n = 0; return true; });
+  console.error = () => {}; __failWrites(new RegExp('^' + E.hourKey() + '$'));
+  for (let i = 0; i < 20; i++) await E.logErr('burst', 'b' + i);
+  console.error = quiet; __failWrites(null);
+  const burst = (await E.recentErrs(1)).filter((x) => x.where === 'burst').length;
+  eq('one shard that always loses: every row still lands in another', burst, 20);
   const guarded = E.guard('t', async () => { throw new Error('unexpected'); });
   const r = await guarded(new Request('https://x/api/t'));
   eq('an uncaught throw becomes a 500, not a crash', r.status, 500);
@@ -90,7 +106,7 @@ console.log('\nERRORS LAND IN THE BLOB STORE, ONE DOCUMENT PER HOUR');
   await leaky(new Request('https://x/api/t?code=SECRET123&session_id=cs_test_abc'));
   const row = (await E.recentErrs(1)).find((x) => x.msg === 'leaky');
   eq('the row keeps the route’s path, never its query string', row && row.url, 'https://x/api/t');
-  const hour = String((__dump().get(E.hourKey()) || {}).body || '');
+  const hour = E.shardKeys().map((k) => String((__dump().get(k) || {}).body || '')).join('');
   ok('and nothing in the hour’s document carries the code or the session id',
      hour.length > 0 && !hour.includes('SECRET123') && !hour.includes('cs_test_abc'));
 }
