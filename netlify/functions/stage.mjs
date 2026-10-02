@@ -1,6 +1,6 @@
 import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, tipsTonight, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME, liveFans, sameNightResume } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME, liveFans, sameNightResume, netOf } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
@@ -61,7 +61,7 @@ export async function stagePayload(aid, seat) {
      account's total travels alongside as `allTime`, named, for anything that wants it. */
   const since = show.startedAt ? Number(show.startedAt) : Infinity;
   const tonight = show.startedAt ? tipsTonight(meta.tips, since) : { total: 0, count: 0 };
-  const allTime = Math.round(meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0) * 100) / 100;
+  const allTime = Math.round(meta.tips.reduce((a, t) => a + netOf(t), 0) * 100) / 100;   // net of refunds (0179)
   const recent = (show.startedAt ? meta.tips.filter((t) => t && Number(t.at) >= since) : meta.tips).slice(-15).reverse();
   /* TONIGHT'S VOTE PURCHASES, the same window as the tips, so the Studio can
      celebrate a pack bought the way it celebrates a tip (the founder, 2026-09-17:
