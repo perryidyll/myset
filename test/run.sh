@@ -14,7 +14,7 @@ set -e
 cd "$(dirname "$0")/.."
 # Every test process appends the keys it wrote here; the last step reads them all
 # (test/keyfamilies.mjs): no kind of document without a second home, or a reason.
-MYSET_KEYLOG="$(mktemp -t myset-keys)"
+MYSET_KEYLOG="$(mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX")"
 export MYSET_KEYLOG
 echo "── syntax ──"
 node --import ./test/register.mjs test/syntax.mjs
