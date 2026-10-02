@@ -947,7 +947,8 @@ async function payDash(){
    at the bar. It is a lookup key minted from the session id — never a secret,
    never proof of payment; the button under it is the only fulfilment, and its
    verb is what the venue actually does: hands it over, or posts it. An order
-   refunded in full has no button at all — it must never be handed over (0177). */
+   refunded in full has no button at all — it must never be handed over (0177) — and
+   nor has one that came in after the last one sold (`short`, 0178). */
 /* what a refund or a chargeback did to a row that still stands (`lost` is cents) */
 const vlossNote=(x)=>x.dispute==='won'?' · Dispute won':x.dispute&&x.dispute!=='warning_closed'?' · Disputed':x.lost?' · '+vmoney(x.lost)+' refunded':'';
 function ordersSection(){
@@ -958,10 +959,10 @@ function ordersSection(){
       <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">
         ${x.code?`<b style="font-size:24px;font-weight:800;letter-spacing:.08em;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--ink)">${esc(x.code)}</b>`:''}
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''} · $${Number(x.amount||0).toFixed(2)}</div>
-          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' shipping':''} · ${vdate(x.at)}${x.refunded?' · Refunded — don’t hand it over':(done?' · '+verb:'')+vlossNote(x)}</div></div></div>
+          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' shipping':''} · ${vdate(x.at)}${x.refunded?' · Refunded — don’t hand it over':x.short?' · Sold out before it was paid — refunding the buyer':(done?' · '+verb:'')+vlossNote(x)}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
         <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
-        ${x.refunded?'':`<button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button>`}</div></div>`;}).join('')
+        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button>`}</div></div>`;}).join('')
       ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
 }
 async function orderDone(sid,done){ const d=await post('/venueadmin',{action:'orderDone',sid,done}); if(d&&d.ok){ VORDERS=null; loadOrders(); } else toast((d&&d.error)||'Couldn’t update that'); }
