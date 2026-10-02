@@ -88,6 +88,16 @@ const made = await S.createSample({
   seed: { line: 'The Tide Lines | @thetidelines' }, supIds: ['thetidelines', '@thetidelines'], by: 'factory' });
 ok('it is made, with the address and the label for a link', made.ok && made.key === 'sample-profile' && made.link.endsWith('/thetidelines?sample-profile'), made);
 const aid = made.owner, KEY = made.key;
+{ // its share card (0165): the sample's own portrait when the link carries the label
+  const ap = (await import('../netlify/functions/artistpage.mjs')).default;
+  const og = (h, k) => ((h.match(new RegExp(`<meta [a-z]+="${k}" content="([^"]*)"`)) || [])[1]);
+  const lab = await (await ap(new Request('https://myset.vip/thetidelines?sample-profile'))).text();
+  ok('a labelled link shows the sample’s portrait on its share card (0165)', /^https:\/\/myset\.vip\/api\/img\?/.test(og(lab, 'og:image') || '') && og(lab, 'og:title') === 'The Tide Lines' && og(lab, 'og:url') === 'https://myset.vip/thetidelines?sample-profile', { img: og(lab, 'og:image'), t: og(lab, 'og:title'), u: og(lab, 'og:url') });
+  const lab2 = await (await ap(new Request('https://myset.vip/.netlify/functions/artistpage?a=thetidelines&sample-profile'))).text();
+  ok('and through the rewrite’s own query', og(lab2, 'og:title') === 'The Tide Lines');
+  const bare = await (await ap(new Request('https://myset.vip/thetidelines'))).text();
+  ok('the bare address keeps the plain card: no sample is shown without the label (0101)', og(bare, 'og:image') === '/icons/icon-512.png' && !/og:url/.test(bare));
+}
 const reg0 = await readArtists();
 ok('it is NOT a row in the registry every phone reads', !reg0.byId[aid] && !reg0.bySlug.thetidelines);
 const prof = await getProfile(aid);

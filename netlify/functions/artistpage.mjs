@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { cleanSlug } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
 import { publicArtist } from './_lib.mjs';
+import { verifySample, SAMPLE_MARK } from './_sample.mjs';
 
 /* THE ARTIST PAGE, WITH THE ARTIST ON ITS SHARE CARD (the founder, 2026-09-27).
    A link to myset.vip/<slug> pasted into iMessage, WhatsApp or Instagram showed the
@@ -99,6 +100,19 @@ async function card(slug) {
   return { name: String(p.name || '').trim(), image: shareImage(p) };
 }
 
+/* A SAMPLE'S CARD (decision 0165). A sample page sent in a DM showed the MySet icon:
+   its slug is no account, so card() found nobody. Asked for with the label in the
+   query (?sample-profile, 0164; a crawler never sees a #), the sample's own portrait,
+   else cover, goes on the card, by the same rule as an artist's. The bare address is
+   untouched, so it stays the ordinary "no such page" (0101). */
+async function sampleCard(slug) {
+  const hit = await verifySample(slug, SAMPLE_MARK, 'artist');
+  if (!hit) return null;
+  const p = await getProfile(hit.owner);
+  return { name: String(p.name || hit.row.name || '').trim(), image: shareImage(p) };
+}
+export const hasLabel = (u) => new RegExp(`[?&]${SAMPLE_MARK}(?![\\w-])`).test(u.search);
+
 export default async (req) => {
   const url = new URL(req.url);
   let html = shell();
@@ -109,8 +123,9 @@ export default async (req) => {
   }
   try {
     const slug = cleanSlug(url.searchParams.get('a') || url.pathname.split('/').filter(Boolean)[0] || '');
-    const c = slug ? await within(card(slug), PROFILE_MS) : null;
-    if (c) html = withShare(html, { ...c, url: `${ORIGIN}/${slug}` });
+    const labelled = hasLabel(url);
+    const c = !slug ? null : await within(card(slug).then((x) => x || (labelled ? sampleCard(slug).then((y) => y && { ...y, sample: true }) : null)), PROFILE_MS);
+    if (c) html = withShare(html, { name: c.name, image: c.image, url: `${ORIGIN}/${slug}${c.sample ? `?${SAMPLE_MARK}` : ''}` });
   } catch { /* the page as it always was */ }
   return new Response(html, {
     status: 200,
