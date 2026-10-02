@@ -1,0 +1,37 @@
+# The whole suite, on every pull request (decision 0144).
+#
+# main is production and merging is the deploy (decision 0045). Until this file the
+# only thing between a pull request and myset.vip was whoever opened it remembering
+# to run `sh test/run.sh` first: of 192 merged pull requests, half were open for
+# under a minute. This runs the same script on GitHub's machine and reports it on
+# the pull request as the check named "suite".
+#
+# - No secrets, read-only token: the suite needs neither, and a pull request from a
+#   fork must not be able to reach anything.
+# - `[skip ci]` in a branch's LAST commit message stops this from running, and a
+#   required check that never runs blocks the merge. Keep the marker out of branch
+#   commits; a docs-only merge puts it in the squash subject instead
+#   (`gh pr merge --squash --subject "… [skip ci] (#n)"`), which is what stops
+#   Netlify's production build. AGENTS.md § Deploying.
+name: tests
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: sh test/run.sh
