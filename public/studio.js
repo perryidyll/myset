@@ -857,8 +857,29 @@ function ask({title,lede,yes,no,go}){
 }
 function startSong(action,extra={}){
   const now=D&&D.songs&&D.songs.find(x=>x.now);
-  if(!now||(action==='play'&&extra.song===now.id)) return act(action,extra);
-  ask({title:'End current song?',lede:`${now.title} is still playing.`,yes:'Yes, end it',no:'Keep playing',go:()=>act(action,extra)});
+  if(!now||(action==='play'&&extra.song===now.id)) return playAct(action,extra);
+  ask({title:'End current song?',lede:`${now.title} is still playing.`,yes:'Yes, end it',no:'Keep playing',go:()=>playAct(action,extra)});
+}
+/* ONE TAP, ONE SONG (decision 0151). A Play that got no answer may still have started
+   its song, and a retry after the server's eight-second window would start the NEXT
+   one. So each tap carries an id, and the same id goes with that tap's retry: the
+   server answers a tap it has already obeyed instead of obeying it twice. With no
+   answer, the stage is read again before another tap is let through; if this tap is
+   on it, it landed. A tap the server never acted on leaves no trace, so keeping its
+   id for the retry costs nothing. Two minutes on, a tap is a new tap. */
+let TAP=null;
+async function playAct(action,extra){
+  if(PRACTICE||WRITING) return act(action,extra);
+  const k=action+':'+(extra.song||'');
+  if(!TAP||TAP.k!==k||Date.now()-TAP.at>120000) TAP={k,id:Date.now().toString(36)+Math.random().toString(36).slice(2,10),at:Date.now()};
+  const t=TAP, d=await act(action,{...extra,tap:t.id});
+  if(!d){ if(TAP===t) TAP=null; return; }          // it landed
+  if(d.offline){
+    WRITING=true;
+    try{ await load({quiet:true}); }finally{ WRITING=false; }
+    if(TAP===t&&D&&D.show&&(D.show.taps||[]).includes(t.id)) TAP=null;
+  }
+  return d;
 }
 function closeAsk(ok){
   const go=ASK_GO, done=ASK_DONE; ASK_GO=ASK_DONE=null;

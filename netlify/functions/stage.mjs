@@ -82,6 +82,8 @@ export async function stagePayload(aid, seat) {
     show: {
       artist: show.artist, artistFirst: show.artistFirst || '', venue: show.venue, city: show.city, status: show.status,
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
+      // the ids of the last Play taps that started a song, so a retry can look first (0151)
+      taps: show.taps.map((t) => t.id),
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
       artistId: aid, slug: (who && who.slug) || slugHint || '',

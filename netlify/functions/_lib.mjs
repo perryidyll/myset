@@ -380,6 +380,9 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
 }
 
 /* ---------- show config ---------- */
+/* How many Play taps the show remembers (decision 0151). A retry follows its tap by
+   seconds; eight is every song of the last half hour or so, and a few hundred bytes. */
+export const TAPS_KEPT = 8;
 function normShow(s) {
   const d = defaultShow();
   const show = { ...d, ...(s || {}) };
@@ -393,6 +396,10 @@ function normShow(s) {
      at tonight — what makes Play one write (decision 0147, `liveFans` below). */
   show.plays = Math.max(0, parseInt(show.plays, 10) || 0);
   show.col = show.col && typeof show.col === 'object' && !Array.isArray(show.col) ? show.col : {};
+  /* The last few Play taps that started a song, by the id the Studio sent with each
+     (decision 0151) — what lets a retry of the same tap be answered, not obeyed. */
+  show.taps = (Array.isArray(show.taps) ? show.taps : [])
+    .filter((t) => t && typeof t.id === 'string' && t.id).slice(-TAPS_KEPT);
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
@@ -469,6 +476,57 @@ export async function getShow(aid, { withName = true } = {}) {
     show.artistFirst = (a && a.first) || '';
   }
   return show;
+}
+/* THE SHOW FOR THE PERSONAL POLL, WITHOUT CARRYING IT EVERY TIME (decision 0152,
+   INVARIANT 0hz).
+
+   /api/me is polled by every phone in the room and never cached, and the show record
+   it reads carries the whole song library and the night's play log: about 100 KB for a
+   typical act and up to 540 KB, read 250 times a second at 5,000 phones (the 2 October
+   2026 audit). Nearly every one of those reads finds the record exactly as the last one
+   did, because only the artist changes it.
+
+   So a warm function instance keeps the record it last read for an artist, with the
+   etag the store gave it, and asks the store ON CONDITION: only if it is no longer
+   that. The store answers 304 and no body when nothing has changed, and the whole
+   record when something has — one strong read either way, the read the poll always
+   made, without the bytes. The kept copy is used ONLY when the store has just said it
+   is still the current one, so it is never older than a plain read would have been.
+   It is frozen: a caller that tried to change it would throw rather than change it for
+   the next phone. Anything else — a read that throws, a reply without the etag, no
+   record at all — goes the ordinary way (`readDoc`), which decides what a failure is.
+
+   For callers that only read the show and never show the artist's name. */
+const SHOW_MEMO = new Map();                 // aid -> { etag, show }, oldest first
+const SHOW_MEMO_MAX = 16;                    // artists one instance keeps
+const frozen = (o) => {
+  if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); for (const k of Object.keys(o)) frozen(o[k]); }
+  return o;
+};
+function keepShow(aid, data, etag) {
+  const show = normShow(data);
+  show.artistId = aid;
+  SHOW_MEMO.delete(aid);
+  if (!data || !etag) return show;            // nothing stored, or nothing to ask with next time
+  SHOW_MEMO.set(aid, { etag, show: frozen(show) });
+  while (SHOW_MEMO.size > SHOW_MEMO_MAX) SHOW_MEMO.delete(SHOW_MEMO.keys().next().value);
+  return show;
+}
+export async function getShowKept(aid) {
+  const held = SHOW_MEMO.get(aid);
+  if (held) {
+    let r = null;
+    try { r = await store().getWithMetadata(KEY.show(aid), { type: 'json', consistency: 'strong', etag: held.etag }); }
+    catch { r = null; }
+    if (r && r.data === null && r.etag === held.etag) {
+      // used: newest again — unless a newer copy replaced it while this read was out
+      if (SHOW_MEMO.get(aid) === held) { SHOW_MEMO.delete(aid); SHOW_MEMO.set(aid, held); }
+      return held.show;
+    }
+    if (r && r.data && r.etag) return keepShow(aid, r.data, r.etag);
+  }
+  const { data, etag } = await readDoc(KEY.show(aid), null);
+  return keepShow(aid, data, etag);
 }
 /* INVARIANT 4 says a conditional write can report success without sticking under
    concurrency, which is why every FAN write goes through a read-back verify. The

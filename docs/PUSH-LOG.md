@@ -64,6 +64,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
 **tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
 **Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+### 2026-10-03 02:55 — 8e2d516 — scale-p2-show@fix/show-poll-split (83 files since origin/main)
+**tl;dr:** A slow Play tapped twice no longer skips a song; every song stays votable in a huge room once the vote page uses the new list; each phone's check-in stops re-downloading the song library (0150, 0151, 0152)
+**Other sessions:** STACKED on #219. admin play/playTop take optional tap id (show.taps, TAPS_KEPT); studio.js playAct. New endpoint GET /api/fan?what=songs&a=&v= (songs.mjs) + lean board (lean=1, tally) + board.songsV — contract in 0150, week one builds vote.html to it. me.mjs reads the show via getShowKept(aid) (conditional read vs a frozen per-instance copy); vote.mjs should follow. 0152's hot show record NOT built (design only). No new blob keys.
+
 ### 2026-10-03 02:49 — df20945 — scale-p2@test/contention-sim (64 files since origin/main)
 **tl;dr:** No change for a person: the crowded-room test passes on GitHub's runner
 **Other sessions:** test/contention.mjs: byte-identical repeat only on Node >= 24; on 20/22 it compares status counts + votes landed/lost. roomsim preloads every netlify/functions/*.mjs before the virtual clock.
