@@ -389,6 +389,10 @@ function normShow(s) {
   if (typeof show.freeCredits !== 'number') show.freeCredits = DEFAULT_FREE_CREDITS;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
   if (!Array.isArray(show.log)) show.log = [];
+  /* How many songs have been started, ever, and the count each song was started
+     at tonight — what makes Play one write (decision 0147, `liveFans` below). */
+  show.plays = Math.max(0, parseInt(show.plays, 10) || 0);
+  show.col = show.col && typeof show.col === 'object' && !Array.isArray(show.col) ? show.col : {};
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
@@ -831,17 +835,19 @@ export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
   fan.va ||= {};
   const rows = (fan.va[songId] ||= []);
   let freeLeft = Math.max(0, (show.freeCredits || 0) - fan.freeUsed);
-  /* [credit cost, paid portion, WHEN]. The third field is the moment of the
-     cast, per vote, so the night's event log (_evlog.mjs, decision 0066) can say
-     when each vote arrived after the song has played and the row is gone from
-     here. Readers take the first two fields and ignore the rest, and a row from
-     before the stamp existed is read with the song's first-vote time instead. */
-  const at = Date.now();
+  /* [credit cost, paid portion, WHEN, PLAYS SEEN]. The third field is the moment
+     of the cast, per vote, so the night's event log (_evlog.mjs, decision 0066)
+     can say when each vote arrived after the song has played and the row is gone
+     from here. Readers take the first two fields and ignore the rest, and a row
+     from before the stamp existed is read with the song's first-vote time instead.
+     The fourth is `show.plays` as THIS cast read it — how a vote that set off
+     before its song started is known for what it is when it lands after (0147). */
+  const at = Date.now(), seen = show.plays || 0;
   for (let i = 0; i < count; i++) {
     const price = unlimited ? 0 : cost;
     const fromFree = Math.min(price, freeLeft);
     freeLeft -= fromFree;
-    rows.push([price, price - fromFree, at]);
+    rows.push([price, price - fromFree, at, seen]);
   }
   chargeFan(fan, show, unlimited ? 0 : cost * count);
 }
@@ -1143,6 +1149,57 @@ export function boardLimitFor(heads) {
   if (n <= 1000) return 40;
   if (n <= 3000) return 25;
   return 15;
+}
+
+/* PLAY IS ONE WRITE — decision 0147.
+
+   Starting a song used to be two things: the show write that says what is playing,
+   then a sweep of all twelve fan files to take that song's votes off the board. A
+   cast reads the show ONCE, before its own write, and retries that write for as
+   long as it takes — so in a rush a vote that set off before Play could land after
+   the sweep had passed its file. It stayed on the song that had just started, and
+   once that song was in `played` it read as a request to hear it again, bought at
+   the ordinary price. (Simulated at 5,000 phones: 1 to 13 a Play.) And a sweep
+   that ran out of tries left a twelfth of the room's votes behind, silently.
+
+   Now the show write carries the answer. `show.plays` counts every song started;
+   `show.col[song]` is the count that song was last started at. A cast stamps each
+   vote row with the `plays` it read. A row whose stamp is LOWER than its song's
+   mark set off before that song started: the song has collected it, whichever
+   side of the sweep it landed on. Nothing is refunded — the fan voted for a song
+   and it is playing, the same outcome as landing a millisecond earlier.
+
+   The sweep still runs. It is housekeeping now: it files the votes in the night's
+   event log and keeps the files small. If it loses, the board is still right.
+
+   Only a row that carries a stamp can be collected this way. A row from before
+   the stamp existed, and votes bought for a song at checkout (`grantPaidSongVotes`,
+   which a fan paid money for), are left exactly as they were.
+
+   These two take the collected rows out of records ALREADY READ — never out of
+   the store. The rows stay in the file until the sweep or the end of the night
+   files them (`harvestAll` reads the file as it is, so every vote is still filed
+   once: INVARIANT 0fq). */
+export function liveFan(fan, show) {
+  const col = show && show.col;
+  if (!fan || !fan.va || !col) return fan;
+  for (const song of Object.keys(fan.va)) {
+    const mark = col[song], rows = fan.va[song];
+    if (!mark || !Array.isArray(rows)) continue;
+    const kept = rows.filter((r) => !(Array.isArray(r) && Number.isInteger(r[3]) && r[3] < mark));
+    let gone = rows.length - kept.length;
+    if (!gone) continue;
+    fan.v = (fan.v || []).filter((x) => (x === song && gone > 0 ? (gone--, false) : true));
+    if (kept.length) { fan.va[song] = kept; if (fan.ts) fan.ts[song] = Number(kept[0][2]) || fan.ts[song]; }
+    else { delete fan.va[song]; if (fan.ts) delete fan.ts[song]; }
+  }
+  return fan;
+}
+export function liveFans(fans, show) {
+  const col = show && show.col;
+  if (!fans || !col || !Object.keys(col).length) return fans;      // nothing has played: nothing to do
+  for (const id of Object.keys(fans)) liveFan(fans[id], show);
+  return fans;
 }
 
 export function voteCounts(fans) {

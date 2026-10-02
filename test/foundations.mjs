@@ -82,7 +82,7 @@ await cast('fan-3', 'echo', 1);
 {
   const fans = await readFans(AID);
   const row = fans['fan-1'].va.alpha[0];
-  ok('a vote row carries the moment of the cast', Array.isArray(row) && row.length === 3 && row[2] >= t0 && row[2] <= Date.now(), row);
+  ok('a vote row carries the moment of the cast, and how many songs had started (0147)', Array.isArray(row) && row.length === 4 && row[2] >= t0 && row[2] <= Date.now() && row[3] === 0, row);
   eq('nothing in the log before a song plays', (await readEventLog(AID, showId)).n, 0);
 }
 await A('play', { song: 'alpha' });

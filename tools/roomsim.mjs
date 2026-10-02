@@ -182,7 +182,11 @@ const holds = (f) => !!(fans[f] && (fans[f].v || []).length);
    the song that is now playing is STRANDED: Play collected before it landed. */
 const nowPlaying = showEnd.nowPlaying || null;
 const said200 = res.vote.filter((r) => r[0] === 200).map((r) => r[2]);
-const stranded = nowPlaying ? Object.values(fans).reduce((n, f) => n + (f.v || []).filter((x) => x === nowPlaying).length, 0) : null;
+const onSong = (fs) => Object.values(fs).reduce((n, f) => n + ((f && f.v) || []).filter((x) => x === nowPlaying).length, 0);
+/* Raw: rows still in the files. Since decision 0147 a late row may sit there and be
+   ignored: what the board counts is the file read through liveFans. */
+const rawOnSong = nowPlaying ? onSong(fans) : null;
+const stranded = nowPlaying ? onSong(lib.liveFans ? lib.liveFans(fans, showEnd) : fans) : null;
 console.log(JSON.stringify({
   cfg: { P, burst, burstSec, arrive, arriveSec, play, ghosts, r: A.r ?? 42, w: A.w ?? 80, timeout: TIMEOUT, seed: A.seed ?? 1 },
   shardKB: Math.round(shardBytes.reduce((x, y) => x + y, 0) / lib.SHARDS / 1024),
@@ -190,7 +194,7 @@ console.log(JSON.stringify({
   vote: score(res.vote), votesLanded: voters.filter(holds).length,
   votesLost: play ? null : said200.filter((f) => !holds(f)).length,
   me: score(res.me), presenceLanded: arrive ? Object.values(fans).filter((f) => f.seenShow === show.showId).length - P - ghosts : null,
-  play: res.play, strandedOnPlayedSong: stranded,
+  play: res.play, strandedOnPlayedSong: stranded, rowsLeftInFiles: rawOnSong,
   store: { ...store, MBread: Math.round(store.bytesR / 1e6), MBwritten: Math.round(store.bytesW / 1e6) },
   wallSec: Math.round(Number(process.hrtime.bigint() - wall0) / 1e8) / 10, err: res.err }));
 process.exit(0);
