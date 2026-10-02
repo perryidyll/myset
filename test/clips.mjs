@@ -427,7 +427,7 @@ const R2 = await import('../netlify/functions/_r2.mjs');
 
 console.log('\nTHE BYTES GO TO R2, AND THE PHONE IS SENT THERE  (_r2.mjs, vid.mjs)');
 const { __r2, __setClock } = await import('./r2-fake.mjs');
-const { putClip, hasClip, clipUrl, dropClipKeys } = await import('../netlify/functions/_video.mjs');
+const { putClip, hasClip, clipUrl, dropClipKey } = await import('../netlify/functions/_video.mjs');
 const { store } = await import('../netlify/functions/_lib.mjs');
 const E = await import('../netlify/functions/_errlog.mjs');
 __r2.install();
@@ -629,7 +629,7 @@ console.log('\nTAKING IT DOWN TAKES IT OFF R2');
   ok('the artist’s key list names the R2 clip', keys.includes(`vid_${cid}_${r2clip}`));
   await deleteArtist(cid);
   ok('LEAVING MYSET TAKES THE BYTES OFF R2', !__r2.objects.has(`vid_${cid}_${r2clip}`), [...__r2.objects.keys()]);
-  ok('and dropClipKeys only ever touches vid_ keys', (await dropClipKeys(['posts_x', 'img_x_y'])) === 0);
+  ok('and dropClipKey only ever touches vid_ keys', (await dropClipKey('posts_x')) === false && (await dropClipKey('img_x_y')) === false);
   /* The first run of this section passed while every delete was throwing inside
      the fake — the object was gone before the throw. So: the deletes must also
      have left NO error behind, or "gone" is an accident. */

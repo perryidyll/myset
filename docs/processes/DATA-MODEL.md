@@ -494,7 +494,7 @@ Linked steps: 369944, 369945
 
 ### Sheet sync cursor (sheetsync) — entity 4881
 
-`sheetsync` · Where the warehouse walk got to last time — which shows have been appended to the Google Sheet's log tabs, so rows are written once and never rewritten. `src: _warehouse.mjs SYNC`
+`sheetsync` · Where the warehouse walk got to last time — which shows have been appended to the Google Sheet's log tabs, so rows are written once and never rewritten — and the first artist the last run did not take (`cursor`), where the next one starts (decision 0173). `src: _warehouse.mjs SYNC`
 
 | attribute | type | what it holds |
 | --- | --- | --- |

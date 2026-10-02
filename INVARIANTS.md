@@ -1598,6 +1598,12 @@ If you are about to violate one, stop and say so rather than working around it.
 
     A silent truncation is how a spreadsheet starts lying.
 
+    · **And the next run starts where this one stopped** (decision 0173). Past the
+      cap every run read the same first 400, so the 401st artist never reached the
+      sheet: a cap that dropped. `cursor` in the sync state names the first artist
+      a run did not take; a run also stops taking artists after `WALK_MS`, so it
+      writes what it has instead of being killed with nothing written.
+
 0bw2. **ONE SYNC AT A TIME.** The 03:20 cron and Perry tapping "Sync now" a second
     later would both walk the store and both append — the same night twice in a
     tab the Guide calls safe to chart. `runningSince` in the sync doc is the lock,
@@ -2031,8 +2037,9 @@ If you are about to violate one, stop and say so rather than working around it.
     billing is cancelled, the calendar is un-indexed. Sessions are NOT killed and
     `rev` is NOT bumped — soft delete locks the account DOWN, never the owner OUT.
     Everything but undo, export, the plan and the portal answers 423. The purge is
-    one account per cron ring, hourly watermark, after the show sweep; the
-    `delqueue` entry is removed LAST, so purge is re-runnable by construction.
+    one account per cron ring, hourly watermark, before the show sweep and inside
+    `PURGE_BUDGET_MS` (0im); the `delqueue` entry is removed LAST, so purge is
+    re-runnable by construction.
     The calendar STAYS un-indexed for the whole window: the daily `heal()` skips a
     marked row (it re-pointed every row from its calendar, which the window keeps,
     and the same ring's sweep started a deleted account's gig — found 2026-09-27),
@@ -2040,6 +2047,8 @@ If you are about to violate one, stop and say so rather than working around it.
     entry that got back. Undo re-indexes. `sweepNotes` drops a first-night letter
     for a marked account rather than send it. `test/autoshow.mjs` and
     `test/firstgig.mjs` "AN ACCOUNT ON ITS WAY OUT"; decision 0098.
+
+0im. **A purge deletes what an index names before the index, and the registry row last.** `keysFor` and `keysForVenue` name a document before any key read off it, and collect the documents they read (`namers`): the index, the id list, the library, the profile, the feed, the pending clips, the diary, the inbox, each night's log head, the version, post and inbox archives. `eraseKeys` walks the list from the END: documents nothing is read off go side by side, an index goes alone once everything below it is gone, and a delete that fails stops the walk before the next index. A clip's bytes leave R2 inside the walk and a refusal stops it too (`dropClipKey` throws), so no pending list is deleted while it holds a clip R2 kept. Killed anywhere, every document left is still named, and the next ring finishes. `purgeDue` gives it `PURGE_BUDGET_MS` and keeps `cur[owner]` on `delqueue` — set before the first delete, then the key each ring reached — and the next ring carries on below that key. Undo is refused once `cur[owner]` exists; until then the thirty days are untouched (0dh). A new key family read off a document adds that document to `namers`. `test/background.mjs` kills the walk after every possible delete with deletes landing out of order. Decision `0173`.
     A public door that takes a slug goes through `publicArtist` — the `/:slug`
     share card (`artistpage.mjs`) resolved it alone and kept a deleted account's
     name and portrait on link previews (`test/sharecard.mjs`). The founder's sheet
@@ -2662,9 +2671,10 @@ If you are about to violate one, stop and say so rather than working around it.
     never a 500 or a hang — every call has a timeout, and the failure is logged
     at most once a minute per instance so an outage cannot pile CAS writes onto
     the serving path. Hiding, sweeping, deleting a post, an artist or a venue
-    take the bytes off R2 (`dropClip`, `dropClipKeys`) — AND A DELETE R2 REFUSES
+    take the bytes off R2 (`dropClip`, `dropClipKey`) — AND A DELETE R2 REFUSES
     IS NOT FORGOTTEN: the clip goes back on the pending list and the sweep ring
-    keeps the owner until the list is empty, so the next ring tries again;
+    keeps the owner until the list is empty, so the next ring tries again (a
+    purge instead stops its walk before the list that names the clip, 0im);
     without that a hide during an outage would leave 75MB nothing could ever
     find. NEVER REMOVE THE FOUR VARIABLES WHILE CLIPS ARE ON R2: with them gone
     every clip already there is a 404 and every later delete skips it. Rotate a

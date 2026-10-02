@@ -675,6 +675,40 @@ sent.length = 0;
 r = await AS(P.token, 'sheetSync');
 ok('and the next sync goes into the new sheet without rolling again', r.ok && !r.sheet.rolled && SHEET.hit === 'made-1' && sent.length === 0, r.sheet);
 delete SHEET.cells; delete SHEET.cellsById;
+
+/* ---------- a cap that rotates (decision 0173) ---------- */
+console.log('\nPAST THE CAP, THE NEXT SYNC STARTS WHERE THIS ONE STOPPED  (0173, 0bw)');
+{
+  /* Until 2026-10-03 every run read the same first 400 artists, so the 401st never
+     reached the sheet at all. The cap is two here and there are more than two. */
+  for (const [e, n] of [['rot1@x.com', 'Rota One'], ['rot2@x.com', 'Rota Two'], ['rot3@x.com', 'Rota Three']]) await mk(e, n);
+  const everyone = Object.keys((await readArtists()).byId);
+  process.env.MYSET_SHEET_MAX_ARTISTS = '2';
+  const seen = new Set(), runs = [];
+  for (let i = 0; i < Math.ceil(everyone.length / 2) + 1; i++) {
+    const r = await W.syncSheet();
+    const got = cellsIn('Artists', 'Artist id');
+    runs.push(got);
+    for (const id of got) seen.add(id);
+    if (!r.ok) { ok('a capped run still succeeds', false, r); break; }
+  }
+  eq('each run takes two', runs.map((x) => x.length), runs.map(() => 2));
+  eq('and every artist reaches the sheet within a turn of the list', everyone.filter((id) => !seen.has(id)), []);
+  ok('no two runs in a row take the same two', runs.every((x, i) => i === 0 || x.join() !== runs[i - 1].join()), runs);
+  ok('the run says where it stopped', /starting where the last sync stopped/.test((await W.syncSheet()).note || ''));
+  delete process.env.MYSET_SHEET_MAX_ARTISTS;
+
+  /* Out of time: a run stops taking artists and writes what it has, rather than
+     being killed with nothing written. At least one artist a run, so it moves. */
+  process.env.MYSET_SHEET_WALK_MS = '0';
+  const a = await W.syncSheet(), b = await W.syncSheet();
+  ok('with no time left a run takes one artist and says the rest come next', a.ok && cellsIn('Artists', 'Artist id').length === 1 && /The rest come next sync/.test(a.note), a.note);
+  ok('and the next run takes the next one', b.ok && cellsIn('Artists', 'Artist id').length === 1, b.note);
+  delete process.env.MYSET_SHEET_WALK_MS;
+  const full = await W.syncSheet();
+  eq('with room for everyone, a run takes everyone and clears the cursor', [cellsIn('Artists', 'Artist id').length, (await W.readSyncState()).cursor], [everyone.length, null]);
+  ok('and says nothing about a cap', full.ok && !full.capped, full);
+}
 globalThis.fetch = realFetch;
 
 console.log(`\n${pass} passed, ${fail} failed`);
