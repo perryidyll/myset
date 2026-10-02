@@ -99,9 +99,15 @@ export const cleanCountry = (v) => {
   return PAYOUT_COUNTRIES.has(c) ? c : '';
 };
 
+/* A CLOCK ON EVERY CALL THE ROOM WAITS FOR (decision 0188). stripe-node's default is
+   80 seconds a request, longer than a synchronous function lives — so a Stripe
+   brownout held a fan's "confirm" or "buy" until Netlify killed it, with no answer
+   at all. Ten seconds is many times a healthy call; a timeout is a 5xx the page
+   already treats as "try again", and the webhook and the bell still deliver. */
+export const STRIPE_OPTS = { timeout: 10000, maxNetworkRetries: 1 };
 export const stripeClient = () => {
   const key = process.env.STRIPE_SECRET_KEY;
-  return key ? new Stripe(key) : null;
+  return key ? new Stripe(key, STRIPE_OPTS) : null;
 };
 
 /** The client plus the request options every call about this artist's money needs.

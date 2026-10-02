@@ -45,7 +45,8 @@ const note = (method, args, opts) => {
 const NOW = () => Math.floor(Date.now() / 1000);
 
 export default class Stripe {
-  constructor(key) { this.key = key; }
+  // the client's own options (timeout, retries) are kept so a test can check the clock (0188)
+  constructor(key, opts) { this.key = key; this.opts = opts || {}; state.clientOpts = this.opts; }
   get accounts() {
     return {
       create: async (params, opts) => {

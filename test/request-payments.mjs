@@ -222,6 +222,13 @@ console.log('\nSONG VOTES THE ROOM CAN NO LONGER GIVE BECOME WALLET VOTES (0182)
   eq('a second return trip grants nothing more', [again.already, (await PUB('latefan')).credits.extra], [true, 3]);
 }
 
+console.log('\nA FAN’S STRIPE CALL HAS A CLOCK (0188)');
+{
+  await PAY({ fan: 'clockfan', kind: 'tip', amount: 2, attempt: 'clock-one' });
+  ok('the buy button’s client gives up on Stripe within fifteen seconds, not eighty',
+     __stripe.clientOpts && __stripe.clientOpts.timeout > 0 && __stripe.clientOpts.timeout <= 15000, __stripe.clientOpts);
+}
+
 console.log('\nA FULL REQUEST QUEUE IS SAID BEFORE THE CARD IS ASKED (0182)');
 {
   const { MAX_PENDING } = await import('../netlify/functions/_requests.mjs');

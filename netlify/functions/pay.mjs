@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha,
          readFans, creditsUsed, isUnlimited } from './_lib.mjs';
 import { canTakeMoney, payAllowed } from './_pay.mjs';
-import { readConnect, connectUsable, feeCents, scope } from './_connect.mjs';
+import { readConnect, connectUsable, feeCents, scope, STRIPE_OPTS } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { getProfile, MIN_CENTS, merchSoldOut } from './_profile.mjs';
 import { PAYOUT_COUNTRIES } from './_connect.mjs';
@@ -74,7 +74,7 @@ const main = async (req) => {
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const origin = new URL(req.url).origin;
-  const stripe = new Stripe(key);
+  const stripe = new Stripe(key, STRIPE_OPTS);   // a clock on the buy button (0188)
 
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
