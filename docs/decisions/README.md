@@ -155,6 +155,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0157](0157-somebody-is-told-when-production-breaks.md) | Somebody is told when production breaks | 2026-10-02 | ops | decided | perry-confirmed |
 | [0158](0158-an-about-is-two-sentences-with-a-space-between.md) | An About is two sentences, with a space between them and no line | 2026-10-02 | ui | decided | perry |
 | [0159](0159-a-sample-s-cover-is-chosen-twice.md) | A sample's cover is chosen twice — the best four side by side — and live videos past the top three give frames | 2026-10-02 | factory | decided | perry |
+| [0159](0159-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md) | Two rate rules at the edge, sized so a room never meets them | 2026-10-03 | scale | decided | perry-confirmed |
 | [0161](0161-a-sample-s-about-is-written-in-a-magazine-voice.md) | A sample's About is written in a magazine voice, with a wink of humour | 2026-10-03 | ui | decided | perry |
 | [0162](0162-an-artist-sample-ends-with-the-founder-s-page-as-a-live-example.md) | An artist sample ends with a link to the founder's own page, as a live example | 2026-10-03 | ui | decided | perry |
 | [0163](0163-a-sample-s-tagline-is-written-in-the-magazine-voice-too.md) | A sample's tagline is written in the magazine voice too | 2026-10-03 | ui | decided | perry |
@@ -191,7 +192,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md) · [0123](0123-asking-a-venue-for-a-spot-is-a-conversation-in-messages.md) · [0124](0124-a-venue-s-phones-get-push-alerts-a-new-ask-to-play.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) · [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) · [0140](0140-the-bell-does-shows-first-and-the-daily-pass-runs.md) · [0141](0141-the-audience-path-reads-the-artist-list-from-a-cop.md) · [0143](0143-the-vote-page-waits-longer-when-the-room-cannot-be.md) · [0159](0159-two-rate-rules-at-the-edge-sized-so-a-room-never-meets.md)
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
