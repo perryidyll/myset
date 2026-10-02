@@ -67,7 +67,13 @@ THE OFF-SITE COPY (decision 0146)
   mirror's own manifests out of it, and names every key no manifest has ever
   copied and no line of _mirror.mjs FAMILIES excuses. Exit 1 when there is one.
 
+  `--from-r2 --date YYYY-MM-DD` reads that day's DATED copies instead (decision
+  0175, `snap/<day>/<key>`, kept for SNAP_DAYS): every document the mirror copied
+  that day because it had changed, as it was then. Not a whole store; the copy to
+  reach for when a bad deploy has already been copied over `backup/`.
+
   python3 tools/backup.py --from-r2
+  python3 tools/backup.py --from-r2 --date 2026-10-01
   python3 tools/backup.py --coverage
 """
 import concurrent.futures
@@ -348,13 +354,13 @@ def r2_env():
     return got
 
 
-def from_r2():
-    """Read the off-site copy into <backups>/r2/<stamp>/ in the shape verify() and restore() read."""
+def from_r2(day=None):
+    """Read the off-site copy (or one day's dated copies) into <backups>/r2/<stamp>[-<day>]/ in the shape verify() and restore() read."""
     now = datetime.datetime.now(datetime.timezone.utc)
-    out = os.path.join(ROOT, 'r2', now.strftime('%Y%m%dT%H%M%SZ'))
+    out = os.path.join(ROOT, 'r2', now.strftime('%Y%m%dT%H%M%SZ') + (f'-{day}' if day else ''))
     os.makedirs(os.path.join(ROOT, 'r2'), mode=0o700, exist_ok=True)
     os.chmod(ROOT, 0o700)
-    r = subprocess.run(['node', os.path.join(REPO, 'tools', 'r2pull.mjs'), out], env={**ENV, **r2_env()}, cwd=REPO)
+    r = subprocess.run(['node', os.path.join(REPO, 'tools', 'r2pull.mjs'), out] + (['--date', day] if day else []), env={**ENV, **r2_env()}, cwd=REPO)
     return out, r.returncode == 0
 
 
@@ -465,7 +471,10 @@ if __name__ == '__main__':
         d = args[args.index('--from') + 1] if '--from' in args else ''
         sys.exit(0 if wipe(st, d) else 1)
     if '--from-r2' in args:
-        out, complete = from_r2()
+        day = args[args.index('--date') + 1] if '--date' in args and len(args) > args.index('--date') + 1 else None
+        if '--date' in args and not (day and len(day) == 10 and day[4] == '-' and day[7] == '-'):
+            sys.exit('--date wants YYYY-MM-DD')
+        out, complete = from_r2(day)
         whole = os.path.exists(os.path.join(out, 'manifest.json')) and verify(out)
         sys.exit(0 if (complete and whole) else 1)
     if '--coverage' in args:
