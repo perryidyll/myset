@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 03:03 — 1377ee2 — scale-vote@fix/vote-page-cadence (17 files since origin/main)
+**tl;dr:** The vote page asks the server less: it shows the board first, asks for the fan's own votes only after they act, on wake or once a minute, waits a random moment when a phone wakes in a big room, keeps the keyboard in search, warns inside Instagram's/TikTok's browser before a purchase, and says 'lots of people are buying' instead of 'payments broken' (0185)
+**Other sessions:** NOT MERGED — waits on the founder's word. vote.html: ME_DUE/ME_EVERY (60 s) cadence; <head> starts only the board; wake() jitter 0–1.5 s with a 'Catching up…' dim; WV moved from shop.html into fan.js (all fan pages re-stamped). _lib.mjs: mutateFan gains optional 5th arg tries; markPresence uses PRESENCE_TRIES=3 (INVARIANT 0if). Reads confirm's asCredits.
+
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
 **Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.
