@@ -116,5 +116,18 @@ console.log('\nWHAT COMES OUT IS A DRAWING OF THE MYSET MARK');
     qrSvg('x'.repeat(400)) === null);
 }
 
+console.log('\nA KIND IS ONE OF OURS, NOT ANYTHING AN OBJECT HAS  (qr.mjs, audit SEC-15)');
+{
+  /* `KINDS[kind]` found `__proto__`, `constructor` and friends on Object.prototype, so
+     a made-up kind went on to ask for a slug or call a function that is not a URL
+     builder — a 500 with a real slug. A kind the table does not own is unknown. */
+  const qrFn = (await import('../netlify/functions/qr.mjs')).default;
+  for (const k of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
+    const r = await qrFn(new Request(`https://x/api/qr?k=${k}&a=somebody`));
+    ok(`k=${k} is an unknown code (404), never a 500`, r.status === 404, r.status);
+  }
+  ok('and the real home code still draws', (await qrFn(new Request('https://x/api/qr?k=home'))).status === 200);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
