@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
+**tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
+**Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+
 ### 2026-10-03 01:54 — 1e58aeb — about-voice@docs/about-voice-0161-live (3 files since origin/main)
 **tl;dr:** Docs: decision 0161 (magazine-voice About) recorded as live as 72dbe98
 **Other sessions:** Puzzle changelog 2708 (0161). Andrew's sample was re-picked by hand on 2026-10-03: the cover is his current IG portrait and the avatar is a B&W tagged photo; don't rebuild it with Keep unticked.
