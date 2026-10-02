@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
+**tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
+**Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
+
 ### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
 **tl;dr:** Sample page builds: the cover is now chosen twice: the best four candidates go back to the model side by side and it picks the one the act would be proudest of; live videos beyond the top three now give frames too (0159)
 **Other sessions:** _fai.mjs: coverChoices(), reviewCover() (COVER_SYSTEM, call 'cover'), pickPhotos({cover}) picks the rest around a given cover. _factory.mjs: LIVE_TITLE, up to 2 live-titled videos past the top 3; choosePhotos runs the review unless late, a failure keeps the picker's choice (errors.cover). 0158 commits set to cb2272f.
