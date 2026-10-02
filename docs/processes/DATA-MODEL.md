@@ -422,7 +422,7 @@ Linked steps: 369985, 369986, 370003, 369996
 
 ### City feed index (cityindex) — entity 4874
 
-`cityindex` · Every listed gig by city for the front door and the artist directory, rewritten whenever an artist's calendar changes — so the feed reads one document and never walks every artist (INVARIANT 0i). `src: _events.mjs CITY_INDEX, reindexCities; _featured.mjs`
+`cityindex` · Every listed gig by city for the front door and the artist directory, rewritten whenever an artist's calendar changes — so the feed reads one document and never walks every artist (INVARIANT 0i). Since decision 0174 it also keeps each owner's rules in each city (`gigs`), from which the picker counts and a feed and a venue page choose whose calendars to read (INVARIANT 0in), and `heal`, where the daily re-pointing from every calendar (`citycron`) got to. `src: _events.mjs CITY_INDEX, reindexCities; _featured.mjs`
 
 | attribute | type | what it holds |
 | --- | --- | --- |

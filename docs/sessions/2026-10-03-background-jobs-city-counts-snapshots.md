@@ -41,6 +41,21 @@ Not built tonight: it touches every number on a page the founder checked by hand
 | Knock-outs | walk in list order (7 red); indexes batched with leaves (2 red, with out-of-order deletes); sealed skip removed (1 red); sheet cursor ignored (2 red); sheet time box removed (2 red). All restored |
 | `sh test/run.sh` | exit 0, 5,240 ✓, 0 ✗ |
 
+## What was built — decision 0174
+
+- **`cityindex` carries each owner's rules per city** (`gigs[country][city][owner]`), written in the same compare-and-set as the membership by `reindexCities`. A rule that can never be on again is left out.
+- **The picker** is one read and counts each city's own gigs from the rules. A **city's feed** reads only the owners with a night in its window, and the registries once. A **venue page** reads only the artists whose rules name it, so the sixty-first artist in a city is no longer dropped. An owner with no rules yet is read the old way.
+- **`citycron`** (new, hourly) rings `healCityIndex`: once a day every owner on the two registries is re-pointed from their own calendar, one write a ring. A save newer than the heal's read is kept, and a leaving account stays out.
+
+## Verified — 0174
+
+| Check | Result |
+| --- | --- |
+| `node --import ./test/register.mjs test/citycounts.mjs` | 28 ✓, 0 ✗ |
+| Knock-outs | picker reads calendars; feed reads everyone; venue page reads every artist with rules; heal without the newer-save guard; heal re-indexes a leaving account — each red, each restored |
+| `featured`, `gigok`, `rsvp`, `fandoor`, `e2e`, `artists` | green |
+| `sh test/run.sh` | exit 0, 5,269 ✓, 0 ✗ |
+
 ## Not checked
 
 - Anything against production: Netlify's real delete latency, the real function limits, the real bill for the five-minute bell, Google's real API past the cap.
@@ -53,4 +68,7 @@ Not built tonight: it touches every number on a page the founder checked by hand
 - The copy's bell went from every 20 minutes to every 5. That is about 216 more one-read rings a day.
 - A sheet run's walk stops after 15 s (`WALK_MS`), leaving time for Google's writes. Past the cap, each day's snapshot tabs show a different set of artists.
 - The register was written up, not built.
+- The picker now counts each city's own gigs. An owner with gigs in two towns used to be counted in full in both.
+- The heal rings hourly from a new bell, `citycron`, and finishes a pass a day. Its budget is 5 s.
+- `cityindex` grows about tenfold per owner and city; splitting it by country is the way out if it gets too big.
 - The founder's console erase of a sample page (`eraseData` in `_sample.mjs`) still deletes in list order. It was not in the audit's row; it is one request on a small account, but it has the same flaw.
