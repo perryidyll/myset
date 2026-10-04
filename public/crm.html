@@ -1694,12 +1694,14 @@ const failHtml=(b,loc)=>b.st==='skipped'
   ?`<div class="bc-fail"><p class="err">They asked not to be contacted — not built.</p>${loc==='n'?'<button type="button" class="btn quiet" data-act="newprofile">New profile</button>':''}</div>`
   :`<div class="bc-fail"><p class="err">${esc(b.err||'The build stopped before it finished.')}</p>
   <div class="bc-2"><button type="button" class="btn pri" data-act="retrybuild" data-k="${esc(b.id)}">Try again</button><button type="button" class="btn" data-act="editdetails" data-k="${esc(b.id)}">Edit details</button></div></div>`;
+/* Generate folds the long form away: the page goes back to its top, where the card is — on the click and when it finishes. */
+const toTop=()=>window.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});
 function startBuild(loc,j){
   const now=Date.now(), q=((S&&S.queue)||[]).find(x=>x.id===j.id);
   const b=B[j.id]=Object.assign(B[j.id]||{},{id:j.id,cid:j.cid,name:j.name,kind:j.kind,t0:(q&&q.at)||j.t0||now,st:j.st||'queued',stage:j.stage||'',pct:pct(j.pct),
     tReal:performance.now(),err:j.err||'',review:false,starting:!!j.starting});
   b.disp=Math.max(b.disp||0,b.pct);
-  if(loc==='n'){ PJ=j.id; $('#nBC').innerHTML=bcHtml(b,'n'); $('#nMeta').innerHTML=`${kb(b.kind)}<span class="bc-t" data-t>00:00</span>`; fold('#nF',false); fold('#nB',true); if(PHONE)window.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'}); }
+  if(loc==='n'){ PJ=j.id; $('#nBC').innerHTML=bcHtml(b,'n'); $('#nMeta').innerHTML=`${kb(b.kind)}<span class="bc-t" data-t>00:00</span>`; fold('#nF',false); fold('#nB',true); toTop(); }
   bcPaint(b); jobPoll(); creep();
 }
 function bcPaint(b){
@@ -1728,6 +1730,7 @@ function bcState(el,b,st,was){
     const tt=mmss((b.end||Date.now())-b.t0); el.querySelectorAll('[data-t]').forEach(x=>{x.textContent=tt;}); if(loc==='n'&&b.id===PJ){ const m=$('#nMeta [data-t]'); if(m)m.textContent=tt; }
     low.innerHTML=doneHtml(b,loc);
     if(el.getClientRects().length)b.seen=true;   // seen finishing on screen: no toast needed for it
+    if(was&&loc==='n'&&b.id===PJ)toTop();      // the finished card, from wherever the form left the page
     if(was&&!REDUCE){ const rx=el.querySelector('.rx'); rx.classList.remove('flash'); void rx.offsetWidth; rx.classList.add('flash'); burst(el.querySelector('.rx-b'),14,96); }
     say(`Profile ready: ${b.name||''}`);
   } else if(st==='fail'){
