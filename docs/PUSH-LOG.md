@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-05 00:33 — f4e7dab — sample-cover@docs/0169-commits (0 files since origin/main)
+**tl;dr:** Decision 0169 now names the commits that shipped it (057bec0, f4e7dab).
+**Other sessions:** Docs only. Linktree links for generated profiles are gathered by hand in the founder's Chrome, never by the generator (robots.txt).
+
 ### 2026-10-05 00:17 — 057bec0 — sample-cover@ux/generate-scroll-top (0 files since origin/main)
 **tl;dr:** CRM: after Generate profile, and again when it finishes, the page goes back to the top where the build card is.
 **Other sessions:** crm.html toTop() in startBuild('n') (desktop too, was phone-only) and bcState done for PJ. Generator does NOT read Linktree: linktr.ee robots.txt is Disallow / for unnamed bots; gather those links by hand.
