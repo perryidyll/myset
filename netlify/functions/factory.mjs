@@ -37,7 +37,7 @@ const listWords = (a) => (a.length <= 1 ? (a[0] || '') : `${a.slice(0, -1).join(
 function sourceWords(rec) {
   const seen = [];
   for (const s of (rec && rec.sources) || []) { const w = SRCWORD[s && s.kind]; if (w && !seen.includes(w)) seen.push(w); }
-  return listWords(seen.slice(0, 3)) || 'public pages';
+  return listWords(seen.slice(0, 3)) || 'pages';   // "your public pages", never "your public public pages"
 }
 
 /* THE DRAFTS. Short on purpose: a DM is read on a phone between sets. The hook is the

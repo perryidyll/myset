@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-04 17:08 — f610365 — sample-cover@fix/sample-cover-thai-tab (15 files since origin/main)
+**tl;dr:** A sample artist's page always gets a cover when it has photos of the act; with no genre known, the suggested songs lead with the country's hits; CRM opens a sample in a new tab, not a pop-up.
+**Other sessions:** coverChoices has an artist fallback (best sharp act shot, coverOk first, wide>square>tall); reviewCover no longer accepts 'none' (0159 amended). openTab() in crm.html/factory.html — never pass a 3rd arg to window.open. Decision 0168; 0163–0167 commits filled.
+
 ### 2026-10-04 15:54 — 62b22f2 — sample-songs@ux/sample-photos-songs (0 files since origin/main)
 **tl;dr:** CRM's Generate form takes photos uploaded from your phone or computer (six in all, the generator looks at yours first), and an artist's page now starts with 20 suggested songs on its setlist — a switch, on by default (0166, 0167)
 **Other sessions:** New hq action stagePhoto {data} -> {url} (an s… unguessable /api/img address); seed.songs (hq generate sets it for artists unless body.songs===false; rebuild carries it); _fai.suggestSongs (smart model, 10+5+5, SONG_GROUPS); createSample writes payload.songs into show.songs and keeps them on sample_<owner>.songs for revive; choosePhotos now judges the founder's photos FIRST (f, y, w). PHOTO_MAX=6 in _crm.mjs.

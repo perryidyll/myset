@@ -431,6 +431,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const href=u=>/^https?:\/\//i.test(String(u||''))?String(u):'';
 const pageUrl=u=>/^(https?:\/\/|\/(?!\/))/i.test(String(u||''))?String(u):'';
+/* A page opens in a new TAB. A third argument to window.open (even just 'noopener') makes
+   Chrome open a small pop-up window instead, so the opener is cut after the fact. */
+const openTab=u=>{ const w=window.open(u,'_blank'); if(w)try{w.opener=null;}catch(e){} };
 const imgSrc=u=>{u=String(u||'');return /^(https?:\/\/|\/(?!\/)|data:image\/)/i.test(u)?u:'';};
 const ls=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
 const keep=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -694,7 +697,7 @@ async function detail(owner,fresh){
    the real link. */
 async function openLink(owner){
   const have=DET[owner]&&pageUrl(DET[owner].preview||DET[owner].link);
-  if(have){ window.open(have,'_blank','noopener'); return; }
+  if(have){ openTab(have); return; }
   const w=window.open('about:blank','_blank'); const d=await detail(owner); const u=d&&pageUrl(d.preview||d.link);
   if(w){ if(u){ try{w.opener=null;}catch(e){} w.location.href=u; } else w.close(); }
   else if(u)toast('The browser blocked the new tab — tap Open again');
@@ -872,7 +875,7 @@ const ACTS={
   optout:async(b,o)=>{ if(!await ask('Delete it forever?','For when they asked for it gone. The page and any copy kept of it are deleted now, and the factory never builds them again.','Delete forever',true))return;
     const d=await api('optout',{owner:o}); if(failed(d))return; delete DET[o]; closeSheet(); toast('Deleted forever. The factory won’t build them again'); load(); },
   copyrev:b=>copy(REVIVED.link,b,'Link copied'),
-  openrev:()=>{ const u=pageUrl(REVIVED.link); if(u)window.open(u,'_blank','noopener'); },
+  openrev:()=>{ const u=pageUrl(REVIVED.link); if(u)openTab(u); },
 };
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b||b.disabled)return; const f=ACTS[b.dataset.act]; if(!f)return; e.preventDefault(); f(b,b.dataset.owner); });
 document.addEventListener('input',e=>{ const t=e.target; if(t.id==='lines')buildState(); else if(t.id==='q'){Q=t.value;SHOW=48;renderPages();} else if(t.closest&&t.closest('#panel')&&t.dataset.max)wordsState(); });
