@@ -50,11 +50,12 @@ export const ARCHIVE_MS = 180 * 86400e3;
 export const UNDO_MS = 14 * 86400e3;
 const REG = 'samplereg', ARC = 'samplearc', SUP = 'samplesup', STAT = 'samplestat';
 export const SAMPLE = (owner) => `sample_${owner}`;
-/* The factory's suggested songs (0167): twenty asked for, never more than this kept. */
-export const SAMPLE_SONGS_MAX = 20;
+/* The factory's suggested songs (0167): twenty asked for, plus up to twenty of the act's
+   own from a pasted setlist (0169); never more than this kept. */
+export const SAMPLE_SONGS_MAX = 40;
 const songsOf = (payload) => ((payload && payload.songs && Array.isArray(payload.songs.songs)) ? payload.songs.songs : [])
   .filter((g) => g && g.title).slice(0, SAMPLE_SONGS_MAX)
-  .map((g) => ({ title: clean(g.title, 80), artist: clean(g.artist, 60), group: ['main', 'near1', 'near2'].includes(g.group) ? g.group : 'main' }));
+  .map((g) => ({ title: clean(g.title, 80), artist: clean(g.artist, 60), group: ['theirs', 'main', 'near1', 'near2'].includes(g.group) ? g.group : 'main' }));
 export const ARCDOC = (owner) => `samplearc_${owner}`;
 export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 

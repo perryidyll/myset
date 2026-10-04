@@ -4,7 +4,7 @@ import { parseMedia } from './_embeds.mjs';
 import { safeLink } from './_profile.mjs';
 import { parseSeed, classifyUrl, youtube, ytThumbs, readSite, musicBrainz, itunesArtist, nominatim,
          fetchImage, ldSummary, clean, norm, ctxOf, regionName, LINK_KINDS } from './_fsrc.mjs';
-import { discover, extractFacts, judgePhotos, pickPhotos, coverChoices, reviewCover, writeCopy, suggestSongs, estimateCost, modelFast, modelSmart } from './_fai.mjs';
+import { discover, extractFacts, judgePhotos, pickPhotos, coverChoices, reviewCover, writeCopy, suggestSongs, NOTES_MAX, estimateCost, modelFast, modelSmart } from './_fai.mjs';
 
 /* THE SAMPLE FACTORY (decision 0101): one seed line in — "The Tide Lines | @thetidelines
    | thetidelines.com | Koh Phangan" — and out comes one sample page's worth of content,
@@ -123,7 +123,7 @@ function seedOf(job) {
     seed.media.push(...x.media);
   }
   seed.photos = [].concat((s && s.photos) || []).map(String).filter((u) => /^https:\/\/\S+$/.test(u)).slice(0, 6);
-  seed.notes = String((s && typeof s === 'object' && s.notes) || '').replace(/\r/g, '').trim().slice(0, 600);   // the founder's notes (0136)
+  seed.notes = String((s && typeof s === 'object' && s.notes) || '').replace(/\r/g, '').trim().slice(0, NOTES_MAX);   // the founder's notes (0136; 2,000 since 0169)
   seed.songs = !!(s && typeof s === 'object' && s.songs);   // twenty suggested songs for the song list (0167)
   seed.line = line;
   return seed;
@@ -542,11 +542,14 @@ export async function runJob(job, opts = {}) {
     if (now() - t0 > 13 * 60e3) return { ok: false, error: 'timeout: the build ran past thirteen minutes', usage };
     const copy = await writeCopy(facts, sources, kind, ctx, { name: st.name, notes: st.seed.notes });
     /* the suggested songs (0167): asked for on the form, an artist only, and a failure
-       costs the song list, never the page */
+       costs the song list, never the page. A setlist in the notes (0169) is read even with
+       the suggestions switched off — then only the act's own songs are kept. */
     let songs = null;
-    if (kind === 'artist' && seed.songs && now() - t0 <= 13 * 60e3) {
+    if (kind === 'artist' && (seed.songs || seed.notes) && now() - t0 <= 13 * 60e3) {
       try { songs = await suggestSongs(facts, ctx, { name: st.name, city: st.city, country: st.country, notes: st.seed.notes }); }
       catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.songs = clean(e.message, 160); }
+      if (songs && !seed.songs) songs = { ...songs, songs: songs.songs.filter((x) => x.group === 'theirs') };
+      if (songs && !songs.songs.length) songs = null;
     }
 
     await stage('gate');
