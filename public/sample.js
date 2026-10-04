@@ -226,7 +226,7 @@ body.sampled{padding-top:var(--sbh,112px)}
   const FOUNDER = 'perryidyll';   // the founder's artist page, the live example a sample points to
   /* ---------- the page ---------- */
   function days(n) { return n === 1 ? '1 day' : `${n} days`; }
-  function words(list) { return list.length <= 1 ? (list[0] || 'public pages') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`; }
+  function words(list) { return list.length <= 1 ? (list[0] || 'pages') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`; }   // "your public pages", never "public public" (0168)
 
   function page(P) {
     try {
