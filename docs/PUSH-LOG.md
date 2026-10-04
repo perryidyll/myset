@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-04 15:54 — 62b22f2 — sample-songs@ux/sample-photos-songs (0 files since origin/main)
+**tl;dr:** CRM's Generate form takes photos uploaded from your phone or computer (six in all, the generator looks at yours first), and an artist's page now starts with 20 suggested songs on its setlist — a switch, on by default (0166, 0167)
+**Other sessions:** New hq action stagePhoto {data} -> {url} (an s… unguessable /api/img address); seed.songs (hq generate sets it for artists unless body.songs===false; rebuild carries it); _fai.suggestSongs (smart model, 10+5+5, SONG_GROUPS); createSample writes payload.songs into show.songs and keeps them on sample_<owner>.songs for revive; choosePhotos now judges the founder's photos FIRST (f, y, w). PHOTO_MAX=6 in _crm.mjs.
+
 ### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
 **tl;dr:** Docs: scale-audit week one recorded as live
 **Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
