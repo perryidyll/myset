@@ -371,7 +371,9 @@ export async function reviewCover(choices, ctx, { kind = 'artist', name = '', no
    never as licence: what they ask is followed where the facts and the pictures allow,
    and a fact the notes state reaches the copy only through the founder's note source,
    cited like any other. */
-const notesBlock = (notes) => (notes ? `\n\nTHE FOUNDER'S NOTES FOR THIS PAGE (follow them where the facts allow; never invent anything to satisfy one):\n${clean(notes, 600)}` : '');
+/* 2,000 characters: room for a pasted setlist (decision 0169). */
+export const NOTES_MAX = 2000;
+const notesBlock = (notes) => (notes ? `\n\nTHE FOUNDER'S NOTES FOR THIS PAGE (follow them where the facts allow; never invent anything to satisfy one):\n${clean(notes, NOTES_MAX)}` : '');
 export async function judgePhotos(cands, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
   const judged = [];
   for (let i = 0; i < (cands || []).length; i += 10) {
@@ -482,7 +484,7 @@ export const SONG_GROUPS = { main: 10, near1: 5, near2: 5 };
 const SONGS_SYSTEM = `MYSET FACTORY · SONGS
 
 You suggest a starting song list for ONE live-music act's sample page on MySet, where the audience votes on what the act plays next. Answer with ONE JSON object and nothing else:
-{"genre":"","near":["",""],"songs":[{"title":"","artist":"","group":"main"}]}
+{"genre":"","near":["",""],"theirs":[{"title":"","artist":""}],"songs":[{"title":"","artist":"","group":"main"}]}
 
 - genre: the act's main genre, from the FACTS (with its country or scene when the facts name one, like "Brazilian MPB" or "Irish trad"). When the FACTS name no genre, it is the most popular music of the PLACE's country, in that country's own language (an act in Thailand with no genre: "Thai pop"), unless the facts say the act sings in another language.
 - near: two neighbouring genres a crowd for that act would also enjoy, different from the main one and from each other.
@@ -491,28 +493,33 @@ You suggest a starting song list for ONE live-music act's sample page on MySet, 
   · 5 with group "near1": the most popular songs of near[0];
   · 5 with group "near2": the most popular songs of near[1].
 - Songs a solo singer or a band could plausibly play live. No song twice; none by the act itself.
+- theirs: every song the FOUNDER'S NOTES say the act plays (a pasted setlist), in the notes' order, at most 20, each with its best-known performer (the act's own name for a song of their own). [] when the notes list no songs. Never guess songs into it.
+- songs: none of the theirs songs again; the genre comes from theirs too when the facts name none.
 - Titles and performers exactly as they are commonly written, with no notes, years or quotes.`;
 function checkSongs(o) {
   const why = [];
   if (typeof o.genre !== 'string' || !o.genre.trim()) why.push('"genre" must be a non-empty string');
   if (!Array.isArray(o.near) || o.near.length !== 2 || o.near.some((g) => typeof g !== 'string' || !g.trim())) why.push('"near" must be two genre names');
   if (!Array.isArray(o.songs) || o.songs.some((s) => !isObj(s) || typeof s.title !== 'string' || !s.title.trim() || typeof s.artist !== 'string' || !s.artist.trim())) why.push('"songs" must be an array of {"title","artist","group"}');
+  if (o.theirs != null && (!Array.isArray(o.theirs) || o.theirs.length > 20 || o.theirs.some((s) => !isObj(s) || typeof s.title !== 'string' || !s.title.trim() || typeof s.artist !== 'string'))) why.push('"theirs" must be an array of at most 20 {"title","artist"}');
   if (why.length) return { ok: false, why };
   for (const [g, n] of Object.entries(SONG_GROUPS)) { const k = o.songs.filter((s) => s.group === g).length; if (k !== n) why.push(`${n} songs with group "${g}", not ${k}`); }
   const sig = (s) => `${clean(s.title).toLowerCase()}|${clean(s.artist).toLowerCase()}`;
   if (new Set(o.songs.map(sig)).size !== o.songs.length) why.push('no song twice');
   return why.length ? { ok: false, why } : { ok: true, value: o };
 }
-/** Returns { genre, near:[a,b], songs:[{title, artist, group}] } — main first, then near1,
- *  near2 — or null when the facts name nothing to go on. */
+/** Returns { genre, near:[a,b], songs:[{title, artist, group}] } — the act's own setlist
+ *  from the notes first (group "theirs", 0169), then main, near1, near2 — or null when
+ *  the facts and the notes name nothing to go on. */
 export async function suggestSongs(facts, ctx, { name = '', city = '', country = '', notes = '' } = {}) {
   const use = (facts || []).filter((f) => ['genre', 'act_type', 'instrument', 'based_in', 'origin', 'language', 'cover_song', 'original_song'].includes(f.k));
-  if (!use.length && !country) return null;
+  if (!use.length && !country && !notes) return null;
   const content = `ACT: ${name || '(no name)'}${[city, country].filter(Boolean).length ? `\nPLACE: ${[city, country].filter(Boolean).join(', ')}` : ''}`
     + `\n\nFACTS:\n${use.map((f) => `- ${f.k}: ${f.v}`).join('\n') || '- (none beyond the place)'}` + notesBlock(notes);
   const o = await askJSON({ call: 'songs', model: modelSmart(ctx), system: SONGS_SYSTEM, content, check: checkSongs, maxTokens: 4000, ctx });
   const order = Object.keys(SONG_GROUPS);
+  const theirs = (o.theirs || []).map((s) => ({ title: clean(s.title, 80), artist: clean(s.artist, 60) || clean(name, 60), group: 'theirs' }));
   return { genre: clean(o.genre, 60), near: o.near.map((g) => clean(g, 60)),
-    songs: o.songs.map((s) => ({ title: clean(s.title, 80), artist: clean(s.artist, 60), group: s.group }))
-      .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group)) };
+    songs: [...theirs, ...o.songs.map((s) => ({ title: clean(s.title, 80), artist: clean(s.artist, 60), group: s.group }))
+      .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group))] };
 }

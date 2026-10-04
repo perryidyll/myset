@@ -278,6 +278,7 @@ const main = async (req) => {
     if (d.owner && reg.byId[d.owner]) return json({ ok: false, error: 'This one already has a page — use Rebuild in Edit profile.', cid });
     const seed = C.seedFrom(d.kind, d);
     if (d.kind === 'artist' && body.songs !== false) seed.songs = true;   // twenty suggested songs, unless unticked (0167)
+    if (typeof body.notes === 'string' && body.notes.trim()) seed.notes = body.notes;   // notes for the generator, a setlist among them (0169)
     if (!seed.name && !Object.keys(seed.links).length) return bad('Give them a name, or at least one link.');
     const { queueJobs, startJobs } = await import('./factory.mjs');
     const { added, skipped } = await queueJobs(d.kind, [{ seed, label: d.name || seed.line, cid }]);

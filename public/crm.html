@@ -1464,6 +1464,7 @@ function countUp(el,to){
 }
 
 /* ---------- the new-profile form ---------- */
+const NOTES_MAX=2000;   // notes for the generator — _fai.mjs NOTES_MAX (0169)
 const fld=(id,g,label,ph,o={})=>`<div class="fi">${ico(g)}<label class="sr" for="${id}">${label}</label><input class="inp" id="${id}" placeholder="${esc(ph)}"${o.type?` type="${o.type}"`:''}${o.im?` inputmode="${o.im}"`:''} autocomplete="${o.ac||'off'}" spellcheck="false"${o.req?' aria-required="true"':''}${o.v!=null?` value="${esc(o.v)}" data-was="${esc(o.v)}"`:''}></div>`;
 const linkRow=(p,k,v)=>`<div class="lr" data-k="${k}"><div><div class="fi">${ico(LG(k))}<label class="sr" for="${p}L-${k}">${LW[k]}</label><input class="inp lk" id="${p}L-${k}" data-link="${k}" placeholder="${esc(LW[k]+' · '+LPH[k])}" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" aria-describedby="${p}H-${k}"${v!=null?` value="${esc(v)}" data-was="${esc(v)}"`:''}><span class="vk" aria-hidden="true">${ico('check','vok')}${ico('bang','vno')}</span></div><p class="hint" id="${p}H-${k}"></p></div></div>`;
 const tagbox=loc=>`<div class="tagbox" data-loc="${loc}"><span class="tgs" style="display:contents"></span><label class="sr" for="tg-${loc}">Add a tag</label><input id="tg-${loc}" data-tag="${loc}" placeholder="Add a tag — Enter or comma" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="sug-${loc}" aria-autocomplete="list"><ul class="sug" id="sug-${loc}" role="listbox" hidden></ul></div>`;
@@ -1477,6 +1478,9 @@ function buildForm(){
     <div class="nf-ct"><p class="sub">Contact</p>${fld('nEmail','email','Email','Email',{type:'email',im:'email'})}${fld('nPhone','phone','Phone or WhatsApp','Phone / WhatsApp',{type:'tel',im:'tel'})}</div>
     <div class="nf-ph"><p class="sub" style="margin-top:22px">Photos<span class="subr" id="nPc"></span></p><div class="ups" id="nUps"><label class="up-add upl" id="nUpAdd">${ico('upload')}<span>Add photos</span><input type="file" accept="image/*" multiple data-f="nup" aria-label="Upload photos for the page"></label></div>
       <p class="hint2">The generator looks at yours first, and picks the cover and the rest from them.</p></div>
+    <div class="nf-gn"><p class="sub" style="margin-top:22px">Notes for the generator<span class="subr cnt" id="c-nGen"></span></p><label class="sr" for="nGen">Notes for the generator</label>
+      <textarea class="inp" id="nGen" rows="4" placeholder="Paste their setlist, or say what to lead with or leave out. “Sings in Thai and English. Lead with the Sunday sunset sessions.”"></textarea>
+      <p class="hint2">Songs pasted here go first on their setlist. Read on every rebuild; never shown on the page.</p></div>
     <div class="nf-mo"><button type="button" class="disc" data-act="more" aria-expanded="false" aria-controls="nMore"><span>More</span><em id="nMoreW">Photo links · tags · private note</em>${ico('chev')}</button>
       <div class="fold" id="nMore" inert><div><div>
         <p class="sub" style="margin-top:16px">Photo links</p>${[0,1,2].map(i=>`<div class="fi" style="margin-top:${i?8:0}px">${ico('photo')}<label class="sr" for="nP${i}">Photo link ${i+1}</label><input class="inp" id="nP${i}" type="url" inputmode="url" placeholder="https:// … a picture of them" autocomplete="off" spellcheck="false"></div>`).join('')}
@@ -1514,6 +1518,7 @@ function goState(){
   const mw=$('#nMoreW'); if(mw)mw.textContent=w.length?w.join(' · '):'Photo links · tags · private note';
   const tc=$('#tcn'); if(tc)tc.textContent=TAGS.n.length?`${TAGS.n.length}/12`:'';
   const pc=$('#nPc'); if(pc)pc.textContent=UP.length?`${UP.length}/${UP_MAX}`:'';
+  const gn=$('#nGen'), gc=$('#c-nGen'); if(gn&&gc){ const n=[...gn.value].length; gc.textContent=n?`${n}/${NOTES_MAX}`:''; gc.className='subr cnt'+(n>NOTES_MAX?' over':n>NOTES_MAX*.9?' near':''); if(n>NOTES_MAX){ if(g)g.disabled=true; } }
   const ad=$('#nUpAdd'); if(ad)ad.hidden=UP.length>=UP_MAX;
 }
 /* PHOTOS FROM THIS DEVICE (decision 0166). Each is made small here (shrink), sent on its
@@ -1603,7 +1608,8 @@ async function generate(){
   const tmp='new:'+Date.now(), kind=KIND;
   $('#nDup').hidden=true;
   startBuild('n',{id:tmp,cid:NCID,name:f.name||firstLink(f.links),kind,st:'queued',stage:'',pct:0,starting:true});
-  const d=await api('generate',Object.assign({kind,fields:f,songs},NCID?{cid:NCID}:{}),true);
+  const notes=val('nGen');
+  const d=await api('generate',Object.assign({kind,fields:f,songs},notes?{notes}:{},NCID?{cid:NCID}:{}),true);
   const mine=PJ===tmp, b=B[tmp]; delete B[tmp];
   if(!d||!d.ok){
     if(mine)showForm(false);
@@ -2319,8 +2325,8 @@ function wordsState(){
     if(c){c.textContent=n+'/'+m;c.className='cnt'+(n>m?' over':n>m*.9?' near':'');} if(el.value!==el.dataset.was)dirty=true; if(n>m)over=true; });
   const b=$('#wS'); if(b){ b.disabled=!dirty||over; b.textContent=over?'Too long to save':'Save words'; }
   const l=$('#lS'); if(l)l.disabled=!$$('#lF [data-link]').some(e=>e.value!==e.dataset.was);
-  const g=$('#gNotes'); if(g){ const n=[...g.value].length, c=$('#c-gNotes'); if(c){c.textContent=n+'/600';c.className='cnt'+(n>600?' over':n>540?' near':'');}
-    const gs=$('#gS'); if(gs){ gs.disabled=g.value.trim()===g.dataset.was.trim()||n>600; gs.textContent=n>600?'Too long to save':'Save notes'; } }
+  const g=$('#gNotes'); if(g){ const n=[...g.value].length, c=$('#c-gNotes'); if(c){c.textContent=n+'/'+NOTES_MAX;c.className='cnt'+(n>NOTES_MAX?' over':n>NOTES_MAX*.9?' near':'');}
+    const gs=$('#gS'); if(gs){ gs.disabled=g.value.trim()===g.dataset.was.trim()||n>NOTES_MAX; gs.textContent=n>NOTES_MAX?'Too long to save':'Save notes'; } }
 }
 function chooserHtml(){
   const d=CT[DR.cid]||{}, rec=(d.page&&d.page.record)||{}, s=DR.pick, kind=kindOf(), K=ROLEK[kind], R=rolesNow((d.page&&d.page.profile)||{},kind);

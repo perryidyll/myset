@@ -209,7 +209,8 @@ function claude(body, headers) {
     const grp = (g, n, pre) => Array.from({ length: n }, (_, i) => ({ title: `${pre} Song ${i + 1}`, artist: `${pre} Artist ${i + 1}`, group: g }));
     const songs = [...grp('near2', 5, 'Folk Rock'), ...grp('main', 10, 'Indie Folk'), ...grp('near1', 5, 'Americana')];
     if (body.messages.length === 1 && ai.songsShort) songs.pop();            // nineteen: forces the one repair
-    return reply(JSON.stringify({ genre: 'Indie folk', near: ['Americana', 'Folk rock'], songs }));
+    const theirs = /FOUNDER'S NOTES[\s\S]*Setlist:/.test(user) ? [{ title: 'Wonderwall', artist: 'Oasis' }, { title: 'Harvest Moon', artist: 'Neil Young' }, { title: 'Sunset Road', artist: '' }] : [];
+    return reply(JSON.stringify({ genre: 'Indie folk', near: ['Americana', 'Folk rock'], theirs, songs }));
   }
   return json({ type: 'error', error: { type: 'invalid_request_error', message: 'unexpected call' } }, 400);
 }
@@ -528,6 +529,19 @@ ai.songsFail = true;
 r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true } }, { ...net, isSuppressed: async () => false });
 ai.songsFail = false;
 ok('a failed songs call costs the song list, never the page', r.ok && !r.payload.songs && !!r.payload.provenance.errors.songs, r.error || r.payload.provenance.errors);
+
+console.log('\nA SETLIST IN THE NOTES  goes first on the song list (decision 0169)');
+const LIST = 'Setlist: Wonderwall, Harvest Moon, Sunset Road (our own)';
+ai.songsAsked = [];
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true, notes: LIST } }, { ...net, isSuppressed: async () => false });
+const TS = ((r.payload || {}).songs || {}).songs || [];
+ok('their three first, then the twenty suggestions', r.ok && TS.length === 23 && TS.slice(0, 3).every((x) => x.group === 'theirs') && TS[3].group === 'main', TS.map((x) => x.group));
+eq('a song of their own, with no performer given, is theirs by name', TS[2].artist, 'The Tide Lines');
+ok('the notes reach the songs call', /Setlist: Wonderwall/.test(ai.songsAsked[0] || ''));
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: false, notes: LIST } }, { ...net, isSuppressed: async () => false });
+eq('suggestions switched off: only their own songs are kept', (((r.payload || {}).songs || {}).songs || []).map((x) => x.title), ['Wonderwall', 'Harvest Moon', 'Sunset Road']);
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, notes: 'x'.repeat(2500) } }, { ...net, isSuppressed: async () => false });
+eq('notes keep 2,000 characters, room for a setlist', (r.payload.seed.notes || '').length, 2000);
 ai.calls.length = 0;
 r = await F.runJob({ kind: 'venue', seed: { line: 'Sunset Bar | Koh Phangan, Thailand', songs: true } }, { ...net, isSuppressed: async () => false });
 ok('a venue has no song list: never asked', !ai.calls.some((c) => /· SONGS/.test(c.body.system)) && !(r.payload || {}).songs);

@@ -1,6 +1,7 @@
 import { guard } from './_errlog.mjs';
 import { json, bad, requireArtist, casDoc, readDoc, store } from './_lib.mjs';
 import { isPlatformOwner } from './_plan.mjs';
+import { NOTES_MAX } from './_fai.mjs';
 import { readSampleReg, mutateSampleReg, readArchive, readStats, linkFor, SAMPLE, isVenueOwner, bump, noteSample,
          removeSample, reviveSample, undoClaim, UNDO_MS, createSample, optOut, readFactoryCfg as readCfg, mutateFactoryCfg,
          defaultFactoryCfg as defaultCfg, ROLES, rolesOf, writeRoles } from './_sample.mjs';
@@ -506,7 +507,7 @@ const main = async (req) => {
   if (action === 'notes') {
     /* NOTES FOR THE GENERATOR (0136): what the founder wants said, left out or led
        with. Kept on the page's seed, so every rebuild reads them; never on the page. */
-    const notes = String(body.notes || '').replace(/\r/g, '').trim().slice(0, 600);
+    const notes = String(body.notes || '').replace(/\r/g, '').trim().slice(0, NOTES_MAX);
     let built = false;
     await casDoc(SAMPLE(owner), () => ({ v: 1, owner }), (d) => { built = !!(d.seed && (d.seed.line || d.seed.raw)); if (!built) return false; d.seed = { ...d.seed, notes }; return true; });
     if (!built) return bad('This page was made by hand, so there is no build for notes to steer.');
