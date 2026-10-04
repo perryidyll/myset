@@ -255,6 +255,24 @@ ok('in the archive', !!(await S.readArchive())[d.owner]);
 sw = await S.sweepSamples(Date.now() + 31 * 86400e3 + 181 * 86400e3);
 ok('at one hundred and eighty days the snapshot is erased too', sw.erased.includes(d.owner) && !(await readDoc(`samplearc_${d.owner}`, null)).data, sw);
 
+console.log('\nSUGGESTED SONGS  into the sample’s song list (decision 0167)');
+const SONGS = { genre: 'Indie folk', near: ['Americana', 'Folk rock'],
+  songs: [...Array.from({ length: 19 }, (_, i) => ({ title: `Tune ${i + 1}`, artist: `Singer ${i + 1}`, group: i < 10 ? 'main' : i < 15 ? 'near1' : 'near2' })),
+    { title: 'Tune 1', artist: 'Singer 1', group: 'near2' }] };
+const sg = await S.createSample({ kind: 'artist', name: 'Song Band', slug: 'songband', songs: SONGS, by: 'founder' });
+let shw = (await readDoc(`show_${sg.owner}`, null)).data;
+eq('the songs are in the library, in order, a song twice kept once', shw.songs.map((x) => x.title), Array.from({ length: 19 }, (_, i) => `Tune ${i + 1}`));
+ok('each row shaped as addSong makes one: an id, on, no key, no tags', shw.songs.every((x) => x.id && x.active === true && x.key === '' && Array.isArray(x.tags) && x.tags.length === 0)
+   && new Set(shw.songs.map((x) => x.id)).size === 19, shw.songs[0]);
+r = await door({ action: 'page', slug: 'songband', key: sg.key });
+ok('the page shows them: "On the setlist"', r.ok && r.songs === 19 && (r.setlist || []).length === 10, { songs: r.songs, setlist: r.setlist });
+ok('the record keeps them, with the genres, for a revive', ((await readDoc(`sample_${sg.owner}`, null)).data.songs || {}).genre === 'Indie folk');
+ok('a sample asked for none has an empty song list', ((await readDoc(`show_${c.owner}`, null)).data || { songs: [] }).songs.length === 0);
+await S.sweepSamples(Date.now() + 31 * 86400e3);
+r = await F({ action: 'revive', owner: sg.owner });
+shw = (await readDoc(`show_${r.owner || sg.owner}`, null)).data;
+ok('revived: the songs come back with it', r.ok && shw && shw.songs.length === 19, r);
+
 console.log('\nVENUES');
 const v = await S.createSample({ kind: 'venue', name: 'Harbour Bar', slug: 'harbourbar', city: 'Koh Phangan', country: 'Thailand',
   tagline: 'Live music by the pier', about: 'A bar by the pier.', links: { instagram: 'https://instagram.com/harbourbar' },

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { casDoc, readDoc, store, mutateShow, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
+import { casDoc, readDoc, store, mutateShow, cleanArtistId, DEFAULT_ARTIST, songId, songSig } from './_lib.mjs';
 import { readArtists, mutateArtists, cleanSlug, RESERVED } from './_auth.mjs';
 
 /* SAMPLE PROFILES — a page the factory builds for an artist or a venue who has never
@@ -50,6 +50,11 @@ export const ARCHIVE_MS = 180 * 86400e3;
 export const UNDO_MS = 14 * 86400e3;
 const REG = 'samplereg', ARC = 'samplearc', SUP = 'samplesup', STAT = 'samplestat';
 export const SAMPLE = (owner) => `sample_${owner}`;
+/* The factory's suggested songs (0167): twenty asked for, never more than this kept. */
+export const SAMPLE_SONGS_MAX = 20;
+const songsOf = (payload) => ((payload && payload.songs && Array.isArray(payload.songs.songs)) ? payload.songs.songs : [])
+  .filter((g) => g && g.title).slice(0, SAMPLE_SONGS_MAX)
+  .map((g) => ({ title: clean(g.title, 80), artist: clean(g.artist, 60), group: ['main', 'near1', 'near2'].includes(g.group) ? g.group : 'main' }));
 export const ARCDOC = (owner) => `samplearc_${owner}`;
 export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 
@@ -331,7 +336,22 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
     });
     /* The Studio's header reads the name off the show record when the registry has
        none — and a sample is not in the registry. */
-    await mutateShow(owner, (s) => { s.artist = name; s.artistFirst = clean(payload.first || name, 60); return true; }).catch(() => {});
+    await mutateShow(owner, (s) => {
+      s.artist = name; s.artistFirst = clean(payload.first || name, 60);
+      /* THE SUGGESTED SONGS (decision 0167), into the library, which is the setlist while
+         no named list is chosen: the page shows them under "On the setlist" and the
+         Studio's preview has something to vote on. Shaped as addSong makes a row. */
+      const have = new Set(s.songs.map((x) => songSig(x.title, x.artist)));
+      for (const g of songsOf(payload)) {
+        const title = clean(g.title, 80), artist = clean(g.artist, 60), sig = songSig(title, artist);
+        if (!title || have.has(sig) || s.songs.length >= SAMPLE_SONGS_MAX) continue;
+        let id = songId(title, artist);
+        while (s.songs.some((x) => x.id === id)) id = `${songId(title, artist)}-${Math.random().toString(36).slice(2, 5)}`;
+        s.songs.push({ id, title, artist, active: true, key: '', tags: [] });
+        have.add(sig);
+      }
+      return true;
+    }).catch(() => {});
   } else {
     const vid = owner.slice(2);
     const { mutateVenueProfile } = await import('./_venues.mjs');
@@ -373,6 +393,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       facts: payload.facts || null, provenance: payload.provenance || null,
       photos: kept && kept.roles ? kept.meta : photoMeta, quality: payload.quality || null, msgs: payload.msgs || {},
       supIds: (payload.supIds || []).slice(0, 12), by: payload.by === 'founder' ? 'founder' : 'factory',
+      ...(songsOf(payload).length ? { songs: { genre: clean(payload.songs.genre, 60), near: (payload.songs.near || []).map((g) => clean(g, 60)).slice(0, 2), songs: songsOf(payload) } } : {}),
       usage: payload.usage || null, events: [{ t: Date.now(), e: 'built', m: payload.by || 'factory' }],
     });
     return true;
@@ -573,7 +594,7 @@ export async function reviveSample(owner, { fetch: F = globalThis.fetch } = {}) 
     : { kind, name: p.name || snap.row.name, first: p.first, last: p.last, slug: snap.row.slug, tagline: p.tagline, style: p.style, bio: p.bio,
         links: p.links, media: (p.media || []).map((m) => ({ url: m.provider === 'youtube' && m.id ? `https://www.youtube.com/watch?v=${m.id}` : (m.href || ''), hero: m.hero, title: m.title })) };
   const made = await createSample({ ...payload, photos, cp: (snap.row.cp || 1) + 1, seed: rec.seed, sources: rec.sources, facts: rec.facts,
-    provenance: rec.provenance, quality: rec.quality, msgs: rec.msgs, supIds: rec.supIds, by: 'founder' }, { fetchMedia: true });
+    provenance: rec.provenance, quality: rec.quality, msgs: rec.msgs, supIds: rec.supIds, songs: rec.songs, by: 'founder' }, { fetchMedia: true });
   if (!made.ok) return made;
   await store().delete(ARCDOC(owner)).catch(() => {});
   await casDoc(ARC, () => ({ v: 1, byOwner: {} }), (d) => { if (!d.byOwner || !d.byOwner[owner]) return false; delete d.byOwner[owner]; return true; }).catch(() => {});

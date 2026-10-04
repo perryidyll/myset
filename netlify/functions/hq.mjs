@@ -242,6 +242,19 @@ const main = async (req) => {
   /* The message library (decision 0117): the page sends it whole; null puts the defaults back. */
   if (action === 'savelib') return json({ ok: true, lib: await C.saveLib(body.lib === null ? null : (body.lib || {})) });
 
+  /* A PHOTO UPLOADED IN THE FORM (decision 0166). The phone has already made it small
+     (crm.html shrink); it is kept under a name nobody can guess, exactly as a sample's
+     own pictures are (SAMPLE_NS), and handed back as an address — so it travels in the
+     contact's photo links like any other, and the factory fetches it and judges it
+     first. One photo a request: ten in one body would pass a function's limit. */
+  if (action === 'stagePhoto') {
+    const { decodeDataUrl, putImage, newSampleNs } = await import('./_img.mjs');
+    const d = decodeDataUrl(body.data);
+    if (d.error) return bad(d.error);
+    const path = await putImage(newSampleNs(), 'p0', d.bytes, d.type);
+    return json({ ok: true, url: origin + path });
+  }
+
   if (action === 'generate' || action === 'save') {
     let cid = C.validCid(body.cid) ? body.cid : '';
     let kind = body.kind === 'venue' ? 'venue' : 'artist';
@@ -264,6 +277,7 @@ const main = async (req) => {
     const reg = await readSampleReg();
     if (d.owner && reg.byId[d.owner]) return json({ ok: false, error: 'This one already has a page — use Rebuild in Edit profile.', cid });
     const seed = C.seedFrom(d.kind, d);
+    if (d.kind === 'artist' && body.songs !== false) seed.songs = true;   // twenty suggested songs, unless unticked (0167)
     if (!seed.name && !Object.keys(seed.links).length) return bad('Give them a name, or at least one link.');
     const { queueJobs, startJobs } = await import('./factory.mjs');
     const { added, skipped } = await queueJobs(d.kind, [{ seed, label: d.name || seed.line, cid }]);

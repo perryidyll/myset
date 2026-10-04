@@ -205,8 +205,24 @@ let q = (await readDoc('factoryq', null)).data;
 let j = q.jobs.find((x) => x.id === tideJob);
 ok('the job carries the contact and the form’s fields', j.cid === tide && j.seed.name === 'The Tide Lines' && j.seed.city === 'Koh Phangan' && j.seed.links.instagram === 'https://www.instagram.com/thetidelines/', j);
 ok('and nothing private', !JSON.stringify(j).includes('tide@example.com') && !JSON.stringify(j).includes('Sunset Bar') && !JSON.stringify(j).includes('234 5678'), j.seed);
+eq('twenty suggested songs are asked for unless the box is unticked (0167)', j.seed.songs, true);
 r = await H({ action: 'generate', cid: tide, fields: {} });
 eq('a second tap follows the same build', r.job && r.job.id, tideJob);
+{
+  /* PHOTOS UPLOADED IN THE FORM (0166): kept under a name nobody can guess, handed back
+     as an address, and carried to the factory with the photo links */
+  const jpg = 'data:image/jpeg;base64,' + Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(400, 7)]).toString('base64');
+  const up = await H({ action: 'stagePhoto', data: jpg });
+  const m = /^https:\/\/hq\.test\/api\/img\?a=(s[a-z0-9]{10})&s=p0&v=\w+$/.exec(up.url || '');
+  ok('an uploaded photo comes back as an address under an unguessable name', up.ok && !!m, up);
+  const { getImage } = await import('../netlify/functions/_img.mjs');
+  ok('and its bytes are kept', m && (await getImage(m[1], 'p0')).bytes.length === 404);
+  eq('a file that is not a picture is refused', (await H({ action: 'stagePhoto', data: 'data:image/jpeg;base64,' + Buffer.from('not a picture').toString('base64') })).ok, false);
+  const r2 = await H({ action: 'generate', kind: 'artist', songs: false, fields: { name: 'Upload Band', links: { instagram: '@uploadband' }, photos: [up.url, 'https://img.test/a.jpg', up.url.replace('a=s', 'a=t'), 'https://img.test/b.jpg', 'https://img.test/c.jpg', 'https://img.test/d.jpg', 'https://img.test/e.jpg'] } });
+  const j2 = (await readDoc('factoryq', null)).data.jobs.find((x) => x.id === r2.job.id);
+  ok('uploads ride with the links to the factory, six at most', j2.seed.photos[0] === up.url && j2.seed.photos.length === 6, j2.seed.photos);
+  ok('unticked: no songs asked for', !j2.seed.songs, j2.seed);
+}
 r = await H({ action: 'generate', kind: 'artist', fields: { name: 'Tide Lines Again', links: { instagram: 'instagram.com/thetidelines' } } });
 eq('the same Instagram is a duplicate, and says which', [r.ok, r.error, r.cid], [false, 'duplicate', tide]);
 r = await H({ action: 'generate', kind: 'artist', fields: { city: 'Nowhere' } });
@@ -254,6 +270,7 @@ row = await rowOf(tide);
 ok('the follow-up is set when the first message goes out (not after a later one)', row.fu === 0, row.fu);
 r = await H({ action: 'generate', kind: 'venue', fields: { name: 'Sunset Bar', city: 'Haad Rin', links: { instagram: '@sunsetbar', google: 'https://maps.app.goo.gl/Sun5et' }, email: 'hello@sunsetbar.example' } });
 const bar = r.cid;
+ok('a venue is never asked for songs', !(await readDoc('factoryq', null)).data.jobs.find((x) => x.id === r.job.id).seed.songs);
 BG.deps.run = fakeBuild({ review: false });
 await BG.work(r.job.id);
 await H({ action: 'log', cid: bar, ch: 'inperson', dir: 'out', text: 'Showed the manager on my phone.' });

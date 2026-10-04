@@ -203,6 +203,14 @@ function claude(body, headers) {
         { s: 'Their sets lean on indie folk with room for a singalong.', src: [genre] }],
       hook: { text: 'Loved your live Wonderwall from Sunset Bar.', src: [cover] } }) + '\n```');
   }
+  if (sys.includes('· SONGS')) {
+    ai.songsAsked = (ai.songsAsked || []).concat([user]);
+    if (ai.songsFail) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'canned failure' } }, 400);
+    const grp = (g, n, pre) => Array.from({ length: n }, (_, i) => ({ title: `${pre} Song ${i + 1}`, artist: `${pre} Artist ${i + 1}`, group: g }));
+    const songs = [...grp('near2', 5, 'Folk Rock'), ...grp('main', 10, 'Indie Folk'), ...grp('near1', 5, 'Americana')];
+    if (body.messages.length === 1 && ai.songsShort) songs.pop();            // nineteen: forces the one repair
+    return reply(JSON.stringify({ genre: 'Indie folk', near: ['Americana', 'Folk rock'], songs }));
+  }
   return json({ type: 'error', error: { type: 'invalid_request_error', message: 'unexpected call' } }, 400);
 }
 function youtubeApi(u) {
@@ -494,6 +502,28 @@ ai.conf = 0.6;
 r = await F.runJob({ kind: 'artist', seed: { line: SEED } }, { ...net, isSuppressed: async () => false });
 ok('an identity of 0.6: built, but it waits for the founder', r.ok && r.payload.quality.review && !r.payload.quality.checks.identity && r.payload.quality.score < 0.85, r.payload && r.payload.quality);
 ai.conf = 0.92;
+ok('no songs asked for, no songs call and none on the page', !ai.calls.some((c) => /· SONGS/.test(c.body.system)) && !('songs' in P));
+
+console.log('\nTWENTY SUGGESTED SONGS  asked for on the form (decision 0167)');
+ai.calls.length = 0; ai.songsAsked = []; ai.songsShort = true;
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true, photos: ['https://img.test/sunset-inside.jpg'] } }, { ...net, isSuppressed: async () => false });
+ai.songsShort = false;
+const SG = (r.payload || {}).songs;
+ok('it builds, with twenty songs', r.ok && SG && SG.songs.length === 20, r.error || SG);
+eq('ten of the main genre first, then five and five of its neighbours', SG.songs.map((x) => x.group).join(','), [...Array(10).fill('main'), ...Array(5).fill('near1'), ...Array(5).fill('near2')].join(','));
+eq('the genre and its two neighbours ride along', [SG.genre, SG.near], ['Indie folk', ['Americana', 'Folk rock']]);
+ok('nineteen is refused and repaired once', ai.calls.filter((c) => /· SONGS/.test(c.body.system)).length === 2 && P.usage && r.payload.usage.list.some((u) => u.call === 'songs:repair'));
+ok('asked from the facts and the place, with the smart model', /genre: Indie folk/.test(ai.songsAsked[0]) && /Koh Phangan, Thailand/.test(ai.songsAsked[0])
+   && ai.calls.filter((c) => /· SONGS/.test(c.body.system)).every((c) => c.body.model === 'claude-sonnet-5'));
+ok('THE POINT of 0166: the founder’s photo is judged before any video frame or website image', (r.payload.provenance.judged[0] || {}).id === 'f1', r.payload.provenance.judged.map((j) => j.id));
+eq('the songs ask rides on the seed, so a rebuild asks again', r.payload.seed.songs, true);
+ai.songsFail = true;
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true } }, { ...net, isSuppressed: async () => false });
+ai.songsFail = false;
+ok('a failed songs call costs the song list, never the page', r.ok && !r.payload.songs && !!r.payload.provenance.errors.songs, r.error || r.payload.provenance.errors);
+ai.calls.length = 0;
+r = await F.runJob({ kind: 'venue', seed: { line: 'Sunset Bar | Koh Phangan, Thailand', songs: true } }, { ...net, isSuppressed: async () => false });
+ok('a venue has no song list: never asked', !ai.calls.some((c) => /· SONGS/.test(c.body.system)) && !(r.payload || {}).songs);
 
 console.log('\nA VENUE  OpenStreetMap, opening hours, amenities, a founder’s photo');
 r = await F.runJob({ kind: 'venue', seed: { line: 'Sunset Bar | https://www.google.com/maps/place/Sunset+Bar/@9.7312,100.0136,17z | Koh Phangan, Thailand',

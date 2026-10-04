@@ -166,6 +166,27 @@ main{max-width:var(--maxw);margin:0 auto;padding:22px max(var(--gut),env(safe-ar
 .sub:first-child{margin-top:0}
 .nf-id>.sub,.nf-ln>.sub,.nf-ct>.sub{margin-top:22px}
 .hint2{margin:6px 2px 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+/* the form's own photos (0166): each picture springs out of the tile that took it */
+.ups{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px}
+.up,.up-add{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden}
+.up-add{display:grid;place-content:center;justify-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-2);background:rgba(var(--hi),.045);
+  box-shadow:inset 0 0 0 1px var(--line-2);cursor:pointer;transition:background .2s,transform .25s var(--spring)}
+.up-add:hover{background:rgba(var(--hi),.08)}.up-add:active{transform:scale(.94)}
+.up-add[hidden]{display:none}
+.up{margin:0;background:rgba(var(--hi),.06);animation:upIn .5s var(--spring) both;transform-origin:var(--ox,50%) var(--oy,50%)}
+.up img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s,filter .3s}
+.up[data-st=up] img{opacity:.45;filter:saturate(.4)}
+.up[data-st=up]::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(var(--hi),.28) 50%,transparent 70%);background-size:250% 100%;animation:upSheen 1.1s linear infinite}
+.up[data-st=bad]{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.up[data-st=bad] img{opacity:.35}
+.up button{position:absolute;top:4px;right:4px;display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;cursor:pointer;z-index:1;transition:transform .2s var(--spring)}
+.up button:hover{transform:scale(1.12)}.up button svg{width:12px;height:12px}
+.up.out{animation:upOut .28s var(--ease) both}
+@keyframes upIn{from{opacity:0;transform:scale(.4)}}
+@keyframes upOut{to{opacity:0;transform:scale(.6)}}
+@keyframes upSheen{from{background-position:120% 0}to{background-position:-120% 0}}
+.nf-sg{margin-top:20px}.nf-sg.off{display:none}
+@media (prefers-reduced-motion:reduce){.up,.up.out,.up[data-st=up]::after{animation:none}.up-add,.up button{transition:none}}
 
 /* ---------- controls ---------- */
 .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:var(--pill);
@@ -1281,6 +1302,7 @@ const lastT=r=>(r.last&&r.last.t)||r.upd||r.at||0;
 /* ---------- state ---------- */
 const SEENAT={};
 let LOCKED=true, LK_T=null;   // true from the first line until the first summary answers ok
+const UP_MAX=6; let UP=[];   // the form's uploaded photos (0166)
 let S=null, FIRST=true, POLL=null, SEQ=0, GSYNC=null, WAS=null, ROWS=new Map(), LIT=null, NCID='', PJ='', CREEP=null, JP=null, FSUM=null;
 let KIND=ls('myset.hq.kind')==='venue'?'venue':'artist', TAB=['create','pipe','msg'].includes(ls('myset.hq.tab'))?ls('myset.hq.tab'):'pipe';
 const F={f:new Set(),kf:'all',q:'',sort:{k:'',d:0}};
@@ -1450,12 +1472,15 @@ function buildForm(){
     <div class="nf-id"><p class="sub">Identity</p>${fld('nName','user','Name','Name',{req:1})}<div class="two">${fld('nCity','google','City','City')}${fld('nCountry','flag','Country','Country')}</div></div>
     <div class="nf-ln"><p class="sub">Links<span class="subr" id="nLc"></span></p><div id="nLinks">${ALLL.map(k=>linkRow('n',k)).join('')}</div></div>
     <div class="nf-ct"><p class="sub">Contact</p>${fld('nEmail','email','Email','Email',{type:'email',im:'email'})}${fld('nPhone','phone','Phone or WhatsApp','Phone / WhatsApp',{type:'tel',im:'tel'})}</div>
-    <div class="nf-mo"><button type="button" class="disc" data-act="more" aria-expanded="false" aria-controls="nMore"><span>More</span><em id="nMoreW">Photos · tags · private note</em>${ico('chev')}</button>
+    <div class="nf-ph"><p class="sub" style="margin-top:22px">Photos<span class="subr" id="nPc"></span></p><div class="ups" id="nUps"><label class="up-add upl" id="nUpAdd">${ico('upload')}<span>Add photos</span><input type="file" accept="image/*" multiple data-f="nup" aria-label="Upload photos for the page"></label></div>
+      <p class="hint2">The generator looks at yours first, and picks the cover and the rest from them.</p></div>
+    <div class="nf-mo"><button type="button" class="disc" data-act="more" aria-expanded="false" aria-controls="nMore"><span>More</span><em id="nMoreW">Photo links · tags · private note</em>${ico('chev')}</button>
       <div class="fold" id="nMore" inert><div><div>
         <p class="sub" style="margin-top:16px">Photo links</p>${[0,1,2].map(i=>`<div class="fi" style="margin-top:${i?8:0}px">${ico('photo')}<label class="sr" for="nP${i}">Photo link ${i+1}</label><input class="inp" id="nP${i}" type="url" inputmode="url" placeholder="https:// … a picture of them" autocomplete="off" spellcheck="false"></div>`).join('')}
         <p class="sub">Tags<span class="subr tagcount" id="tcn"></span></p>${tagbox('n')}
         <p class="sub">Private note</p><label class="sr" for="nNote">Private note</label><textarea class="inp" id="nNote" rows="3" placeholder="Anything worth remembering"></textarea>
         <p class="hint2">Never shown on any page.</p></div></div></div></div>
+    <label class="sw nf-sg" id="nSg"><input type="checkbox" id="nSongs" checked><span class="tr" aria-hidden="true"></span><span><b>Add 20 suggested songs</b><small>To their song list: the 10 most popular of their genre, and 5 from each of two genres next to it.</small></span></label>
     <div class="dup" id="nDup" hidden></div>
     <div class="nf-go"><button type="submit" class="btn pri big cta" id="nGo" disabled>${ico('bolt')}Generate profile</button>
       <button type="button" class="btn quiet" id="nLead" data-act="savelead" disabled>Save as lead</button></div>
@@ -1470,21 +1495,59 @@ function kindState(anim){
   $$('#nLinks .lr').forEach(r=>{ const o=on.has(r.dataset.k); r.classList.toggle('off',!o); r.inert=!o; });
   $('#nName').placeholder=KIND==='venue'?'Venue name':'Artist or band name';
   $('#nLc').textContent=LINKS[KIND].length+' services';
+  const sg=$('#nSg'); if(sg){ sg.classList.toggle('off',KIND!=='artist'); sg.inert=KIND!=='artist'; }
   goState();
 }
 const val=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
 function formFields(){
   const links={}; for(const k of LINKS[KIND]){ const x=val('nL-'+k); if(x)links[k]=x; }
   return {name:val('nName'),city:val('nCity'),country:val('nCountry'),links,email:val('nEmail'),phone:val('nPhone'),
-    photos:[0,1,2].map(i=>val('nP'+i)).filter(Boolean),tags:TAGS.n.slice(),note:val('nNote')};
+    photos:[...UP.filter(u=>u.st==='ok').map(u=>u.url),...[0,1,2].map(i=>val('nP'+i)).filter(Boolean)].slice(0,UP_MAX),tags:TAGS.n.slice(),note:val('nNote')};
 }
 function goState(){
   const f=formFields(), ok=!!(f.name||Object.values(f.links).some(Boolean));
   const g=$('#nGo'), l=$('#nLead'); if(g)g.disabled=!ok; if(l)l.disabled=!ok;
-  const w=[TAGS.n.length&&plural(TAGS.n.length,'tag'),f.photos.length&&plural(f.photos.length,'photo'),f.note&&'a note'].filter(Boolean);
-  const mw=$('#nMoreW'); if(mw)mw.textContent=w.length?w.join(' · '):'Photos · tags · private note';
+  const pl=[0,1,2].filter(i=>val('nP'+i)).length, w=[TAGS.n.length&&plural(TAGS.n.length,'tag'),pl&&plural(pl,'photo link'),f.note&&'a note'].filter(Boolean);
+  const mw=$('#nMoreW'); if(mw)mw.textContent=w.length?w.join(' · '):'Photo links · tags · private note';
   const tc=$('#tcn'); if(tc)tc.textContent=TAGS.n.length?`${TAGS.n.length}/12`:'';
+  const pc=$('#nPc'); if(pc)pc.textContent=UP.length?`${UP.length}/${UP_MAX}`:'';
+  const ad=$('#nUpAdd'); if(ad)ad.hidden=UP.length>=UP_MAX;
 }
+/* PHOTOS FROM THIS DEVICE (decision 0166). Each is made small here (shrink), sent on its
+   own, and comes back as an address that rides with the photo links; the factory judges
+   the founder's photos before any it finds. Six in all, with the links. */
+function upPaint(){
+  const box=$('#nUps'); if(!box)return;
+  const have=new Set(UP.map(u=>u.id));
+  $$('#nUps .up').forEach(el=>{ if(!have.has(el.dataset.id))el.remove(); });
+  UP.forEach(u=>{ let el=box.querySelector(`.up[data-id="${u.id}"]`);
+    if(!el){ el=document.createElement('figure'); el.className='up'; el.dataset.id=u.id;
+      el.innerHTML=`<img alt="" src="${u.src}"><button type="button" data-act="unup" data-id="${u.id}" aria-label="Remove this photo">${ico('close')}</button>`;
+      box.insertBefore(el,$('#nUpAdd'));
+      if(u.cx!=null){ const r=el.getBoundingClientRect(); el.style.setProperty('--ox',`${Math.round(u.cx-r.left)}px`); el.style.setProperty('--oy',`${Math.round(u.cy-r.top)}px`); u.cx=null; } }
+    el.dataset.st=u.st; el.title=u.st==='bad'?(u.err||'Didn’t upload — remove it and try again'):''; });
+  goState();
+}
+async function upAdd(files,from){
+  const room=UP_MAX-UP.length, list=[...files].filter(f=>/^image\//.test(f.type)).slice(0,Math.max(0,room));
+  if(files.length>list.length)toast(room<=0?`Six photos at most`:`Took the first ${list.length} — six at most`);
+  const r=from&&from.getBoundingClientRect();
+  for(const file of list){
+    const u={id:'u'+Math.random().toString(36).slice(2,9),src:URL.createObjectURL(file),url:'',st:'up'};
+    if(r){ u.cx=r.left+r.width/2; u.cy=r.top+r.height/2; }
+    UP.push(u);
+    u.p=(async()=>{ const data=await shrink(file); if(!data){ u.st='bad'; u.err='Couldn’t read that picture — try a JPEG or PNG'; return; }
+      const d=await api('stagePhoto',{data},true); if(d&&d.ok&&d.url){ u.url=d.url; u.st='ok'; } else { u.st='bad'; u.err=(d&&d.error)||'Didn’t upload'; } })()
+      .catch(()=>{ u.st='bad'; }).finally(upPaint);
+  }
+  upPaint();
+}
+function upDrop(id){
+  const el=document.querySelector(`#nUps .up[data-id="${id}"]`), u=UP.find(x=>x.id===id);
+  UP=UP.filter(x=>x.id!==id); if(u)setTimeout(()=>URL.revokeObjectURL(u.src),400);
+  if(el&&!REDUCE){ el.classList.add('out'); setTimeout(upPaint,280); } else upPaint();
+}
+const upWait=()=>Promise.all(UP.map(u=>u.p).filter(Boolean));
 /* A LINK THAT LOOKS RIGHT GETS A TICK; one that clearly is not gets a soft hint. The
    server is the authority (it canonicalises, and names what it refused in `dropped`). */
 const HOSTS={instagram:/^(instagram\.com|instagr\.am)$/,tiktok:/^((vm|vt)\.)?tiktok\.com$/,youtube:/^(youtube\.com|youtu\.be|music\.youtube\.com)$/,spotify:/^(open\.)?spotify\.(com|link)$/,
@@ -1517,6 +1580,7 @@ function markDropped(p,dropped){
 function fold(sel,on){ const f=$(sel); if(!f)return; f.classList.toggle('on',on); f.inert=!on; }
 function resetForm(){
   const nf=$('#nForm'); if(nf)nf.reset(); TAGS.n=[]; paintTags('n'); NCID='';
+  UP.forEach(u=>URL.revokeObjectURL(u.src)); UP=[]; upPaint();
   $$('#nForm [data-v]').forEach(e=>{delete e.dataset.v;}); $$('#nForm .hint').forEach(h=>{h.textContent='';});
   $('#nDup').hidden=true; goState();
 }
@@ -1530,11 +1594,13 @@ function showDup(cid,msg){
    worker, so the reactor starts turning the moment Generate is tapped ("Starting") and the
    job joins it when the answer lands; a refusal folds the form back, values intact. */
 async function generate(){
+  if(UP.some(u=>u.st==='up')){ toast('Finishing the photo uploads…'); await upWait(); }
   const f=formFields(); if(!f.name&&!Object.values(f.links).some(Boolean))return;
+  const songs=KIND==='artist'&&!!($('#nSongs')||{}).checked;
   const tmp='new:'+Date.now(), kind=KIND;
   $('#nDup').hidden=true;
   startBuild('n',{id:tmp,cid:NCID,name:f.name||firstLink(f.links),kind,st:'queued',stage:'',pct:0,starting:true});
-  const d=await api('generate',Object.assign({kind,fields:f},NCID?{cid:NCID}:{}),true);
+  const d=await api('generate',Object.assign({kind,fields:f,songs},NCID?{cid:NCID}:{}),true);
   const mine=PJ===tmp, b=B[tmp]; delete B[tmp];
   if(!d||!d.ok){
     if(mine)showForm(false);
@@ -1549,6 +1615,7 @@ async function generate(){
 }
 const firstLink=L=>{const v=Object.values(L||{}).find(Boolean)||'';return v.replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'')||'New profile';};
 async function saveLead(){
+  if(UP.some(u=>u.st==='up'))await upWait();
   const f=formFields(); if(!f.name&&!Object.values(f.links).some(Boolean))return;
   const d=await api('save',Object.assign({kind:KIND,fields:f},NCID?{cid:NCID}:{}));
   if(d&&!d.ok&&d.cid&&d.error==='duplicate'){ showDup(d.cid); return; }
@@ -2534,6 +2601,7 @@ const ACTS={
   cend:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const v=b.dataset.v==='1'; if(!!c.soft===v)return; const p=preBy(preOn(c)); c.soft=v;
     if(!c.dirty)fillTpl(c); else if(p){ const was=v?p.ask:(S.lib||{}).soft, now=v?(S.lib||{}).soft:p.ask, i=was?c.text.lastIndexOf(was):-1; if(i>=0){ c.text=c.text.slice(0,i)+now+c.text.slice(i+was.length); c.fx=1; } }
     paintCmp(loc,`[data-act=cend][data-v="${v?1:0}"]`); }, palette:()=>openPal(), palgo:b=>palGo(+b.dataset.i),
+  unup:b=>upDrop(b.dataset.id),
   kind:b=>{ if(KIND===b.dataset.k)return; KIND=b.dataset.k; keep('myset.hq.kind',KIND); kindState(true); },
   more:b=>{ const on=b.getAttribute('aria-expanded')!=='true'; b.setAttribute('aria-expanded',String(on)); fold('#nMore',on); if(on)setTimeout(()=>{const x=$('#nP0');if(x)x.focus({preventScroll:true});},120); },
   savelead:()=>saveLead(),
@@ -2692,6 +2760,7 @@ document.addEventListener('change',async e=>{
   if(c&&f==='tpl'){ if(c.dirty&&c.text.trim()&&!await ask('Replace what you wrote?','The template takes the place of the message you started.','Replace')){ t.value=c.tpl; return; }
     c.tpl=t.value; fillTpl(c); paintCmp(loc,'[data-f=tpl]'); return; }
   if(c&&f==='rch'){ c.rch=t.value; return; }
+  if(f==='nup'&&t.files&&t.files.length){ const fl=[...t.files]; t.value=''; upAdd(fl,t.closest('.up-add')); return; }
   if(f==='upload'&&t.files&&t.files[0]){ const file=t.files[0], slot=DR.pick; t.value=''; if(!slot)return; busy(true);
     try{ const data=await shrink(file); if(!data){ toast('Couldn’t read that picture — try a JPEG or PNG'); return; } await setPhoto(slot,{data}); }
     finally{ busy(false); } return; }

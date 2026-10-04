@@ -523,7 +523,7 @@ const main = async (req) => {
        rebuild reads what the first build read, not only the line's rendering of it */
     const seed = { line, ...(sd.name ? { name: sd.name } : {}), ...(sd.city ? { city: sd.city } : {}), ...(sd.country ? { country: sd.country } : {}),
       ...(sd.links ? { links: sd.links } : {}), ...(Array.isArray(sd.photos) && sd.photos.length ? { photos: sd.photos } : {}),
-      ...(sd.notes ? { notes: sd.notes } : {}) };
+      ...(sd.notes ? { notes: sd.notes } : {}), ...(sd.songs ? { songs: true } : {}) };
     // keep (0136): the photos and a venue's details stay unless the founder asked for fresh ones
     const { added, skipped } = await queueJobs(row.k === 'v' ? 'venue' : 'artist', [{ seed, label: `Rebuild · ${row.name}`, replace: owner, keep: body.keep !== false }]);
     if (!added.length && skipped.length) return json({ ok: true, started: 0, already: true });

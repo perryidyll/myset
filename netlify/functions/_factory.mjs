@@ -4,7 +4,7 @@ import { parseMedia } from './_embeds.mjs';
 import { safeLink } from './_profile.mjs';
 import { parseSeed, classifyUrl, youtube, ytThumbs, readSite, musicBrainz, itunesArtist, nominatim,
          fetchImage, ldSummary, clean, norm, ctxOf, regionName, LINK_KINDS } from './_fsrc.mjs';
-import { discover, extractFacts, judgePhotos, pickPhotos, coverChoices, reviewCover, writeCopy, estimateCost, modelFast, modelSmart } from './_fai.mjs';
+import { discover, extractFacts, judgePhotos, pickPhotos, coverChoices, reviewCover, writeCopy, suggestSongs, estimateCost, modelFast, modelSmart } from './_fai.mjs';
 
 /* THE SAMPLE FACTORY (decision 0101): one seed line in — "The Tide Lines | @thetidelines
    | thetidelines.com | Koh Phangan" — and out comes one sample page's worth of content,
@@ -124,6 +124,7 @@ function seedOf(job) {
   }
   seed.photos = [].concat((s && s.photos) || []).map(String).filter((u) => /^https:\/\/\S+$/.test(u)).slice(0, 6);
   seed.notes = String((s && typeof s === 'object' && s.notes) || '').replace(/\r/g, '').trim().slice(0, 600);   // the founder's notes (0136)
+  seed.songs = !!(s && typeof s === 'object' && s.songs);   // twenty suggested songs for the song list (0167)
   seed.line = line;
   return seed;
 }
@@ -395,9 +396,12 @@ async function choosePhotos(st, ctx, { late }) {
   const judged = [], seen = new Set();
   let picks = { cover: null, avatar: null, extras: [] };
   /* three small photos for an artist (0137), each from a source not yet used if one
-     can be had: a second frame of the same video only once every source is judged */
+     can be had: a second frame of the same video only once every source is judged.
+     The founder's own photos — links, or pictures uploaded in CRM's form (0166) — are
+     judged FIRST: they were chosen by hand, so enough good ones fill the page before a
+     video frame or a website image is fetched at all. */
   const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && pickPhotos(judged, { kind: st.kind, again: false }).extras.length >= (st.kind === 'venue' ? 5 : 3);
-  for (const [p, round] of [['y', ytCandidates], ['w', webCandidates], ['f', founderCandidates]]) {
+  for (const [p, round] of [['f', founderCandidates], ['y', ytCandidates], ['w', webCandidates]]) {
     if (enough() || (judged.length && late())) break;
     // the same picture twice (og:image and an <img>) is judged once; over 8000 px the vision API refuses it
     const cands = (await round(st, ctx)).filter((c) => Math.max(c.width, c.height) <= 8000)
@@ -537,9 +541,17 @@ export async function runJob(job, opts = {}) {
     // better a clear "try again" now than the platform's kill at fifteen minutes mid-write
     if (now() - t0 > 13 * 60e3) return { ok: false, error: 'timeout: the build ran past thirteen minutes', usage };
     const copy = await writeCopy(facts, sources, kind, ctx, { name: st.name, notes: st.seed.notes });
+    /* the suggested songs (0167): asked for on the form, an artist only, and a failure
+       costs the song list, never the page */
+    let songs = null;
+    if (kind === 'artist' && seed.songs && now() - t0 <= 13 * 60e3) {
+      try { songs = await suggestSongs(facts, ctx, { name: st.name, city: st.city, country: st.country, notes: st.seed.notes }); }
+      catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.songs = clean(e.message, 160); }
+    }
 
     await stage('gate');
     const payload = buildPayload(st, { facts, sources, copy, shots, usage, ctx });
+    if (songs) payload.songs = songs;
     if (await check(payload.supIds)) return { ok: false, skipped: 'suppressed', usage };
     return { ok: true, payload, usage };
   } catch (e) {
