@@ -1177,6 +1177,9 @@ const $=s=>document.querySelector(s), $$=(s,r)=>[...(r||document).querySelectorA
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const href=u=>/^https?:\/\//i.test(String(u||''))?String(u):'';
 const pageUrl=u=>/^(https?:\/\/|\/(?!\/))/i.test(String(u||''))?String(u):'';
+/* A page opens in a new TAB. A third argument to window.open (even just 'noopener') makes
+   Chrome open a small pop-up window instead, so the opener is cut after the fact. */
+const openTab=u=>{ const w=window.open(u,'_blank'); if(w)try{w.opener=null;}catch(e){} };
 const imgSrc=u=>{u=String(u||'');return /^(https?:\/\/|\/(?!\/)|data:image\/)/i.test(u)?u:'';};
 const ls=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
 const keep=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -2122,7 +2125,7 @@ async function copy(text,btn,msg){
     setTimeout(()=>{btn.classList.remove('done');btn.innerHTML=was;},1600); }
 }
 function openExt(u){
-  if(/^https:\/\//i.test(u)){ window.open(u,'_blank','noopener'); return true; }
+  if(/^https:\/\//i.test(u)){ openTab(u); return true; }
   if(/^(mailto|sms):/i.test(u)){ location.href=u; return true; }
   return false;
 }
@@ -2616,7 +2619,7 @@ const ACTS={
     else { B[d.job.id]={id:d.job.id,cid:d.cid,name:x.name,kind:x.kind,t0:Date.now(),st:d.job.st,stage:'',pct:0,disp:0,tReal:performance.now(),err:''}; await load(); drawerBody(); }
     load(); },
   viewsample:b=>{ const x=B[b.dataset.k]; if(!x)return; const u=pageUrl(x.preview||x.link);
-    if(u){ window.open(u,'_blank','noopener'); return; }
+    if(u){ openTab(u); return; }
     const w=window.open('about:blank','_blank');
     getContact(x.cid).then(d=>{ const p=d&&d.page&&pageUrl(d.page.preview||d.page.link); if(w){ if(p){ try{w.opener=null;}catch(e){} w.location.href=p; } else { w.close(); toast('The page isn’t ready to open yet'); } } }); },
   first:()=>{ if(PHONE)setMTab('create'); showForm(true); },
@@ -2641,7 +2644,7 @@ const ACTS={
   dclose:()=>closeDrawer(),
   dtab:b=>setTab(b.dataset.t),
   copylink:()=>{ const r=rowBy(DR.cid), u=r&&pageUrl(r.link); if(u)copy(u,null,'Link copied'); },
-  pview:()=>{ const p=(CT[DR.cid]||{}).page, u=p&&pageUrl(p.preview||p.link); if(u)window.open(u,'_blank','noopener'); },
+  pview:()=>{ const p=(CT[DR.cid]||{}).page, u=p&&pageUrl(p.preview||p.link); if(u)openTab(u); },
   copytxt:(b,cid)=>{ const c=(CT[cid]||{}).contact||{}, t=b.dataset.k==='phone'?c.phone:c.email; if(t)copy(t,null,b.dataset.k==='phone'?'Number copied':'Address copied'); },
   copyf:b=>{ const f=((CT[DR.cid]||{}).drafts||{}).followup; if(f)copy(f,b,'Follow-up copied'); },
   fu:b=>{ const n=+b.dataset.k; setFu(n?at9(Date.now()+n*DAY):0); },

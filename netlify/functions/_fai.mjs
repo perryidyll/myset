@@ -300,7 +300,16 @@ export function coverChoices(judged, { kind = 'artist' } = {}) {
   const tier = (j) => (j.kind === 'performing' || j.kind === 'group' ? 0 : 1);
   const good = kind === 'venue' ? J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)
     : J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j) && ['performing', 'group', 'portrait'].includes(j.kind)).sort((a, b) => tier(a) - tier(b) || rank(a, b));
-  return good.length || kind !== 'venue' ? good : J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank);
+  if (good.length) return good;
+  if (kind === 'venue') return J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank);
+  /* An artist with pictures always gets a cover (decision 0168). Phone photos are
+     square or tall and rarely 1000 px wide, so Jay's five uploads (2026-10-04) all
+     missed the bar above and his page opened on a gradient. The cover crops to the
+     busy rows (coverFocus), so any sharp shot of the act will do: the judge's covers
+     first, then the rest; wide before square before tall; playing before posing. */
+  const shape = (j) => (wide(j) ? 0 : j.width >= j.height * 0.9 ? 1 : 2);
+  return J.filter((j) => j.quality >= 0.5 && Math.min(j.width, j.height) >= 400 && ['performing', 'group', 'portrait'].includes(j.kind))
+    .sort((a, b) => (b.coverOk ? 1 : 0) - (a.coverOk ? 1 : 0) || tier(a) - tier(b) || shape(a) - shape(b) || rank(a, b));
 }
 /** `cover`, when given, is the cover already chosen (a judged picture, or null for none):
  *  the cover review's answer, so the portrait and the small photos are picked around it. */
@@ -330,8 +339,8 @@ export function pickPhotos(judged, { kind = 'artist', again = true, cover: chose
 /* THE COVER REVIEW (decision 0159). The judge scores each picture on its own; the
    cover is the one picture the act sees first, so the best few are looked at again,
    side by side, and the one that would make the act proudest at the top of their own
-   page wins. "none" leaves the page without a cover, and the gate sends it to review:
-   a page with no cover is better than one with a cover that embarrasses the act. */
+   page wins. It always picks one (decision 0168: the founder wants no sample page
+   without a cover); coverChoices already left out anything not plainly the act. */
 const COVER_SYSTEM = `MYSET FACTORY · COVER
 
 You pick the cover photo for ONE live-music act's (or venue's) sample page on MySet: the wide picture across the top, the first thing they see when they open the page built for them. The pictures follow, each after a line naming its id; every one already passed a first check.
@@ -340,9 +349,9 @@ Answer with ONE JSON object and nothing else:
 
 - best: the id of the picture that would make them proudest to see at the top of their own page. For an act: the act clearly playing live, or a proper band or promo photo; their face visible and in focus; good light; a clean frame that still works cropped wide. For a venue: the place at its most inviting: the room, the stage or the view.
 - A real live moment beats a posed shot. A sharp, well-lit photo beats a dramatic but murky one. A person who is not plainly the act (an actor in a music video) never wins.
-- "none" only when every picture would embarrass them: blurry, dark, not them, or a scene from a story video.
+- Always pick one: a page with pictures of the act never opens without a cover (decision 0168).
 - why: at most twelve words.`;
-/** `choices` from coverChoices. Returns the picture to use as the cover, or null for none. */
+/** `choices` from coverChoices. Returns the picture to use as the cover. */
 export async function reviewCover(choices, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
   const top = (choices || []).slice(0, 4);
   if (top.length < 2) return top[0] || null;
@@ -353,8 +362,8 @@ export async function reviewCover(choices, ctx, { kind = 'artist', name = '', no
   }
   const ids = top.map((c) => c.id);
   const got = await askJSON({ call: 'cover', model: modelSmart(ctx), system: COVER_SYSTEM, content, maxTokens: 400, ctx,
-    check: (o) => (isObj(o) && (ids.includes(String(o.best)) || o.best === 'none') ? { ok: true, value: String(o.best) } : { ok: false, why: [`"best" must be one of ${ids.join(', ')}, or "none"`] }) });
-  return got === 'none' ? null : top.find((c) => c.id === got);
+    check: (o) => (isObj(o) && ids.includes(String(o.best)) ? { ok: true, value: String(o.best) } : { ok: false, why: [`"best" must be one of ${ids.join(', ')}`] }) });
+  return top.find((c) => c.id === got);
 }
 /** `cands`: [{id, from, group, bytes, type, width, height, src, note}]. Ten a call.
  *  Returns { judged: cands with the verdict merged in, picks }. */
@@ -475,7 +484,7 @@ const SONGS_SYSTEM = `MYSET FACTORY · SONGS
 You suggest a starting song list for ONE live-music act's sample page on MySet, where the audience votes on what the act plays next. Answer with ONE JSON object and nothing else:
 {"genre":"","near":["",""],"songs":[{"title":"","artist":"","group":"main"}]}
 
-- genre: the act's main genre, from the FACTS (with its country or scene when the facts name one, like "Brazilian MPB" or "Irish trad").
+- genre: the act's main genre, from the FACTS (with its country or scene when the facts name one, like "Brazilian MPB" or "Irish trad"). When the FACTS name no genre, it is the most popular music of the PLACE's country, in that country's own language (an act in Thailand with no genre: "Thai pop"), unless the facts say the act sings in another language.
 - near: two neighbouring genres a crowd for that act would also enjoy, different from the main one and from each other.
 - songs: exactly 20, each a real, well-known song with its best-known performer:
   · 10 with group "main": the most popular songs of the main genre (of that country or scene where the facts name one);

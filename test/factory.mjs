@@ -401,14 +401,21 @@ const rb = await A.reviewCover(A.coverChoices(covs), pickB, { name: 'X' });
 eq('the review sees four at most, and its choice is the cover', [seen0[0].messages[0].content.filter((x) => x.type === 'image').length, rb.id], [4, 'b']);
 const around = A.pickPhotos(covs, { cover: rb });
 ok('and the portrait and small photos are picked around it', around.cover.id === 'b' && !around.extras.includes(rb) && around.avatar !== rb, around.extras.map((j) => j.id));
-eq('"none" leaves the page without a cover, for the founder to look at', await A.reviewCover(covs, mini([JSON.stringify({ best: 'none', why: 'all dark' })])), null);
+eq('0168: "none" is no longer an answer, so a page with pictures of the act always has a cover', await A.reviewCover(covs, mini(['{"best":"none"}', '{"best":"none"}'])).catch((e) => e.code), 'bad-json');
 eq('one choice needs no review: no call is made', (await A.reviewCover([covs[0]], mini([])).then((j) => j.id)), 'a');
 eq('an id it was not shown is refused, and a second bad answer is an error the factory catches', await A.reviewCover(covs, mini(['{"best":"zz"}', '{"best":"zz"}'])).catch((e) => e.code), 'bad-json');
 /* A venue whose site has no 1000-px hero still gets a cover (2026-10-01, Sand & Tan opened on a gradient). */
 const vsite = [{ id: 'v1', from: 'website', group: 'w1', isAct: true, coverOk: false, quality: 0.8, textOverlay: 0, width: 900, height: 600, kind: 'room' },
   { id: 'v2', from: 'website', group: 'w2', isAct: true, coverOk: false, quality: 0.9, textOverlay: 0, width: 700, height: 900, kind: 'food' }];
 eq('a venue with no 1000-px cover takes its best wide photo instead', A.pickPhotos(vsite, { kind: 'venue' }).cover.id, 'v1');
-eq('an artist does not: its cover must be the act, big and wide', A.pickPhotos(vsite).cover, null);
+eq('an artist does not: its cover must be the act', A.pickPhotos(vsite).cover, null);
+/* 0168: Jay's five phone photos (2026-10-04), square and tall, none 1000 px wide: his page opened with no cover. */
+const jay = [shot('f1', 'founder', 'f:1', 'performing', 0.75, 1080, 1080, { coverOk: false, avatarOk: true, people: 1 }), shot('f2', 'founder', 'f:2', 'performing', 0.7, 832, 1254, { avatarOk: true, people: 1 }),
+  shot('f3', 'founder', 'f:3', 'portrait', 0.6, 1258, 1600, { coverOk: false, avatarOk: true, people: 1, textOverlay: 0.15 }), shot('f4', 'founder', 'f:4', 'performing', 0.65, 1600, 1451, { avatarOk: true, people: 1 }),
+  shot('f5', 'founder', 'f:5', 'portrait', 0.55, 1595, 1600, { coverOk: false, avatarOk: true, people: 1 })];
+eq('an artist with only phone photos still gets a cover: the judge\'s covers first, squarer first', A.coverChoices(jay).map((j) => j.id).join(), 'f4,f2,f1,f5,f3');
+ok('and the page is filled around it', (() => { const p = A.pickPhotos(jay); return p.cover.id === 'f4' && p.avatar && p.avatar.id === 'f1' && p.extras.map((j) => j.id).join() === 'f2,f3'; })(), A.pickPhotos(jay));
+eq('a blurry shot or a story frame is still never the cover', A.coverChoices([shot('b', 'founder', 'f:1', 'performing', 0.4, 1080, 1080), shot('s', 'founder', 'f:2', 'video-scene', 0.9, 1080, 1080)]).length, 0);
 eq('and a venue never makes a tall photo its cover', A.pickPhotos([vsite[1]], { kind: 'venue' }).cover, null);
 
 console.log('\nTHE GATE  when the founder should look first');
