@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-05 00:17 — 057bec0 — sample-cover@ux/generate-scroll-top (0 files since origin/main)
+**tl;dr:** CRM: after Generate profile, and again when it finishes, the page goes back to the top where the build card is.
+**Other sessions:** crm.html toTop() in startBuild('n') (desktop too, was phone-only) and bcState done for PJ. Generator does NOT read Linktree: linktr.ee robots.txt is Disallow / for unnamed bots; gather those links by hand.
+
 ### 2026-10-04 23:27 — 1486fad — sample-cover@feat/generator-notes (10 files since origin/main)
 **tl;dr:** CRM's Generate form has a 'Notes for the generator' box: paste an artist's setlist and their songs go first on the page's song list, ahead of the 20 suggestions.
 **Other sessions:** hq generate takes body.notes -> seed.notes; NOTES_MAX 2000 lives in _fai.mjs (crm.html mirrors it); songs call returns theirs[] -> group 'theirs' first; SAMPLE_SONGS_MAX 40; notes alone trigger the songs call (theirs only when suggestions are off).
