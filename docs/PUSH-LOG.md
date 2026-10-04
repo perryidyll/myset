@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-04 17:14 — 5346d28 — sample-cover@fix/sample-welcome-public (7 files since origin/main)
+**tl;dr:** A sample page's welcome no longer says 'your public public pages'.
+**Other sessions:** sample.js words() falls back to 'pages' (callers prefix 'public'); restamped.
+
 ### 2026-10-04 17:08 — f610365 — sample-cover@fix/sample-cover-thai-tab (15 files since origin/main)
 **tl;dr:** A sample artist's page always gets a cover when it has photos of the act; with no genre known, the suggested songs lead with the country's hits; CRM opens a sample in a new tab, not a pop-up.
 **Other sessions:** coverChoices has an artist fallback (best sharp act shot, coverOk first, wide>square>tall); reviewCover no longer accepts 'none' (0159 amended). openTab() in crm.html/factory.html — never pass a 3rd arg to window.open. Decision 0168; 0163–0167 commits filled.
