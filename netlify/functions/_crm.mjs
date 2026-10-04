@@ -37,6 +37,9 @@ export const MAX_TAGS = 12, TAG_LEN = 24, MAX_MSGS = 300, MAX_NOTES = 100, MAX_E
  *  the founder set one. A reply clears it: the ball is in the founder's court then,
  *  and "Needs your reply" says so better than a date. */
 export const FOLLOW_MS = 4 * 86400e3;
+/* The founder's photos for a page: three links and uploads in CRM's form, six in all (0166);
+   the factory reads no more than six (_factory.mjs seedOf). */
+export const PHOTO_MAX = 6;
 export const validCid = (c) => /^c[a-f0-9]{10}$/.test(String(c || ''));
 export const newCid = () => 'c' + randomBytes(5).toString('hex');
 const newMid = () => 'm' + randomBytes(5).toString('hex');
@@ -113,7 +116,7 @@ export function normFields(kind, f = {}, { partial = false } = {}) {
   }
   if (has('email')) { const v = cleanEmail(f.email); if (!v && String(f.email || '').trim()) dropped.push('email'); if (v || !partial || !String(f.email || '').trim()) out.email = v; }
   if (has('phone')) { const v = cleanPhone(f.phone); if (!v && String(f.phone || '').trim()) dropped.push('phone'); if (v || !partial || !String(f.phone || '').trim()) out.phone = v; }
-  if (has('photos')) out.photos = [].concat(f.photos || []).map((u) => String(u || '').trim()).filter((u) => /^https:\/\/\S{8,500}$/.test(u)).slice(0, 3);
+  if (has('photos')) out.photos = [].concat(f.photos || []).map((u) => String(u || '').trim()).filter((u) => /^https:\/\/\S{8,500}$/.test(u)).slice(0, PHOTO_MAX);
   if (has('tags')) out.tags = normTags(f.tags);
   if (has('star')) out.star = !!f.star;
   if (has('fu')) { const t = Number(f.fu) || 0; out.fu = t > 0 ? Math.round(t) : 0; }
@@ -130,7 +133,7 @@ export function seedFrom(kind, c) {
   for (const k of linkKinds(kind)) if (c.links && c.links[k]) links[k] = c.links[k];
   const place = c.city ? [c.city, c.country].filter(Boolean).join(', ') : '';
   const line = [c.name, place, ...Object.values(links)].filter(Boolean).join(' | ').slice(0, 1000);
-  return { line, name: c.name || '', city: c.city || '', country: c.country || '', links, photos: (c.photos || []).slice(0, 3) };
+  return { line, name: c.name || '', city: c.city || '', country: c.country || '', links, photos: (c.photos || []).slice(0, PHOTO_MAX) };
 }
 
 /** The identifiers that say two entries are the same act or venue, and that route a
