@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [057bec0, f4e7dab]
 tests: [test/factory.mjs]
 files: [public/crm.html, netlify/functions/hq.mjs, netlify/functions/_fai.mjs, netlify/functions/_factory.mjs, netlify/functions/factory.mjs, netlify/functions/_sample.mjs]
 ---
