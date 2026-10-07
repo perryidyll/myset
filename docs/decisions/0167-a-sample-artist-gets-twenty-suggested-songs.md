@@ -2,11 +2,11 @@
 id: 0167
 title: A sample artist's song list starts with twenty suggested songs, unless the founder unticks the box
 date: 2026-10-04
-status: decided
+status: superseded
 decided_by: perry
 area: ui
 reverses:
-superseded_by:
+superseded_by: 0170
 invariants: []
 commits: [b086a33]
 tests: [test/factory.mjs, test/samples.mjs, test/hq.mjs]

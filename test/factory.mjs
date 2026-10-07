@@ -206,11 +206,10 @@ function claude(body, headers) {
   if (sys.includes('· SONGS')) {
     ai.songsAsked = (ai.songsAsked || []).concat([user]);
     if (ai.songsFail) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'canned failure' } }, 400);
-    const grp = (g, n, pre) => Array.from({ length: n }, (_, i) => ({ title: `${pre} Song ${i + 1}`, artist: `${pre} Artist ${i + 1}`, group: g }));
-    const songs = [...grp('near2', 5, 'Folk Rock'), ...grp('main', 10, 'Indie Folk'), ...grp('near1', 5, 'Americana')];
-    if (body.messages.length === 1 && ai.songsShort) songs.pop();            // nineteen: forces the one repair
+    const home = Array.from({ length: 10 }, (_, i) => ({ title: `Thai Bar Song ${i + 1}`, artist: `Thai Artist ${i + 1}` }));
+    if (body.messages.length === 1 && ai.songsShort) home.pop();             // nine: forces the one repair
     const theirs = /FOUNDER'S NOTES[\s\S]*Setlist:/.test(user) ? [{ title: 'Wonderwall', artist: 'Oasis' }, { title: 'Harvest Moon', artist: 'Neil Young' }, { title: 'Sunset Road', artist: '' }] : [];
-    return reply(JSON.stringify({ genre: 'Indie folk', near: ['Americana', 'Folk rock'], theirs, songs }));
+    return reply(JSON.stringify({ country: 'Thailand', theirs, home }));
   }
   return json({ type: 'error', error: { type: 'invalid_request_error', message: 'unexpected call' } }, 400);
 }
@@ -512,17 +511,23 @@ ok('an identity of 0.6: built, but it waits for the founder', r.ok && r.payload.
 ai.conf = 0.92;
 ok('no songs asked for, no songs call and none on the page', !ai.calls.some((c) => /· SONGS/.test(c.body.system)) && !('songs' in P));
 
-console.log('\nTWENTY SUGGESTED SONGS  asked for on the form (decision 0167)');
+console.log('\nTWENTY SUGGESTED SONGS  ten bar classics of the world, ten of the act\u2019s country (decisions 0167, 0170)');
 ai.calls.length = 0; ai.songsAsked = []; ai.songsShort = true;
 r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true, photos: ['https://img.test/sunset-inside.jpg'] } }, { ...net, isSuppressed: async () => false });
 ai.songsShort = false;
 const SG = (r.payload || {}).songs;
 ok('it builds, with twenty songs', r.ok && SG && SG.songs.length === 20, r.error || SG);
-eq('ten of the main genre first, then five and five of its neighbours', SG.songs.map((x) => x.group).join(','), [...Array(10).fill('main'), ...Array(5).fill('near1'), ...Array(5).fill('near2')].join(','));
-eq('the genre and its two neighbours ride along', [SG.genre, SG.near], ['Indie folk', ['Americana', 'Folk rock']]);
-ok('nineteen is refused and repaired once', ai.calls.filter((c) => /· SONGS/.test(c.body.system)).length === 2 && P.usage && r.payload.usage.list.some((u) => u.call === 'songs:repair'));
-ok('asked from the facts and the place, with the smart model', /genre: Indie folk/.test(ai.songsAsked[0]) && /Koh Phangan, Thailand/.test(ai.songsAsked[0])
-   && ai.calls.filter((c) => /· SONGS/.test(c.body.system)).every((c) => c.body.model === 'claude-sonnet-5'));
+eq('the world\u2019s ten bar classics first, then ten of the country', SG.songs.map((x) => x.group).join(','), [...Array(10).fill('world'), ...Array(10).fill('home')].join(','));
+eq('the classics are the fixed ten, never a genre guess', SG.songs.slice(0, 10).map((x) => x.title), A.WORLD_BAR_SONGS.map(([t]) => t));
+eq('the country rides along', [SG.country, SG.songs[10].title], ['Thailand', 'Thai Bar Song 1']);
+ok('nine of the country is refused and repaired once', ai.calls.filter((c) => /\u00b7 SONGS/.test(c.body.system)).length === 2 && P.usage && r.payload.usage.list.some((u) => u.call === 'songs:repair'));
+ok('asked from the place, with the smart model, never the genre', /Koh Phangan, Thailand/.test(ai.songsAsked[0]) && !/genre:/.test(ai.songsAsked[0])
+   && ai.calls.filter((c) => /\u00b7 SONGS/.test(c.body.system)).every((c) => c.body.model === 'claude-sonnet-5'));
+for (const [where, c] of [['in the US', 'United States'], ['country unknown', '']]) {
+  const n = ai.calls.length, U = await A.suggestSongs([], {}, { name: 'Bar Band', country: c });
+  ok(`${where}: the world\u2019s ten, then the American ten, no model call`, ai.calls.length === n && U.songs.length === 20 && U.country === 'United States'
+     && U.songs.slice(10).map((x) => x.title).join() === A.US_BAR_SONGS.map(([t]) => t).join(), U);
+}
 ok('THE POINT of 0166: the founder’s photo is judged before any video frame or website image', (r.payload.provenance.judged[0] || {}).id === 'f1', r.payload.provenance.judged.map((j) => j.id));
 eq('the songs ask rides on the seed, so a rebuild asks again', r.payload.seed.songs, true);
 ai.songsFail = true;
@@ -535,7 +540,8 @@ const LIST = 'Setlist: Wonderwall, Harvest Moon, Sunset Road (our own)';
 ai.songsAsked = [];
 r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true, notes: LIST } }, { ...net, isSuppressed: async () => false });
 const TS = ((r.payload || {}).songs || {}).songs || [];
-ok('their three first, then the twenty suggestions', r.ok && TS.length === 23 && TS.slice(0, 3).every((x) => x.group === 'theirs') && TS[3].group === 'main', TS.map((x) => x.group));
+ok('their three first, then the suggestions, Wonderwall not twice', r.ok && TS.length === 22 && TS.slice(0, 3).every((x) => x.group === 'theirs') && TS[3].group === 'world'
+   && TS.filter((x) => x.title === 'Wonderwall').length === 1, TS.map((x) => x.group));
 eq('a song of their own, with no performer given, is theirs by name', TS[2].artist, 'The Tide Lines');
 ok('the notes reach the songs call', /Setlist: Wonderwall/.test(ai.songsAsked[0] || ''));
 r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: false, notes: LIST } }, { ...net, isSuppressed: async () => false });
