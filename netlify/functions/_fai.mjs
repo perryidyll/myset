@@ -475,51 +475,60 @@ export async function writeCopy(facts, sources, kind, ctx, { name = '', notes = 
   return tidyCopy(o, facts, venue);
 }
 
-/* ---------- songs (decision 0167) ----------
+/* ---------- songs (decisions 0167, 0170) ----------
    TWENTY SUGGESTED SONGS for a sample artist's song list, so the page a stranger opens
-   already shows a setlist the room could vote on. Not facts about the act: the most
-   popular songs of the genre the facts name, ten from it and five from each of two
-   neighbouring genres — a starting list the artist edits once the page is theirs. */
-export const SONG_GROUPS = { main: 10, near1: 5, near2: 5 };
+   already shows a setlist the room could vote on. Not facts about the act and not a guess
+   at its genre (0170: a genre guess put a trance anthem on a Thai singer-songwriter's
+   page): ten bar classics the whole world sings along to, then ten of the act's own
+   country — the ten American ones when the country is the US or cannot be told. The
+   artist edits the list once the page is theirs. */
+export const WORLD_BAR_SONGS = [
+  ['All of Me', 'John Legend'], ['Perfect', 'Ed Sheeran'], ['Iris', 'Goo Goo Dolls'], ['Wonderwall', 'Oasis'],
+  ['Wagon Wheel', 'Darius Rucker'], ['Hallelujah', 'Jeff Buckley'], ['Sweet Caroline', 'Neil Diamond'],
+  ['Brown Eyed Girl', 'Van Morrison'], ['Hotel California', 'Eagles'], ['Mr. Brightside', 'The Killers']];
+export const US_BAR_SONGS = [
+  ["Don't Stop Believin'", 'Journey'], ['Take Me Home, Country Roads', 'John Denver'], ['Sweet Home Alabama', 'Lynyrd Skynyrd'],
+  ['Piano Man', 'Billy Joel'], ["Free Fallin'", 'Tom Petty'], ['Tennessee Whiskey', 'Chris Stapleton'],
+  ['Friends in Low Places', 'Garth Brooks'], ["Livin' on a Prayer", 'Bon Jovi'], ['Fast Car', 'Tracy Chapman'], ['Jolene', 'Dolly Parton']];
+export const HOME_SONGS = 10;
+const isUS = (c) => /^(us|usa|u\.s\.a?\.?|united states( of america)?|america)$/i.test(String(c || '').trim());
 const SONGS_SYSTEM = `MYSET FACTORY · SONGS
 
-You suggest a starting song list for ONE live-music act's sample page on MySet, where the audience votes on what the act plays next. Answer with ONE JSON object and nothing else:
-{"genre":"","near":["",""],"theirs":[{"title":"","artist":""}],"songs":[{"title":"","artist":"","group":"main"}]}
+You read the place and the setlist of ONE live-music act for its sample page on MySet, where the audience votes on what the act plays next. Answer with ONE JSON object and nothing else:
+{"country":"","theirs":[{"title":"","artist":""}],"home":[{"title":"","artist":""}]}
 
-- genre: the act's main genre, from the FACTS (with its country or scene when the facts name one, like "Brazilian MPB" or "Irish trad"). When the FACTS name no genre, it is the most popular music of the PLACE's country, in that country's own language (an act in Thailand with no genre: "Thai pop"), unless the facts say the act sings in another language.
-- near: two neighbouring genres a crowd for that act would also enjoy, different from the main one and from each other.
-- songs: exactly 20, each a real, well-known song with its best-known performer:
-  · 10 with group "main": the most popular songs of the main genre (of that country or scene where the facts name one);
-  · 5 with group "near1": the most popular songs of near[0];
-  · 5 with group "near2": the most popular songs of near[1].
-- Songs a solo singer or a band could plausibly play live. No song twice; none by the act itself.
+- country: the country the act is based in, in English ("Thailand"), from the PLACE or the FACTS. "" when neither says it — never guess one from a name or a language.
 - theirs: every song the FOUNDER'S NOTES say the act plays (a pasted setlist), in the notes' order, at most 20, each with its best-known performer (the act's own name for a song of their own). [] when the notes list no songs. Never guess songs into it.
-- songs: none of the theirs songs again; the genre comes from theirs too when the facts name none.
+- home: when country is "" or the United States, []. Otherwise exactly ${HOME_SONGS}: the most classic bar songs of THAT country — the ones every bar crowd there sings along to and a solo singer with a guitar or a covers band plays there every night, in the language they are sung in there. Each a real, well-known song with its best-known performer. Not the act's genre, not dance or club music, none by the act itself, none of theirs again, no song twice.
 - Titles and performers exactly as they are commonly written, with no notes, years or quotes.`;
+const sig = (s) => `${clean(s.title).toLowerCase()}|${clean(s.artist).toLowerCase()}`;
 function checkSongs(o) {
   const why = [];
-  if (typeof o.genre !== 'string' || !o.genre.trim()) why.push('"genre" must be a non-empty string');
-  if (!Array.isArray(o.near) || o.near.length !== 2 || o.near.some((g) => typeof g !== 'string' || !g.trim())) why.push('"near" must be two genre names');
-  if (!Array.isArray(o.songs) || o.songs.some((s) => !isObj(s) || typeof s.title !== 'string' || !s.title.trim() || typeof s.artist !== 'string' || !s.artist.trim())) why.push('"songs" must be an array of {"title","artist","group"}');
-  if (o.theirs != null && (!Array.isArray(o.theirs) || o.theirs.length > 20 || o.theirs.some((s) => !isObj(s) || typeof s.title !== 'string' || !s.title.trim() || typeof s.artist !== 'string'))) why.push('"theirs" must be an array of at most 20 {"title","artist"}');
+  const list = (x) => Array.isArray(x) && x.every((s) => isObj(s) && typeof s.title === 'string' && s.title.trim() && typeof s.artist === 'string');
+  if (typeof o.country !== 'string') why.push('"country" must be a string, "" when unknown');
+  if (o.theirs != null && (!list(o.theirs) || o.theirs.length > 20)) why.push('"theirs" must be an array of at most 20 {"title","artist"}');
+  if (!list(o.home) || o.home.some((s) => !s.artist.trim())) why.push('"home" must be an array of {"title","artist"}');
   if (why.length) return { ok: false, why };
-  for (const [g, n] of Object.entries(SONG_GROUPS)) { const k = o.songs.filter((s) => s.group === g).length; if (k !== n) why.push(`${n} songs with group "${g}", not ${k}`); }
-  const sig = (s) => `${clean(s.title).toLowerCase()}|${clean(s.artist).toLowerCase()}`;
-  if (new Set(o.songs.map(sig)).size !== o.songs.length) why.push('no song twice');
+  const want = (!o.country.trim() || isUS(o.country)) ? 0 : HOME_SONGS;
+  if (o.home.length !== want) why.push(want ? `"home" must hold exactly ${want} songs of ${o.country}, not ${o.home.length}` : '"home" must be [] when the country is unknown or the United States');
+  if (new Set(o.home.map(sig)).size !== o.home.length) why.push('no song twice');
   return why.length ? { ok: false, why } : { ok: true, value: o };
 }
-/** Returns { genre, near:[a,b], songs:[{title, artist, group}] } — the act's own setlist
- *  from the notes first (group "theirs", 0169), then main, near1, near2 — or null when
- *  the facts and the notes name nothing to go on. */
+/** Returns { country, songs:[{title, artist, group}] } — the act's own setlist from the
+ *  notes first (group "theirs", 0169), then the world's bar classics ("world"), then ten of
+ *  the act's country ("home"; the American ten when that country is the US or unknown). */
 export async function suggestSongs(facts, ctx, { name = '', city = '', country = '', notes = '' } = {}) {
-  const use = (facts || []).filter((f) => ['genre', 'act_type', 'instrument', 'based_in', 'origin', 'language', 'cover_song', 'original_song'].includes(f.k));
-  if (!use.length && !country && !notes) return null;
-  const content = `ACT: ${name || '(no name)'}${[city, country].filter(Boolean).length ? `\nPLACE: ${[city, country].filter(Boolean).join(', ')}` : ''}`
-    + `\n\nFACTS:\n${use.map((f) => `- ${f.k}: ${f.v}`).join('\n') || '- (none beyond the place)'}` + notesBlock(notes);
-  const o = await askJSON({ call: 'songs', model: modelSmart(ctx), system: SONGS_SYSTEM, content, check: checkSongs, maxTokens: 4000, ctx });
-  const order = Object.keys(SONG_GROUPS);
+  const use = (facts || []).filter((f) => ['based_in', 'origin'].includes(f.k));
+  let o = { country: isUS(country) ? 'United States' : '', theirs: [], home: [] };
+  if (notes || (!isUS(country) && (country || use.length))) {
+    const content = `ACT: ${name || '(no name)'}${[city, country].filter(Boolean).length ? `\nPLACE: ${[city, country].filter(Boolean).join(', ')}` : ''}`
+      + `\n\nFACTS:\n${use.map((f) => `- ${f.k}: ${f.v}`).join('\n') || '- (none beyond the place)'}` + notesBlock(notes);
+    o = await askJSON({ call: 'songs', model: modelSmart(ctx), system: SONGS_SYSTEM, content, check: checkSongs, maxTokens: 4000, ctx });
+  }
+  const home = o.home.length ? o.home : US_BAR_SONGS.map(([title, artist]) => ({ title, artist }));
   const theirs = (o.theirs || []).map((s) => ({ title: clean(s.title, 80), artist: clean(s.artist, 60) || clean(name, 60), group: 'theirs' }));
-  return { genre: clean(o.genre, 60), near: o.near.map((g) => clean(g, 60)),
-    songs: [...theirs, ...o.songs.map((s) => ({ title: clean(s.title, 80), artist: clean(s.artist, 60), group: s.group }))
-      .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group))] };
+  const seen = new Set(theirs.map((s) => clean(s.title).toLowerCase()));
+  const add = (group) => (s) => { const t = clean(s.title, 80), k = t.toLowerCase(); if (seen.has(k)) return null; seen.add(k); return { title: t, artist: clean(s.artist, 60), group }; };
+  return { country: clean(o.home.length ? o.country : 'United States', 60),
+    songs: [...theirs, ...WORLD_BAR_SONGS.map(([title, artist]) => add('world')({ title, artist })), ...home.map(add('home'))].filter(Boolean) };
 }

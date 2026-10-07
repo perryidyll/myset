@@ -55,7 +55,7 @@ export const SAMPLE = (owner) => `sample_${owner}`;
 export const SAMPLE_SONGS_MAX = 40;
 const songsOf = (payload) => ((payload && payload.songs && Array.isArray(payload.songs.songs)) ? payload.songs.songs : [])
   .filter((g) => g && g.title).slice(0, SAMPLE_SONGS_MAX)
-  .map((g) => ({ title: clean(g.title, 80), artist: clean(g.artist, 60), group: ['theirs', 'main', 'near1', 'near2'].includes(g.group) ? g.group : 'main' }));
+  .map((g) => ({ title: clean(g.title, 80), artist: clean(g.artist, 60), group: ['theirs', 'world', 'home'].includes(g.group) ? g.group : 'home' }));
 export const ARCDOC = (owner) => `samplearc_${owner}`;
 export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 
@@ -394,7 +394,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       facts: payload.facts || null, provenance: payload.provenance || null,
       photos: kept && kept.roles ? kept.meta : photoMeta, quality: payload.quality || null, msgs: payload.msgs || {},
       supIds: (payload.supIds || []).slice(0, 12), by: payload.by === 'founder' ? 'founder' : 'factory',
-      ...(songsOf(payload).length ? { songs: { genre: clean(payload.songs.genre, 60), near: (payload.songs.near || []).map((g) => clean(g, 60)).slice(0, 2), songs: songsOf(payload) } } : {}),
+      ...(songsOf(payload).length ? { songs: { country: clean(payload.songs.country, 60), songs: songsOf(payload) } } : {}),
       usage: payload.usage || null, events: [{ t: Date.now(), e: 'built', m: payload.by || 'factory' }],
     });
     return true;
