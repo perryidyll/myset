@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-07 14:34 — 21e21b3 — sample-cover@fix/bar-classics (9 files since origin/main)
+**tl;dr:** CRM's Generate now suggests ten world bar classics (All of Me, Wonderwall, Wagon Wheel…) plus ten of the act's country; the American ten when the country is the US or unknown. No more genre guesses.
+**Other sessions:** _fai.mjs WORLD_BAR_SONGS / US_BAR_SONGS are fixed lists; suggestSongs returns {country, songs} with groups theirs/world/home (genre/near and main/near1/near2 are gone); no model call for US/unknown without notes. 0167 superseded by 0170.
+
 ### 2026-10-05 00:33 — f4e7dab — sample-cover@docs/0169-commits (0 files since origin/main)
 **tl;dr:** Decision 0169 now names the commits that shipped it (057bec0, f4e7dab).
 **Other sessions:** Docs only. Linktree links for generated profiles are gathered by hand in the founder's Chrome, never by the generator (robots.txt).
