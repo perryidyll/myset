@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-07 14:56 — fa9c189 — sample-cover@ux/sample-decks-every-visit (8 files since origin/main)
+**tl;dr:** A sample's Studio (artist and venue) now shows its welcome every time it opens, and each tab's tip deck the first time that tab is opened in the visit — no longer once per phone.
+**Other sessions:** studio.js / venue-studio.js: tipOnce + VISIT (in-memory Set) replace Tips.first for samples only; real accounts unchanged (once per phone); practice-round pr-* decks still once per phone. Decision 0171.
+
 ### 2026-10-07 14:34 — 21e21b3 — sample-cover@fix/bar-classics (9 files since origin/main)
 **tl;dr:** CRM's Generate now suggests ten world bar classics (All of Me, Wonderwall, Wagon Wheel…) plus ten of the act's country; the American ten when the country is the US or unknown. No more genre guesses.
 **Other sessions:** _fai.mjs WORLD_BAR_SONGS / US_BAR_SONGS are fixed lists; suggestSongs returns {country, songs} with groups theirs/world/home (genre/near and main/near1/near2 are gone); no model call for US/unknown without notes. 0167 superseded by 0170.
