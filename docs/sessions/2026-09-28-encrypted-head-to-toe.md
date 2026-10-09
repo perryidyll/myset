@@ -283,3 +283,14 @@ both sides added an import at the top of `_auth.mjs`, and both stay. Checked on 
 `verifyToken` still reads the artist list itself for `rev` and `dead` (0176 keeps the
 sign-in facts off the small copies), and `aslug_` / `arow_` hold nothing a person would
 call theirs, so they are not a sealed family.
+
+**Verified, on the final head.** After each merge, the suites nearest it: `test/seal.mjs`
+80, `test/sessionlife.mjs` 34, `test/activity.mjs` 23, `test/secret.mjs` 65,
+`test/storefail.mjs` 36, `test/foundations.mjs` 103, `test/accounts.mjs` 235,
+`test/contention.mjs` 34, `test/background.mjs` 31, `test/snapshots.mjs` 19,
+`test/lookups.mjs` 75, `test/cost.mjs` 33 — all 0 failing. Then the whole suite through
+`node tools/overview.mjs --tests` on `eaf4318`: 6,305 assertions, 0 failing, stamped in
+`test/.last-run.json`. The run before it, on `04e5163`, had failed on its last step alone
+— `test/keyfamilies.mjs` naming `fmgate` — which is what the one line in `FAMILIES`
+answers. **Read before the merge, after this push:** the PR's `suite` check on the new
+head, the rebuilt preview's `/api/health` by content, and its pages at phone width.
