@@ -10,6 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
+**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
+**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
 ### 2026-10-09 15:52 — ac8b93e — scale-p2-money@fix/refunds-and-stock (36 files since origin/main)
 **tl;dr:** Nothing new for a person: the refunds-and-merch-hold change (#238) now sits on today's main, ready to merge
 **Other sessions:** Restacked onto main e996865 (#227 b2dbfec + #150). money/02: refunds are w14, expired checkouts w15 (week one's w12/w13 kept); mhold in FAMILIES owner regex + keysFor/keysForVenue; moneyForShow keeps 0153's resume AND 0177's lostOf. Suite 6,466 ✓ exit 0.
