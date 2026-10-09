@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 08:35 — 92ad67a — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
+**tl;dr:** PR #150 (security slice C) is on main b2dbfec with five merges in and the founder's word to merge: the week-long session is decision 0199 (0jb) and the complete activity log 0200 (0jc) — 0172/0173 and 0hs/0ht were taken; fmgate joins the mirror's skip list; the rebuilt preview says MYSET_SECRET is already set (seal.secret true), so nothing is left for the founder to run
+**Other sessions:** Decisions 0199/0200 and INVARIANTS 0jb/0jc are taken on this branch, merging today. keysFor/keysForVenue: the activity log's head is read for its parts (logKeys) and is a namer, parts before head (0im). FAMILIES: sealkeys global, fmgate skip. After the merge every protected family is sealed on first write and the keyring sealkeys appears; readDoc/casDoc fail closed on a record that cannot be opened. x-myset-token rides back on no-store replies from guard(); both Studios' api() keep it.
+
 ### 2026-10-09 07:58 — 75bdcbb — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
 **tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
 **Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
