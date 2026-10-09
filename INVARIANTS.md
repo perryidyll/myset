@@ -1114,6 +1114,8 @@ If you are about to violate one, stop and say so rather than working around it.
    for exactly that reason. The quantity is bounded by affordability and hard-capped
    at 50 so a hand-made request cannot make a million-element array.
 
+0hu. **Play is one write: a vote that set off before its song started is collected by it.** `show.plays` counts every song started; Play and Play Top set `show.col[song]` to the new count in the same write that sets `nowPlaying`. A cast stamps each vote row with the `plays` it read (`[cost, paid, when, plays seen]`). A row whose stamp is lower than its song's mark is collected: `liveFans(fans, show)` leaves it out wherever the board is drawn — `buildBoard`, `buildMe`, the Studio's queue, the tally Play Top ranks — whichever side of the sweep it landed on, and whether or not the sweep won. Nothing is refunded. Only a stamped row can be collected this way: never a row from before the stamp existed, and never a vote bought for a song at checkout. The filter touches records already read, never the store, so the end of the night still files every vote once (0fq) and the night's totals still count it. Anything new that counts live votes calls `liveFans` first. Found by the 2026-10-02 audit's simulator: 1 to 13 votes a Play at 5,000 phones stayed on the song that had just started and later counted as a cheap request to hear it again. `test/playonewrite.mjs`. Decision `0147`.
+
 15e. **A studio code is half a credential; the page name is the other half.** The
    code door used to check only `getShow(DEFAULT_ARTIST).codeHash`, while `setCode`
    wrote into the CALLING artist's record — so every artist but the founder got a

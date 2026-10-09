@@ -104,6 +104,9 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** No change for a person: the crowded-room test now gives the same result twice on GitHub's runner too
 **Other sessions:** tools/roomsim.mjs flush() turns the event loop until test/blobs-fake.mjs stats.calls stops moving (max 64 turns a virtual ms); the fake counts every get/set in stats.calls. Seeded runs failed to repeat on Node 22 (CI) while they did on Node 26 (Mac).
 
+### 2026-10-03 02:05 — 412642c — scale-p2-play@fix/play-is-one-write (36 files since origin/main)
+**tl;dr:** Play is one write: a vote cast just before the artist presses Play, that lands just after, no longer stays on the song that just started (0147)
+**Other sessions:** STACKED on test/contention-sim (#218): merge that first. NEW RULE: anything that counts live votes from fan records calls liveFans(fans, show) first (INVARIANT 0hu). A vote row now has a FOURTH field (the plays its cast read); show.plays/show.col are written inside Play's mutateShow. _lib.mjs: normShow, chargeVotes, liveFan/liveFans above voteCounts — week one's readDoc change is a different region. test/blobs-fake.mjs gains __slowReads(ms, re).
 ### 2026-10-03 02:15 — 61229d0 — scale-p2@test/contention-sim (36 files since origin/main)
 **tl;dr:** No change for a person: the test run's temporary key log now starts on GitHub's Linux runner as well as on a Mac
 **Other sessions:** #218's suite check failed in 8 s on 'mktemp: too few X's'; test/run.sh now uses mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX".

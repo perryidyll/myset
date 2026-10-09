@@ -88,6 +88,9 @@ echo
 echo "── a vote stays on its song ──"
 node --import ./test/register.mjs test/votesstay.mjs
 echo
+echo "── Play is one write: a vote that lands after its song started (0147) ──"
+node --import ./test/register.mjs test/playonewrite.mjs
+echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs
 echo

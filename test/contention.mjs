@@ -87,12 +87,12 @@ const rush = room({ P: 5000, burst: 1000, burstSec: 20, play: true, oneSong: tru
 ok('the room ran', !rush.error && rush.unfinished === 0 && !rush.err, rush);
 ok('Play answered', rush.play && rush.play.code === 200, rush.play);
 ok('every vote got an answer: yes, or "that one is playing"', said(rush, 200) + said(rush, 409) === 1000, rush.vote);
-/* A KNOWN GAP, MEASURED RATHER THAN ASSERTED. A vote that read the show before
-   Play and landed after it stays on the song that just started. The audit counted
-   1 to 13 a Play at this size. The fix is its own change (the show remembers when
-   it collected, and older votes are ignored); when it lands this line becomes
-   `ok(…, rush.strandedOnPlayedSong === 0)`. */
-console.log(`  · known gap: ${rush.strandedOnPlayedSong} vote(s) left on the song that just started`);
+/* Decision 0147: a vote that read the show before Play and landed after it is
+   collected by Play's own write. Before it, the audit counted 1 to 13 of these a
+   Play at this size, each left on the song that had just started. The rows may
+   still be in the files; the board reads them through liveFans and ignores them. */
+ok('no vote is left on the song that just started (0147)', rush.strandedOnPlayedSong === 0, rush);
+console.log(`    ${rush.rowsLeftInFiles} late row(s) still in the files, none counted`);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
