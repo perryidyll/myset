@@ -36,6 +36,8 @@ Done on production before the fix shipped, through the `bizSave` action with the
 
 Read back and verified: the book went from 69 records to 74, and all five keys now resolve. If his real Anantara figures differed from September's, those two nights are his to re-type — there is no source that can tell us.
 
+Then a second pass, after he was told: the restored Crystal Day rule carried no pay figure, so those three nights read with their 2h 40m back and **no money** — which is exactly what they showed before the delete, and not what they were worth. Every one of his other sixteen Crystal Day records says $60. He was shown that and asked, and on his word `pay` was set to `6000` on all three, with nothing else touched. Read back: 74 records, the three at $60, and no record anywhere in the book with a blank pay. That $60 is his decision, not a recovery — no snapshot knows what those nights paid.
+
 ## The fix
 
 `pruneRules(doc, events, filed)` takes a third argument: every `<eventId>@<date>` key the history index carries. Before deleting a rule it copies that rule onto each of those nights that has no record of its own, so the night keeps its figures as its **own** record — which nothing prunes — and only then drops the rule. A record the artist typed is never overwritten. A night never played is never invented.
