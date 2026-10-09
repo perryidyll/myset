@@ -206,10 +206,35 @@ export function normGig(raw, limits, prev) {
   return { gig: out };
 }
 
-/** Drop rule defaults whose gig is no longer on the calendar. Returns how many went. */
-export function pruneRules(doc, events) {
+/* DROP RULE DEFAULTS WHOSE GIG IS NO LONGER ON THE CALENDAR — BUT NEVER OFF A
+   NIGHT THAT WAS ALREADY PLAYED (decision 0198, INVARIANT 0ja).
+
+   A rule is typed once on the gig form and every night of the run with no record
+   of its own reads its pay, its splits and its four kinds of time from there,
+   past nights included (D5). So dropping the rule with the gig used to RE-PRICE
+   THE PAST: on 2026-10-07 three repeating gigs that had stopped running were
+   deleted, and five nights already played and filed — three Crystal Day, two
+   Anantara — went to no pay and no hours in the Money tab, because the only
+   record of what they were worth was the rule. Deleting a gig cancels the nights
+   to come. It never changes a night that happened.
+
+   So the rule is written onto every night already FILED under that gig that has no
+   record of its own. It becomes that night's own record, which nothing prunes, and
+   only then does the rule go. `filed` is every `<eventId>@<date>` key the history
+   index carries. A caller with no index in hand passes none and NOTHING is pruned:
+   an orphan rule left standing is a figure still on the page, and that is the safe
+   way to fail. Returns how many rules went. */
+export function pruneRules(doc, events, filed) {
+  if (!Array.isArray(filed)) return 0;
   const keep = new Set(((events && events.list) || []).map((e) => e && e.id).filter(Boolean));
-  let gone = 0;
-  for (const id of Object.keys(obj(doc.rules))) if (!keep.has(id)) { delete doc.rules[id]; gone++; }
-  return gone;
+  const dead = Object.keys(obj(doc.rules)).filter((id) => !keep.has(id));
+  if (!dead.length) return 0;
+  const dying = new Set(dead), now = Date.now();
+  for (const raw of filed) {
+    const k = String(raw == null ? '' : raw), at = k.indexOf('@');
+    if (at <= 0 || !dying.has(k.slice(0, at)) || !keyOk(k) || k in doc.gigs) continue;
+    doc.gigs[k] = { ...doc.rules[k.slice(0, at)], at: now };
+  }
+  for (const id of dead) delete doc.rules[id];
+  return dead.length;
 }
