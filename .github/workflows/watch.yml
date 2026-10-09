@@ -7,6 +7,7 @@
 #     ringing, no payment is long owed, the error log is quiet and the inside watch
 #     itself ran in the last half hour
 #   - https://myset.vip/            — the front door, by content, not by status
+#   - https://myset.vip/version.json — which commit production runs (decision 0196)
 # Three tries, forty seconds apart, before it calls anything down.
 #
 # It speaks only when the answer CHANGES. Down: it opens an issue labelled `uptime`,
@@ -17,14 +18,26 @@
 #
 # GitHub starts scheduled workflows late when it is busy — five to thirty minutes
 # is normal — so this is a backstop, not a stopwatch.
+#
+# It also RELEASES A HELD BUILD (decision 0196): a merge while a show was live was not
+# built (tools/hold.sh); when production is behind main and nobody is live, this starts
+# the build through the site's build hook, at most once every half hour.
 name: watch
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'yes = start the held production build now, whoever is live (the valve of decision 0196)'
+        required: false
+        default: 'no'
+        type: choice
+        options: ['no', 'yes']
 permissions:
   contents: read
   issues: write
+  actions: write     # LAST_RELEASE_AT, the repository variable that spaces releases (0196)
 concurrency:
   group: watch
   cancel-in-progress: false
@@ -84,3 +97,31 @@ jobs:
           else
             echo "no change (ok=$OK, open issue: ${open:-none})"
           fi
+      # THE HELD BUILD IS RELEASED (decision 0196). A merge while a show is live is
+      # not built (tools/hold.sh, Netlify's ignore command). Every five minutes this
+      # asks: is production behind main, and is nobody live? Then it starts the
+      # build through the site's build hook, which Netlify runs without asking the
+      # hold again. At most one release every half hour, so a build that fails
+      # cannot be retried every five minutes on credits. `release=yes` on a manual
+      # run releases at once — the valve for a hotfix during a show.
+      - name: Release a held production build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+          FORCE: ${{ inputs.release }}
+        run: |
+          [ -n "$HOOK" ] || { echo "no NETLIFY_BUILD_HOOK secret; nothing to release"; exit 0; }
+          main=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq .commit.sha)
+          prod=$(curl -sS -m 20 'https://myset.vip/version.json' 2>/dev/null | jq -r '.commit // empty' 2>/dev/null || true)
+          [ -n "$prod" ] || { echo "production does not say which commit it runs (no version.json yet); not releasing"; exit 0; }
+          [ "$prod" != "$main" ] || { echo "production is main ($main); nothing held"; exit 0; }
+          if [ "$FORCE" != "yes" ]; then
+            live=$(curl -sS -m 20 'https://myset.vip/api/live' 2>/dev/null) || { echo "could not ask who is live; not releasing"; exit 0; }
+            echo "$live" | jq -e '.live == 0 and .sure == true' >/dev/null || { echo "a show is live, or the count is not sure: $live"; exit 0; }
+            last=$(gh variable get LAST_RELEASE_AT -R "$GITHUB_REPOSITORY" 2>/dev/null || echo 0)
+            now=$(date +%s)
+            [ $((now - ${last:-0})) -ge 1800 ] || { echo "released $((now - last)) s ago; the build is on its way or failed — not again yet"; exit 0; }
+          fi
+          curl -sS -m 20 -X POST -d '{}' "$HOOK" >/dev/null
+          gh variable set LAST_RELEASE_AT -R "$GITHUB_REPOSITORY" --body "$(date +%s)" || true
+          echo "released: production ran $prod, main is $main"

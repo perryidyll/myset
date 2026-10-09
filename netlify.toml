@@ -3,6 +3,12 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+  # Production says which commit it runs: /version.json, written at build (decision 0196).
+  command = "sh ./tools/version.sh"
+  # No deploy lands on a live room: exit 0 holds a production build while a show is on;
+  # the outside watch releases it through the build hook once the room is empty (0196).
+  # Previews and branch deploys are never held. HOLD_DEPLOYS=off is the valve.
+  ignore = "sh ./tools/hold.sh"
 
 [functions]
   node_bundler = "esbuild"

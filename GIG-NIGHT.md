@@ -56,7 +56,7 @@ export PATH="$HOME/.local/node/bin:$PATH" && netlify env:set STRIPE_SECRET_KEY "
 1. Get the key at <https://dashboard.stripe.com/apikeys> ("Secret key", starts `sk_live_…`).
 2. Netlify → project **mysetvip** → Site configuration → Environment variables →
    Add `STRIPE_SECRET_KEY`.
-3. Trigger a redeploy.
+3. Trigger a redeploy. A redeploy during a live show is held by design (decision 0196) and lands once the room empties; if it truly cannot wait, run the `watch` workflow by hand on GitHub with `release=yes`.
 
 Then the buttons go live:
 - **Extra votes** — $3 → 5 votes, $7 → 15 votes (verified with Stripe, then credited automatically when the buyer lands back on the voting page)

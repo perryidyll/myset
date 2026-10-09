@@ -128,6 +128,14 @@ width. Several defects a month are invisible to the tests and obvious on screen.
 are blocked, and the only way in is a pull request — with zero required approvals, so the
 person shipping merges their own. Merging **is** the production deploy.
 
+**A merge while a show is live is built later, not now** (decision 0196): Netlify asks
+`/api/live` before every production build and holds the build while any artist is on
+stage; the outside watch starts it within about five minutes of the last show ending.
+Previews are never held. For a hotfix that cannot wait, the founder runs the `watch`
+workflow by hand with `release=yes` (Actions → watch → Run workflow) — never a session on
+its own. **What production runs** is at https://myset.vip/version.json (the commit, written
+by the build itself); check it before saying anything is live.
+
 ```bash
 sh test/run.sh
 git switch -c <area>/<what-changed>          # in a worktree off origin/main
@@ -138,6 +146,7 @@ git push -u origin HEAD
 gh pr create --fill                           # Netlify posts a deploy preview; the suite runs as a check
 gh pr checks <n> --watch                      # wait for `suite` to pass
 gh pr merge <n> --squash --subject "… (#<n>)" # this is the deploy; keep the PR number
+curl -s https://myset.vip/version.json          # live when this shows the squash SHA (held while a show is live, 0196)
 git push origin --delete <area>/<what-changed>
 ```
 
