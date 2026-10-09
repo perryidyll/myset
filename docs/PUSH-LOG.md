@@ -10,6 +10,14 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 16:16 — d3a59e4 — scale-p2-net@fix/net-of-lost-readers (12 files since origin/main)
+**tl;dr:** Nothing new for a person: the last three money readers net of refunds (#240) now sit on today's main, ready to merge
+**Other sessions:** Restacked onto main 28ff11b (#239). Conflicts: imports in _lifecycle/stage/_warehouse (kept sameNightResume, readPaidAll); _warehouse packs = readPaidAll(...) filtered !tipGone; INVARIANT 0iq = the 0179 version (a superset of main's).
+
+### 2026-10-09 15:20 — 7f7c7c4 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (90 files since origin/main)
+**tl;dr:** The three restored Crystal Day nights now carry $60, on the artist's word — decision 0198 and the session note say so
+**Other sessions:** Doc-only follow-up on the same branch as the pruneRules fix. The repaired nights are 69→74 records plus pay=6000 on gimj34ujp@2026-09-15/-09-29/-10-06; that $60 is the artist's decision, NOT a restoration — no snapshot holds the deleted rule's pay. Live book now has no record with a blank pay.
+
 ### 2026-10-09 09:27 — 712a091 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to today's main a third time (974353e: abuse ceilings 0189/0190, the song list once then tallies 0192); suite 6,682 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257 (setCode reads the list, 0176's deferred line, plus the slice C paperwork): still NOT docs only — merge without [skip ci]. The push log is the one collision each time; every entry from both sides kept, newest first.
@@ -17,6 +25,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-09 09:22 — d6478d0 — myset@claude/myset-encryption-security-460mph (35 files since origin/main)
 **tl;dr:** Brought up to today's main a second time (28ff11b: refunds and chargebacks heard, merch held while the buyer pays 0177/0178; money net of refunds, stock net of checkouts 0194/0195); suite 6,630 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork) is still NOT docs only: merge without [skip ci]. Main is moving every few minutes; the push log is the one collision each time, resolved by keeping every entry from both sides, newest first.
+
+### 2026-10-03 04:22 — ca1c555 — scale-p2-net@fix/net-of-lost-readers (89 files since origin/main)
+**tl;dr:** A refunded tip or pack no longer counts in the discard warning, the Money tab's all-time tips or the sheet's counts (0179)
+**Other sessions:** STACKED on week one's #239. _lib.mjs exports netOf(row) (amount - lost/100) and tipGone(row); every reader that sums or counts money rows uses them (INVARIANT 0iq). Decisions 0145-0156 and 0173-0179 are now all used by c8fc2f.
 
 ### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
 **tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
@@ -104,6 +116,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-09 15:05 — 8cc30bb — song-cost@ux/song-cost-free-votes (27 files since origin/main)
 **tl;dr:** Artists can set how many votes a song costs (Settings → Votes per song, default 1); a fresh phone now gets 1 free vote, not 3; each setlist row has one '…' that opens the Edit/Hide/Delete sheet.
 **Other sessions:** Decision 0172. show.songCost (1–20) gated like replayCost; costOf() returns it for unplayed songs. DEFAULT_FREE_CREDITS=1, VOTE_DEFAULTS_VERSION=3 migrates stored 3 (and v1's 5) to 1. vote.html: isReplay() reads played[], never cost>1. Any test that casts more than one vote must set freeCredits itself. Setlist row: .songmore + hidden .rowacts; window.rowMenu(btn) opens holdSheet.
+
+### 2026-10-09 15:00 — 7a27f36 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (40 files since origin/main)
+**tl;dr:** Deleting a repeating gig no longer wipes the pay and hours off nights you already played — five of the founder's nights were showing $0 and no time after Wednesday's tidy-up, and have been restored (0198)
+**Other sessions:** pruneRules now takes a third argument: the <eventId>@<date> keys from the history index. It writes a dying rule onto every night already filed under that gig that has no record of its own, THEN deletes the rule. Pass it nothing — including a sealed index that would not open (0hb) — and it prunes NOTHING — any new caller must read histidx_<aid> (eventDelete and bizSave's orphan sweep both do). INVARIANT 0ja.
 
 ### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
 **tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record

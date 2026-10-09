@@ -579,13 +579,20 @@ async function handleEvents(aid, action, body) {
 
   if (action === 'eventDelete') {
     await mutateEvents(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
-    const events = await readEvents(aid);
+    const [events, hidx] = await Promise.all([readEvents(aid), readDoc(KEY.histIdx(aid), { shows: [] })]);
+    /* Every night already filed under a gig, so the rule can be kept on the ones that
+       have nothing else saying what they were worth (0198). A sealed index that would
+       not open reads as EMPTY (0hb) — that is no index, not a gig with no nights, so
+       it prunes nothing rather than re-pricing the past. A read that failed threw. */
+    const filed = hidx.sealed ? null
+      : (((hidx.data && hidx.data.shows) || [])).map((r) => r && r.key).filter(Boolean);
     await Promise.all([reindexCities(aid, events), reindexSched(aid, events),
-      /* The gig's default pay/costs go with it (0065). Only when a book exists —
-         `at` is 0 on the empty document, so an artist who never opened the
-         dashboard costs no write here. Nights already logged under the gig keep
-         their own records: a record is the artist's, a rule was the gig's. */
-      mutateBiz(aid, (d) => (d.at ? pruneRules(d, events) > 0 : false)).catch(() => {})]);
+      /* The gig's default pay/costs go with it (0065) — but a night already PLAYED
+         under it keeps those figures as its own record first, because the rule was
+         the only thing pricing it (0198). Only when a book exists — `at` is 0 on
+         the empty document, so an artist who never opened the dashboard costs no
+         write here. */
+      mutateBiz(aid, (d) => (d.at ? pruneRules(d, events, filed) > 0 : false)).catch(() => {})]);
     return json({ ok: true, events: events.list });
   }
 
@@ -1655,9 +1662,14 @@ async function handleBiz(aid, action, body) {
     const rule = body.rule != null ? String(body.rule).slice(0, 24) : null;
     const key = rule === null ? String(body.key || '') : null;
     if (rule === null && !keyOk(key)) return bad('bad key');
-    let events = null;
+    let events = null, filed = null;
     if (rule !== null) {
-      events = await readEvents(aid);
+      /* The index comes along because the orphan sweep below needs it: a rule it
+         drops is written onto the nights already played under it first (0198). */
+      const [ev, hidx] = await Promise.all([readEvents(aid), readDoc(KEY.histIdx(aid), { shows: [] })]);
+      events = ev;
+      filed = hidx.sealed ? null
+        : (((hidx.data && hidx.data.shows) || [])).map((r) => r && r.key).filter(Boolean);
       if (!events.list.some((e) => e && e.id === rule)) return bad('That gig isn’t on your calendar', 400);
     }
     let res = null, full = false;
@@ -1680,8 +1692,9 @@ async function handleBiz(aid, action, body) {
         if (rule !== null && !(id in map) && Object.keys(map).length >= MAX_RULES) { full = true; return false; }
         map[id] = res.gig;
       }
-      // orphans go whenever a rule is touched (0065) — the calendar is in hand
-      if (rule !== null) pruneRules(d, events);
+      // orphans go whenever a rule is touched (0065) — the calendar is in hand,
+      // and each one is kept on its played nights on the way out (0198)
+      if (rule !== null) pruneRules(d, events, filed);
       return true;
     });
     if (res && res.err) return bad(res.err, res.status || 400);
