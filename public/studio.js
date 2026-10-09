@@ -2340,9 +2340,10 @@ function render(){
     ${capNote(s)}
     <p class="muted" style="font-size:12px;padding:8px 20px 0">
       ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
-      <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+      ${/* the same night resumes at the free cap; an older one would be refused, so it is not offered (0156) */
+        freeCap()&&(s.gigCount||0)>=freeCap()&&!s.resumeSameNight?'':`<a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
          style="color:var(--accent);font-weight:700">Resume it instead</a>
-      — use that if you ended it by mistake.</p>`
+      — use that if you ended it by mistake.`}</p>`
     :`${SAMPLE||firstGig()?practiceCard(true):''}${todayCard(s)}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
       <button class="big bigplay" onclick="newShowAsk()">
@@ -2385,6 +2386,7 @@ function render(){
       <div class="stage-song-actions"><button class="chartbtn" data-act="lyrics" data-id="${esc(now.id)}"><svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>Lyrics</button>
       <button class="chartbtn" data-act="autochords" data-id="${esc(now.id)}">♬ Auto chords</button>
       <button class="chartbtn" data-act="chart" data-id="${esc(now.id)}">☰ My chart</button></div></div>`:''}
+    ${owedPanel()}
     ${asksPanel()}
     ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}
 
@@ -2557,6 +2559,7 @@ function render(){
         <div class="c"><b class="mono">$${(T.amount||0).toFixed(2)}</b><span>${T.count||0} tip${T.count===1?'':'s'}</span></div>
       </div>
       ${M.source==='stripe-unreachable'?`<p class="muted" style="font-size:12px;padding:12px 18px 0">Couldn’t reach Stripe for this one — the money figures may be stale.</p>`:''}
+      ${M.source==='stripe-partial'?`<p class="muted" style="font-size:12px;padding:12px 18px 0">Stripe hasn’t finished counting this night’s payments, so these figures are short. Re-check carries on from where it stopped.</p>`:''}
       ${M.unattributed?`<p class="muted" style="font-size:12px;padding:12px 18px 0">$${M.unattributed.toFixed(2)} came in during this window but isn’t tagged to a show — it predates show tracking.</p>`:''}
       ${T.recent&&T.recent.length?`<div class="sec"><span class="kick">Tips</span></div>
         ${T.recent.map(t=>`<div class="tip"><span>$${Number(t.amount).toFixed(2)}${t.note?' · “'+esc(t.note)+'”':''}</span><span class="muted">${dstamp(t.at)}</span></div>`).join('')}`:''}
@@ -2593,6 +2596,7 @@ function render(){
           <div class="c"><b class="mono">${L.totalVotes||0}</b><span>Votes</span></div>
           <div class="c"><b class="mono acc">$${(L.gross||0).toFixed(2)}</b><span>Taken</span></div>
         </div>
+        ${L.partial?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Still counting: Stripe had more payments than it could answer in time, so this is part of the night. Open Money again for the rest.</p>`:''}
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Start the next one from the Live tab when the gig begins.':'Tonight gets filed away when you end the show or start a new one.'}</p>
         ${biz&&done&&window.Money?bizSafe(()=>Money.tonight(L)):''}
@@ -3351,6 +3355,19 @@ function pitchPanel(){
       </div>`;}).join('')}</div>`;
 }
 
+/* A "Decline + refund" whose votes have not all gone back yet (decision 0155). The
+   song is hidden, so its own row and its Decline button are gone; this is the button
+   that finishes it. The server runs the same decline again, which can only give back
+   what has not been given back yet. */
+function owedPanel(){
+  const owed=(D&&D.owed)||[];
+  if(!owed.length) return '';
+  return `<div class="askpanel rise">
+    <div class="ah"><b>Votes still owed back</b><span>The refund didn’t finish</span></div>
+    ${owed.map(o=>`<div class="arow"><div class="m"><div class="t">${esc(o.title||'A declined song')}</div>
+      <div class="s">Declined · its votes haven’t all gone back to the room yet</div></div>
+      <button class="act pri" onclick="act('declineSong',{song:'${o.id}'})">Finish the refund</button></div>`).join('')}</div>`;
+}
 function asksPanel(){
   const all=(D&&D.asks)||[];
   if(!all.length) return '';

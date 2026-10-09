@@ -3,7 +3,7 @@
    tax on reads that never touch money. stripeForRow loads it when a pledge is
    actually captured or cancelled (speed pass two, decision 0048). */
 import { casDoc, readDoc, KEY, creditsUsed, isUnlimited, mutateFan, mutateMeta,
-         grantPaidSongVotes, cleanFanId, getShow } from './_lib.mjs';
+         grantPaidSongVotes, cleanFanId, getShow, mutateShow, refundSongVotes } from './_lib.mjs';
 import { notify } from './_push.mjs';
 import { scope } from './_connect.mjs';
 
@@ -22,7 +22,14 @@ import { scope } from './_connect.mjs';
    vote-cost path remains available without a card — INVARIANT 0w. */
 
 export const MAX_KEPT = 80;          // total rows retained, oldest resolved first
-export const MAX_PENDING = 30;       // how many can be waiting at once
+export const MAX_PENDING = 30;       // how many song and birthday requests can be waiting at once
+/* A FREE MOOD TAP NEVER TAKES A PAID REQUEST'S PLACE (decision 0156, INVARIANT 0il).
+   Vibes shared the thirty waiting places with song requests and birthdays, so thirty
+   free taps in a night shut the door on a fan with votes — or a card authorised — to
+   spend. Vibes are counted on their own now, against their own MAX_VIBES. Together the
+   two stay under MAX_KEPT, so the list stays bounded and `trim` always has room for
+   the oldest answered rows to make way. */
+export const MAX_VIBES = 30;         // how many mood votes can be waiting at once, on their own
 export const VIBE_OPTIONS = ['Energetic','Chill','Romantic','Upbeat','Melancholy','Funky','Acoustic','Rowdy','Nostalgic','Dark','Groovy','Mellow','Anthemic','Intimate','Hypnotic','Uplifting','Soulful','Wild','Dreamy','Heavy'];
 const KINDS = new Set(['song', 'birthday', 'vibe']);
 const OPEN = 'pending';
@@ -107,8 +114,9 @@ export async function createRequest(aid, show, fanId, body, { verified = false }
     return { ok: false, error: kind === 'song'
       ? 'You’ve already got a request in — wait for that one first'
       : 'That shout-out is already in', status: 409 };
-  if (existing.list.filter((r) => r.status === OPEN && r.showId === show.showId).length >= MAX_PENDING)
-    return { ok: false, error: 'There are a lot of requests in already — try again in a bit', status: 429 };
+  const waiting = existing.list.filter((r) => r.status === OPEN && r.showId === show.showId && (r.kind === 'vibe') === (kind === 'vibe')).length;
+  if (waiting >= (kind === 'vibe' ? MAX_VIBES : MAX_PENDING))
+    return { ok: false, error: kind === 'vibe' ? 'Lots of vibes in already — try again in a bit' : 'There are a lot of requests in already — try again in a bit', status: 429 };
 
   const cost = cfg.cost;
   const free = isUnlimited(fanId, show);
@@ -371,6 +379,52 @@ export async function declineRequestsForSong(aid, songId, show) {
     r.kind === 'song' && r.songId === songId && r.status === 'added');
   for (const r of rows) await resolveRequest(aid, r.id, 'declined', show);
   return rows.length;
+}
+
+/* A REFUND OWED IS WRITTEN DOWN BEFORE IT IS PAID (decision 0155, INVARIANT 0ik).
+   "Decline + refund" hides the song and records `show.refundsOwed[song]` — the night
+   it belongs to and the song's title — in that same write. Then the votes go back
+   (`refundSongVotes`) and the song's accepted requests are declined
+   (`declineRequestsForSong`); only when both have run is the mark taken off. Until
+   then the Studio shows it (Finish the refund), and an End and the next fresh start
+   finish it on their own, the fresh start before it wipes the fans.
+
+   It can never refund twice: a vote is taken off its fan in the same write that gives
+   its credit back, so a second pass finds nothing on that fan; a request already
+   declined is not declined again. And it can never leave a fan with nothing to retry:
+   the mark stays until the refund has run whole. A mark from another night is
+   dropped: its fans were carried into a new night, and there is nothing left to give
+   back to. Returns { ok, given, owed } — `owed` false when there was nothing to do. */
+export async function settleOwedRefund(aid, songId) {
+  const show = await getShow(aid);
+  const mark = (show.refundsOwed || {})[songId];
+  if (!mark) return { ok: true, given: [], owed: false };
+  const drop = () => mutateShow(aid, (s) => {
+    if (!s.refundsOwed || !s.refundsOwed[songId] || s.refundsOwed[songId].show !== mark.show) return false;
+    delete s.refundsOwed[songId]; return true;
+  });
+  // a mark left behind after a refund that DID run is harmless: the next pass finds nothing and takes it off
+  if (mark.show !== show.showId) { await drop().catch(() => {}); return { ok: true, given: [], owed: false }; }
+  let given;
+  try {
+    given = await refundSongVotes(aid, songId, show);
+    await declineRequestsForSong(aid, songId, show);
+  } catch (e) {
+    console.error('refund still owed', aid, songId, e && e.message);
+    return { ok: false, given: [], owed: true };
+  }
+  await drop().catch(() => {});
+  return { ok: true, given, owed: true };
+}
+/** Every refund still owed for tonight, finished where it can be (End, a fresh start). */
+export async function settleOwedRefunds(aid) {
+  const show = await getShow(aid);
+  const out = { settled: 0, left: [] };
+  for (const songId of Object.keys(show.refundsOwed || {})) {
+    const r = await settleOwedRefund(aid, songId).catch(() => ({ ok: false }));
+    if (r.ok) out.settled += r.owed ? 1 : 0; else out.left.push(songId);
+  }
+  return out;
 }
 
 /** An unplayed request is never charged just because the show ended. Release every

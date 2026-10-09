@@ -290,10 +290,19 @@ eq('one past the cap is refused', overCap.status, 402);
 ok('and names the way on, with no reset promised', /Bar Star/.test(overCap.error || '') && !/resets/i.test(overCap.error || ''), overCap.error);
 
 /* newShow leaves the show LIVE, and setting live when already live is a no-op —
-   correctly uncapped. End it first, then the Start button is the capped path. */
+   correctly uncapped. End it first, then the Start button is the capped path —
+   except for the night just ended: undoing an End tapped by mistake is the same
+   night, not another show (decision 0156). A night begun over twelve hours ago is
+   not, and Start meets the cap. */
 await A(TA4, 'status', { status: 'ended' });
+const sameNight = await A(TA4, 'status', { status: 'live' });
+ok('resuming the night just ended is not another show', sameNight.ok, sameNight);
+await A(TA4, 'status', { status: 'ended' });
+const { mutateShow: mutS, SAME_NIGHT_MS } = await import('../netlify/functions/_lib.mjs');
+await mutS(ana.artistId, (s) => { s.startedAt = Date.now() - SAME_NIGHT_MS - 60e3; return true; });
 const goLive = await A(TA4, 'status', { status: 'live' });
 eq('and Start the show is capped too, not just New show', goLive.status, 402);
+await mutS(ana.artistId, (s) => { s.startedAt = Date.now(); return true; });
 
 /* Nothing may stop a night that is already running — INVARIANT 16. */
 const sAna2 = await stA(TA4);

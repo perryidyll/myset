@@ -52,6 +52,14 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 04:09 — eba38db — scale-p2@test/contention-sim (54 files since origin/main)
 **tl;dr:** No change for a person: the crowded-room test no longer runs slower on GitHub's machine than on a Mac
 **Other sessions:** tools/roomsim.mjs registers test/hooks.mjs's redirect() through module.registerHooks when present (Node >= 22.15), falling back to register(); test/hooks.mjs exports redirect(spec).
+### 2026-10-03 04:06 — 7c496a0 — scale-p2-life@fix/show-lifecycle (105 files since origin/main)
+**tl;dr:** A failed Decline + refund can no longer finish itself a moment later, after the artist has shown the song again (0155)
+**Other sessions:** refundSongVotes now awaits Promise.allSettled over the twelve fan files and rethrows the first failure; test/refundowed.mjs has a one-file-fails, one-file-slow section. Other Promise.all-over-shards writers (dropSongVotes, consumePlayedVotes) have the same shape — not changed tonight.
+
+### 2026-10-03 03:08 — db2f143 — scale-p2-life@fix/show-lifecycle (83 files since origin/main)
+**tl;dr:** Tapping End stops the room at once and the night is priced after, on a clock; a count Stripe could not finish says so; Decline + refund can be finished if it fails; vibes stop blocking paid requests; an accidental End on the tenth free show can be undone (0153-0156)
+**Other sessions:** STACKED on #231. money.source may be 'stripe-partial' (treat only 'stripe' as known). Start/End no longer write gigsched; registercron's walkLive fills gigsched.live/regdirty (up to 300 a ring) — never re-add a shared write to start/end. show.refundsOwed + settleOwedRefund. MAX_VIBES separate. sameNightResume narrows 0120 (founder card resume-at-cap). No new blob keys.
+
 ### 2026-10-03 03:05 — b9c9680 — scale-p2-fans@perf/fan-files (60 files since origin/main)
 **tl;dr:** Votes in a packed room write about a quarter fewer bytes; one network can bring about 200 new phones into a show with free votes (the founder's number still pending); the room's head count is who is still here (0148, 0149)
 **Other sessions:** STACKED on #226. RULE (0149): anything that marks a phone present (seenShow) goes through settleFree. markPresence body rewritten (optional now, returns record|null; week one's PRESENCE_TRIES goes in as mutateFan's 5th arg). New _lib exports NEW_DEVICES_PER_NETWORK=200, NET_QUOTA, settleFree, freeView, freeVerdict, presenceCurrent, PRESENCE_WINDOW_MS (30 min), RECEIPTS_KEPT 20, RECEIPT_MS 30 min. No new blob keys. Known gap: _requests.mjs does not apply the cap.

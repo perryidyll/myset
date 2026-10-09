@@ -106,6 +106,9 @@ echo
 echo "── paid-vote attribution and artist decline/refund ──"
 node --import ./test/register.mjs test/decline.mjs
 echo
+echo "── a refund owed is written down before it is paid (0155) ──"
+node --import ./test/register.mjs test/refundowed.mjs
+echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
 echo
@@ -145,6 +148,9 @@ echo
 echo "── the free plan's limits ──"
 node --import ./test/register.mjs test/limits.mjs
 echo
+echo "── free vibes keep their own places; the same night resumes at the cap (0156) ──"
+node --import ./test/register.mjs test/vibesandresume.mjs
+echo
 echo "── verifying an artist automatically ──"
 node --import ./test/register.mjs test/autoverify.mjs
 echo
@@ -154,6 +160,9 @@ echo
 echo "── shows that start and end themselves ──"
 node --import ./test/register.mjs test/autoshow.mjs
 echo
+echo "── one live mark per artist: no start or end writes a shared document (0154) ──"
+node --import ./test/register.mjs test/livewalk.mjs
+echo
 echo "── where a night happened ──"
 node --import ./test/register.mjs test/place.mjs
 echo
@@ -162,6 +171,9 @@ node --import ./test/register.mjs test/histname.mjs
 echo
 echo "── a tip after the show is still that night's money ──"
 node --import ./test/register.mjs test/latetips.mjs
+echo
+echo "── the room stops first; the night is priced after, on a clock (0153) ──"
+node --import ./test/register.mjs test/endfirst.mjs
 echo
 echo "── the first gig: the sign, the count, the morning-after note ──"
 node --import ./test/register.mjs test/firstgig.mjs
