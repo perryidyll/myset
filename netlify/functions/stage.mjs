@@ -115,7 +115,10 @@ export async function stagePayload(aid, seat) {
        only while the room is live, like every other refund affordance. The Live tab
        offers "Finish the refund" for each. */
     owed: live ? Object.entries(show.refundsOwed || {}).filter(([, m]) => m && m.show === show.showId)
-      .map(([id, m]) => ({ id, title: m.title || ((show.songs || []).find((x) => x.id === id) || {}).title || '' })) : [],
+      .map(([id, m]) => ({ id, title: m.title || ((show.songs || []).find((x) => x.id === id) || {}).title || '' }))
+      /* and declined requests whose votes are still owed (0202) — tonight's, finished by askDecline */
+      .concat((reqs.list || []).filter((r) => r && r.status === 'declined' && r.owed && r.showId === show.showId)
+        .map((r) => ({ id: r.id, ask: true, title: r.title || '' }))) : [],
     songs: (() => {
       const on = new Set(playable(show).songs.map((x) => x.id));
       /* `votable` is the server's own answer to "could the room choose this right
