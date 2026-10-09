@@ -599,8 +599,12 @@ html[data-theme=dark] .lyr-st:nth-child(even){background:rgba(120,120,128,.24)}
 }
 
 /* vote button */
-.vb{flex:0 0 auto;min-width:74px;height:40px;padding:0 16px;border-radius:var(--pill);
-  font-size:14.5px;font-weight:600;letter-spacing:-.01em;
+/* The button and its price stack in one column (decision 0172): the column centres in
+   the row, so the button sits a little above the middle and the grey line under it. */
+.vcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px}
+.vcost{font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap;line-height:1}
+.vb{flex:0 0 auto;min-width:66px;height:34px;padding:0 14px;border-radius:var(--pill);
+  font-size:13.5px;font-weight:600;letter-spacing:-.01em;
   background:var(--bg);color:var(--ink);box-shadow:0 0 0 1.5px var(--hair) inset;
   transition:transform .24s var(--spring),background .2s var(--ease),color .2s var(--ease),box-shadow .2s;
   animation:voteGlow 4.2s ease-in-out infinite}
@@ -616,8 +620,6 @@ html[data-theme=dark] .lyr-st:nth-child(even){background:rgba(120,120,128,.24)}
 }
 @keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.16)}100%{transform:scale(1)}}
 
-.costpill{display:inline-block;font-size:11px;font-weight:600;color:var(--accent);
-  background:var(--accent-soft);padding:2.5px 8px;border-radius:var(--pill);margin-left:7px;vertical-align:1.5px}
 .nores{padding:34px 20px;text-align:center;color:var(--muted);font-size:14.5px}
 
 /* ── sticky dock ──────────────────────────────────────── */
@@ -1692,10 +1694,10 @@ function row(s,c,open,replay,inQueue){
   /* Short of the song's price with payments on, the sheet opens on Buy more votes. */
   const dis=!open||(!c.unlimited&&c.remaining<cost&&!ST.paymentsEnabled);
   return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''} ${inQueue?'inqueue':''}" data-id="${s.id}">
-    <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:inQueue?`<div class="queuednote">already voted in queue</div>`:''}</div>
+    <div class="m"><div class="t">${esc(s.title)}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:inQueue?`<div class="queuednote">already voted in queue</div>`:''}</div>
     <div class="cnt mono">${s.votes?`${s.votes} vote${s.votes===1?'':'s'}`:''}</div>
-    <button class="vb ${replay?'cost':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
-      onclick="openVote('${s.id}')">Vote</button>
+    <div class="vcol"><button class="vb ${replay?'cost':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
+      onclick="openVote('${s.id}')">Vote</button><small class="vcost">cost: +${cost} vote${cost===1?'':'s'}</small></div>
   </div>`;
 }
 /* Only rendered when the artist has actually switched it on. A button that leads
