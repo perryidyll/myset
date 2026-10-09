@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 15:20 — 7f7c7c4 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (90 files since origin/main)
+**tl;dr:** The three restored Crystal Day nights now carry $60, on the artist's word — decision 0198 and the session note say so
+**Other sessions:** Doc-only follow-up on the same branch as the pruneRules fix. The repaired nights are 69→74 records plus pay=6000 on gimj34ujp@2026-09-15/-09-29/-10-06; that $60 is the artist's decision, NOT a restoration — no snapshot holds the deleted rule's pay. Live book now has no record with a blank pay.
+
 ### 2026-10-03 03:24 — 0c76c92 — scale-abuse@fix/abuse-ceilings (47 files since origin/main)
 **tl;dr:** No change for people: two rule numbers renamed to avoid a clash
 **Other sessions:** #230's INVARIANTS are now 0iw (clips, 0189) and 0ix (promo tries, 0190); 0ii–0iv belong to c8fc2f.
@@ -74,6 +78,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-09 15:05 — 8cc30bb — song-cost@ux/song-cost-free-votes (27 files since origin/main)
 **tl;dr:** Artists can set how many votes a song costs (Settings → Votes per song, default 1); a fresh phone now gets 1 free vote, not 3; each setlist row has one '…' that opens the Edit/Hide/Delete sheet.
 **Other sessions:** Decision 0172. show.songCost (1–20) gated like replayCost; costOf() returns it for unplayed songs. DEFAULT_FREE_CREDITS=1, VOTE_DEFAULTS_VERSION=3 migrates stored 3 (and v1's 5) to 1. vote.html: isReplay() reads played[], never cost>1. Any test that casts more than one vote must set freeCredits itself. Setlist row: .songmore + hidden .rowacts; window.rowMenu(btn) opens holdSheet.
+
+### 2026-10-09 15:00 — 7a27f36 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (40 files since origin/main)
+**tl;dr:** Deleting a repeating gig no longer wipes the pay and hours off nights you already played — five of the founder's nights were showing $0 and no time after Wednesday's tidy-up, and have been restored (0198)
+**Other sessions:** pruneRules now takes a third argument: the <eventId>@<date> keys from the history index. It writes a dying rule onto every night already filed under that gig that has no record of its own, THEN deletes the rule. Pass it nothing — including a sealed index that would not open (0hb) — and it prunes NOTHING — any new caller must read histidx_<aid> (eventDelete and bizSave's orphan sweep both do). INVARIANT 0ja.
 
 ### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
 **tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record

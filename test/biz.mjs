@@ -171,6 +171,49 @@ console.log('\nA RULE IS A GIG\'S, AND GOES WITH IT');
   eq('and no book was written for it', (await readDoc(KEY.biz(nob.artistId), null)).data, null);
 }
 
+/* DELETING A GIG DOES NOT RE-PRICE A NIGHT THAT WAS PLAYED  (decision 0198)
+
+   The founder deleted three repeating gigs that had stopped running on
+   2026-10-07 and five nights already filed under them went to no pay and no
+   hours, because the only record of what they were worth was the gig's rule. */
+console.log('\nA DELETED GIG LEAVES ITS PLAYED NIGHTS PRICED');
+{
+  const rae = await createArtist({ email: 'rae@example.com', name: 'Rae Past', slug: 'rae-past' });
+  const TR = await signToken('rae@example.com', revOf(await readArtists(), rae.artistId));
+  const R = A(TR);
+  await setPlan(rae.artistId, 'plus');
+  ok('a weekly gig', (await R('eventSave', { event: { id: 'grae', venue: 'The Jetty', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: '2026-03-04', time: '20:00', endTime: '22:30', repeat: { freq: 'weekly' } } })).ok);
+  ok('priced once on the gig form, never per night',
+    (await R('bizSave', { rule: 'grae', gig: { pay: 18000, band: [{ name: 'Ball', cents: 6000 }], min: { perform: 120, travel: 50 } } })).ok);
+  const played = await archiveShow(rae.artistId, { showId: '2026-03-11-2003-z9y8', venue: 'The Jetty', city: '',
+    startedAt: Date.parse('2026-03-11T20:03:00Z'), autoKey: 'grae@2026-03-11', songs: [{ id: 's1', title: 'One' }],
+    log: [{ songId: 's1', title: 'One', votes: 1, roundVotes: 1, voters: 1, round: [], at: Date.parse('2026-03-11T20:10:00Z') }],
+    nowPlaying: null, archiveTitle: 'Wednesday' }, {});
+  ok('a night is played and filed under it', played && played.indexed, played);
+  ok('the run stops and the gig is deleted', (await R('eventDelete', { id: 'grae' })).ok);
+  const book = await readBiz(rae.artistId);
+  eq('the rule goes with the gig', Object.keys(book.rules), []);
+  eq('but the night that was played keeps the pay', (book.gigs['grae@2026-03-11'] || {}).pay, 18000);
+  eq('and the band split', ((book.gigs['grae@2026-03-11'] || {}).band || []).map((b) => b.cents), [6000]);
+  const kept = (book.gigs['grae@2026-03-11'] || {}).min || {};
+  eq('and the hours', kept.perform, 120);
+  eq('and the travel', kept.travel, 50);
+  eq('and nothing was invented for a night never played', book.gigs['grae@2026-03-18'], undefined);
+  /* A night with numbers of its own is untouched — the artist typed those, and a
+     rule on its way out must not overwrite them. */
+  ok('a second weekly gig', (await R('eventSave', { event: { id: 'grb', venue: 'The Pier', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: '2026-04-01', time: '20:00', endTime: '22:30', repeat: { freq: 'weekly' } } })).ok);
+  ok('with a rule', (await R('bizSave', { rule: 'grb', gig: { pay: 9000 } })).ok);
+  ok('and one night written by hand', (await R('bizSave', { key: 'grb@2026-04-08', gig: { pay: 12500 } })).ok);
+  await archiveShow(rae.artistId, { showId: '2026-04-08-2001-k3l4', venue: 'The Pier', city: '',
+    startedAt: Date.parse('2026-04-08T20:01:00Z'), autoKey: 'grb@2026-04-08', songs: [{ id: 's1', title: 'One' }],
+    log: [{ songId: 's1', title: 'One', votes: 1, roundVotes: 1, voters: 1, round: [], at: Date.parse('2026-04-08T20:10:00Z') }],
+    nowPlaying: null, archiveTitle: 'Wednesday' }, {});
+  ok('deleting that gig too', (await R('eventDelete', { id: 'grb' })).ok);
+  eq('leaves the artist\'s own figure alone', ((await readBiz(rae.artistId)).gigs['grb@2026-04-08'] || {}).pay, 12500);
+}
+
 console.log('\nA FULL BOOK SAYS SO');
 {
   const big = await createArtist({ email: 'big@example.com', name: 'Big Book', slug: 'big-book' });
