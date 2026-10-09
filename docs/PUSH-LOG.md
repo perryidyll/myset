@@ -67,9 +67,16 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 04:06 — 7c496a0 — scale-p2-life@fix/show-lifecycle (105 files since origin/main)
 **tl;dr:** A failed Decline + refund can no longer finish itself a moment later, after the artist has shown the song again (0155)
 **Other sessions:** refundSongVotes now awaits Promise.allSettled over the twelve fan files and rethrows the first failure; test/refundowed.mjs has a one-file-fails, one-file-slow section. Other Promise.all-over-shards writers (dropSongVotes, consumePlayedVotes) have the same shape — not changed tonight.
+### 2026-10-03 03:48 — 3faeed6 — scale-p2-reg@perf/registry-lookups (129 files since origin/main)
+**tl;dr:** A room no longer reads the whole artist list to find its artist: a page address and an artist's name are two small files each, the list stays the truth (0176)
+**Other sessions:** STACKED on #233. New keys aslug_<slug>, arow_<aid>, alookheal (FAMILIES skip, rebuilt from artists). New registry field seq (NOT rev). RULE: artistById/publicArtist only for a public answer or a name; access, consent, money read readArtists(). Anything writing the registry outside mutateArtists bypasses the copies (citycron heal reconciles). After #150 lands: setCode should read the registry for the slug (reverted tonight to avoid #150's hunk).
+
 ### 2026-10-03 03:08 — f2c65c3 — scale-p2-jobs@fix/background-cursors (100 files since origin/main)
 **tl;dr:** Deleting an account can no longer leave files nobody can find; the nightly off-site copy keeps up with thousands of accounts; the sheet reaches past 400 artists; the front door is one read; dated off-site copies kept 90 days (the founder's answer pending) (0173-0175)
 **Other sessions:** STACKED on the lifecycle PR. dropClipKeys is gone: dropClipKey(k) throws when R2 refuses. keysFor/keysForVenue take optional namers Set; deletion leaves-first (delqueue.cur, purgeStarted; Undo refused once a purge began). inTurn in _lib. cityindex gains gigs/heal (use placeGigs/upcomingAt); new hourly citycron.mjs; mirrorcron bell 20 -> 5 min. New key mirrorsnap_<date> (FAMILIES skip); R2 prefix snap/<day>/<key>.
+### 2026-10-03 04:06 — 7c496a0 — scale-p2-life@fix/show-lifecycle (105 files since origin/main)
+**tl;dr:** A failed Decline + refund can no longer finish itself a moment later, after the artist has shown the song again (0155)
+**Other sessions:** refundSongVotes now awaits Promise.allSettled over the twelve fan files and rethrows the first failure; test/refundowed.mjs has a one-file-fails, one-file-slow section. Other Promise.all-over-shards writers (dropSongVotes, consumePlayedVotes) have the same shape — not changed tonight.
 
 ### 2026-10-03 03:08 — db2f143 — scale-p2-life@fix/show-lifecycle (83 files since origin/main)
 **tl;dr:** Tapping End stops the room at once and the night is priced after, on a clock; a count Stripe could not finish says so; Decline + refund can be finished if it fails; vibes stop blocking paid requests; an accidental End on the tenth free show can be undone (0153-0156)

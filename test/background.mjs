@@ -174,7 +174,7 @@ console.log('\nTHE NIGHTLY COPY ASKS ONLY WHAT COULD HAVE CHANGED');
   const keys = await keysFor(aid);
   const listed = new Set(keys);
   const r1 = await mirrorOwner(aid, keys);
-  ok('the first pass copies every document the account holds', r1.copied === keys.filter((k) => __dump().has(k) && !/^(f\d+_|sess_|lock_|paylim_|vid_)/.test(k)).length && !r1.failed, r1);
+  ok('the first pass copies every document the account holds', r1.copied === keys.filter((k) => __dump().has(k) && !/^(f\d+_|sess_|lock_|paylim_|vid_|aslug_|arow_)/.test(k)).length && !r1.failed, r1);   // aslug_/arow_: copies of the list, never copied off-site (0176)
   __opsStart();
   const r2 = await mirrorOwner(aid, keys);
   const asked = __opsStop().filter((o) => o.startsWith('meta ')).map((o) => o.slice(5));

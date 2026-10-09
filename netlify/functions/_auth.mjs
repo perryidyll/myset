@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc, cleanArtistId, own, clientIp, roomHash } from './_lib.mjs';
+import { lookupPrints, writeLookups, nextSeq, forgetLookups, rowOf } from './_lookup.mjs';
 
 /* Magic-link sign-in for ARTISTS. The audience never signs in — that is the
    whole reason the app works in a bar — so this exists only for the Studio.
@@ -52,6 +53,8 @@ async function secret() {
      byId    artistId -> { slug, name, createdAt, plan }
      bySlug  slug     -> artistId      (so myset.vip/perryidyll resolves)
      byEmail email    -> { artistId, role }   (who can sign in, and as whom)
+     seq      the list's version, moved by every write: what its small copies carry
+              (decision 0176, _lookup.mjs). Not `rev`, which signs devices out.
 */
 const emptyRegistry = () => ({ v: 2, rev: 1, byId: {}, bySlug: {}, byEmail: {} });
 
@@ -76,21 +79,40 @@ export async function readArtists() {
    account it shows as leaving, is asked of the store itself, so a page made a
    second ago opens at once and an undone deletion comes back at once. What can be
    stale is a page that left in the last minute still answering on a warm instance.
-   A write from this instance clears it. */
+   A write from this instance clears it. Since decision 0176 it is the second place
+   publicArtist looks: the address's own small copy is first, and this is read only
+   when that copy is missing or cannot say yes. */
 const PUBLIC_TTL = 60e3;
 let pubReg = null, pubAt = 0;
-export const __flushArtists = () => { pubReg = null; pubAt = 0; };
+export const __flushArtists = () => { pubReg = null; pubAt = 0; forgetLookups(); };
 export async function readArtistsPublic({ fresh = false } = {}) {
   if (!fresh && pubReg && Date.now() - pubAt < PUBLIC_TTL) return pubReg;
   const a = await readArtists();
   pubReg = a; pubAt = Date.now();
   return a;
 }
-export const mutateArtists = (fn) =>
-  casDoc('artists', emptyRegistry, (a) => {
+/** When the copy was last read from the store. A NO from a copy read after a request
+ *  began is already the store's answer and is not asked twice (decision 0176): with
+ *  the small copies answering first, this one is usually cold when it is needed. */
+export const publicCopyAt = () => pubAt;
+/* THE ONE WRITER, AND ITS SMALL COPIES FOLLOW IT (decision 0176). Each attempt
+   fingerprints the copies before `fn` changes anything and moves the version if it
+   writes; once the list's own write has landed, the copies it changed are rewritten
+   and the ones it took away are deleted. Never before, and a copy that fails never
+   fails the change: the list is already right, and a reader asks it. */
+export const mutateArtists = (fn) => {
+  let before = null;
+  return casDoc('artists', emptyRegistry, (a) => {
     a.v ||= 2; a.rev ||= 1; a.byId ||= {}; a.bySlug ||= {}; a.byEmail ||= {};
-    return fn(a);
+    before = lookupPrints(a);
+    const out = fn(a);
+    if (out !== false) a.seq = nextSeq(a);
+    return out;
+  }).then(async (r) => {
+    if (r && r.ok) await writeLookups(before, r.data).catch(() => {});
+    return r;
   }).finally(__flushArtists);        // this instance sees its own write immediately
+};
 
 /** Slugs live in public URLs, so they get the strictest cleaning of anything. */
 export const cleanSlug = (v) =>
@@ -124,9 +146,12 @@ export async function artistBySlug(slug) {
      used to resolve to a function. */
   return own(a.bySlug, want) || (own(a.oldSlug, want) || {}).aid || null;
 }
+/* From the artist's own small copy, the list only when it is not there (decision
+   0176): the name and address on a page, the board's name on every vote. The two
+   sign-in facts (`rev`, `dead`) are never on what this returns. Anything that grants
+   access or prices a payment reads `readArtists()` instead. */
 export async function artistById(aid) {
-  const a = await readArtists();
-  return own(a.byId, aid) || null;
+  return rowOf(aid);
 }
 
 /** Turn a name into a free slug. Deterministic given the registry it is handed,
