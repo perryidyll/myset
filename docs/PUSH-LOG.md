@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 15:21 — bbd4044 — quizzical-haslett-6f8f8b@deps/busboy-sharp (23 files since origin/main)
+**tl;dr:** Nothing a person sees: closes the last two Dependabot alerts (busboy for the functions, sharp for the probe tool)
+**Other sessions:** Root lockfile change, so this one BUILDS (no [skip ci]). @fastify/busboy comes in via @netlify/blobs' dev-utils; cloudflare/probe allowScripts now names esbuild 0.28.2 / workerd 1.20261006.1.
+
 ### 2026-10-09 15:16 — 330fd08 — quizzical-haslett-6f8f8b@deps/probe-undici (1 files since origin/main)
 **tl;dr:** Nothing a person sees: the probe tool's wrangler/undici lockfile takes undici 7.29.1, closing all six Dependabot alerts
 **Other sessions:** cloudflare/probe is a by-hand measuring tool (0035), never built or deployed; the site's own lockfile has only undici-types. Merged [skip ci].
