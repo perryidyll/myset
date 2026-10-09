@@ -11,3 +11,4 @@ deleting the line.
 | commit | date | what shipped | files |
 |---|---|---|---|
 | `128b394` | 2026-09-25 | Reserve mediadash: routed above the slug catch-all since 0092, never reserved — the new structure check found it | _auth.mjs  |
+| `8f9bde6` | 2026-09-28 | The money model's passcode box takes any characters, hides them, and has a Show button | _passgate.mjs  |
