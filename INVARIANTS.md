@@ -2865,6 +2865,8 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     carries a policy that lets it run nothing — netlify.toml's header rules do not
     reach a function's reply. `test/foundations.mjs`, `test/errlog.mjs`.
 
+0jf. **No short field a page draws holds markup.** The cleaner every short field passes through on save — a name, a tagline, a style, a management name, a venue's name, tagline, city and menu lines, a request's title and artist, a review's name, a diary page's title, a shop wish — takes out `<` and `>` (`clean` in `_profile.mjs`, `_maps.mjs`, `_requests.mjs`, `_community.mjs`, `_diary.mjs`, `_wishes.mjs`); `normProfile` runs on every read too, so a value stored before is clean when it is served. It is the second guard: every page still escapes what it draws (`esc`). Long text — a bio, an About, a story, a post — keeps its own characters and is ALWAYS escaped where it is drawn. A new short field that a page draws goes through one of these cleaners. `test/nomarkup.mjs`. Decision `0203`.
+
 ## The security pass, slice B — the network counts too (2026-09-28, decision `0111`)
 
 0gx. **Every anonymous write counts the network as well as the device, and a whole

@@ -185,7 +185,7 @@ Linked steps: 369837, 369838, 369839, 369840, 369842
 
 ### Artist profile (profile_) — entity 4854
 
-`profile_<aid>` · The public page's words and pictures, plus the merch on it (so the community page reads nothing extra). Photos are slots, not a list (Community & media i04). `src: _profile.mjs MAX_PHOTOS, MAX_MERCH; _account.mjs export`
+`profile_<aid>` · The public page's words and pictures, plus the merch on it (so the community page reads nothing extra). Photos are slots, not a list (Community & media i04). No short field (names, tagline, style, management) holds `<` or `>`: `normProfile` takes them out on every save and every read; the bio keeps its own characters and is escaped where it is drawn (decision 0203, INVARIANT 0jf). `src: _profile.mjs MAX_PHOTOS, MAX_MERCH, normProfile; _account.mjs export`
 
 | attribute | type | what it holds |
 | --- | --- | --- |
