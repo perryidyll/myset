@@ -18,6 +18,7 @@ import { listVersions, versionKeys, verKey } from './_versions.mjs';
 import { credKey } from './_cred.mjs';
 import { messageKeys, exportMessages } from './_messages.mjs';
 import { readDiary } from './_diary.mjs';
+import { lookupKeys } from './_lookup.mjs';
 
 /* THE ACCOUNT — what an artist can take with them, and how they leave.
 
@@ -159,6 +160,9 @@ export async function keysFor(aid, namers = null) {
      cannot name. */
   keys.push(`sample_${aid}`);
   keys.push(...sampleImgKeys([profile.photo, profile.avatar, ...(profile.photos || [])]));
+  /* The artist's two kinds of small copy of the list (decision 0176): leaves, named by
+     the list itself, so a purge deletes them before the row that names them goes. */
+  keys.push(...lookupKeys(reg, aid));
   return [...new Set(keys)];
 }
 

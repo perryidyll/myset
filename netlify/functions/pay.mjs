@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha,
          readFans, creditsUsed, isUnlimited } from './_lib.mjs';
 import { canTakeMoney, payAllowed } from './_pay.mjs';
-import { readConnect, connectUsable, feeCents, scope } from './_connect.mjs';
+import { readConnect, connectUsable, feeCents, scope, STRIPE_OPTS } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { getProfile, MIN_CENTS, merchSoldOut } from './_profile.mjs';
 import { PAYOUT_COUNTRIES } from './_connect.mjs';
@@ -74,7 +74,7 @@ const main = async (req) => {
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const origin = new URL(req.url).origin;
-  const stripe = new Stripe(key);
+  const stripe = new Stripe(key, STRIPE_OPTS);   // a clock on the buy button (0188)
 
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
@@ -226,6 +226,12 @@ const main = async (req) => {
     if ((requestDoc.list || []).some((r) =>
       r.fan === fan && r.kind === 'song' && r.status === 'pending' && r.showId === show.showId))
       return bad('You’ve already got a request in — wait for that one first', 409);
+    /* THE QUEUE IS FULL BEFORE THE CARD IS ASKED (decision 0182). createRequest
+       refuses past MAX_PENDING, but only after Checkout has authorized the card — the
+       hold was cancelled, and the fan had been shown a button that led nowhere. */
+    const { MAX_PENDING } = await import('./_requests.mjs');
+    if ((requestDoc.list || []).filter((r) => r.status === 'pending' && r.showId === show.showId).length >= MAX_PENDING)
+      return bad('There are a lot of requests in already — try again in a bit', 429);
     line = {
       quantity: 1,
       price_data: {

@@ -47,6 +47,15 @@ const under = (name, got, ceiling) =>
   ok(`${name} — ${got} (ceiling ${ceiling})`, got <= ceiling, { got, ceiling });
 
 console.log('\nSETUP');
+/* THE FOUNDING PAGE HAS A ROW ON THE LIST, as it does in production. Since decision
+   0176 a page's name is read from the artist's own small copy of that row; a page
+   with no row has no copy, and pays one small read for finding that out before the
+   list answers. Every real page has a row, so the honest count is with one. */
+{
+  const { createArtist } = await import('../netlify/functions/_auth.mjs');
+  const { DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
+  await createArtist({ email: 'founder@example.com', name: 'The Founder', slug: DEFAULT_ARTIST });
+}
 for (const t of ['Alpha', 'Bravo', 'Charlie']) await A('addSong', { title: t, artist: 'T' });
 await A('status', { status: 'live' });
 const lid = await (async () => {
@@ -156,16 +165,33 @@ console.log('\nA SLUG ARTIST’S ROOM  the artist list is read once a minute per
   ok(`THE FIX: a warm poll for a slug artist reads no global document — ${warm.globals}`, warm.globals === 0, warm);
   const v2 = await count(() => ask('kit'));
   eq('nor does resolving the slug on its own', v2.reads, 0);
+  /* Since decision 0176 the slug's own small copies answer before the list, so the
+     instance's copy of the list is cold here: one small read finds no copy, and ONE
+     read of the list says no — the copy read for this question is the store's answer
+     and is not asked twice. */
   const miss = await count(() => ask('nobody-by-this-name'));
-  eq('a slug the copy does not know is asked of the store, once', miss.reads, 1);
+  eq('a slug nobody has is asked of the store, once', miss.globals, 1);
   eq('and is still nobody', await ask('nobody-by-this-name'), null);
+  __flushArtists();
+  const cold = await count(() => ask('kit'));
+  ok(`a COLD instance resolves a slug without the list — ${cold.globals} global, ${cold.reads} small reads (0176)`, cold.globals === 0 && cold.reads === 2, cold);
+  const voteName = await count(() => hit(voteFn, 'https://x/api/vote?a=kit', { fan: 'f9', song: 'nothing', n: 1, op: 'cast', cast: 'costtest00000009' }));
+  ok(`and a vote in that room reads no global document for the artist's name — ${voteName.globals} (0176)`, voteName.globals === 0, voteName);
   const pat = await createArtist({ email: 'pat@example.com', name: 'Pat', slug: 'pat' });
   eq('a sign-up in this instance is seen at once', await ask('pat'), pat.artistId);
   /* Another instance writes — which this one cannot see happen. Written straight to
-     the store here, the way a different warm instance's write arrives. */
-  const far = (fn) => casDoc('artists', () => ({}), (a) => { fn(a); return true; });
+     the store here, the way a different warm instance's write arrives: the list, then
+     the small copies of what it changed (decision 0176), and nothing on this instance
+     told. */
+  const L = await import('../netlify/functions/_lookup.mjs');
+  const far = async (fn) => {
+    let before = null;
+    const r = await casDoc('artists', () => ({}), (a) => { before = L.lookupPrints(a); fn(a); a.seq = L.nextSeq(a); return true; });
+    await L.writeLookups(before, r.data);
+  };
   await far((a) => { a.byId['far-one'] = { slug: 'far', name: 'Far', plan: 'free' }; a.bySlug.far = 'far-one'; });
   eq('a sign-up on ANOTHER instance opens at once too: a no is never taken from the copy', await ask('far'), 'far-one');
+  eq('(the room is open here, and this instance keeps its yes)', await ask('kit'), kit.artistId);
   await far((a) => { a.byId[kit.artistId].del = { at: Date.now() }; });
   eq('a page that left on another instance may answer for up to a minute here', await ask('kit'), kit.artistId);
   __flushArtists();

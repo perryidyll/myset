@@ -55,7 +55,19 @@ export const RETAIN_COUPON = 'myset_stay_50';
 export const SYNC_EVERY_MS = 6 * 3600e3;
 
 export const emptyBilling = () => ({ v: 1, customerId: '', subId: '', priceKey: '', status: '',
-  currentPeriodEnd: 0, cancelAtPeriodEnd: false, retention: null, lastSyncAt: 0 });
+  currentPeriodStart: 0, currentPeriodEnd: 0, cancelAtPeriodEnd: false, retention: null, lastSyncAt: 0 });
+
+/* THREE DAYS FROM THE RENEWAL THAT FAILED (decision 0184). When a renewal's card is
+   declined, Stripe has ALREADY moved the period on: `current_period_start` is the
+   renewal that failed and `current_period_end` is a month after it. Counting the
+   grace from the end gave a failing card the whole of Stripe's retry schedule — a
+   paid plan for weeks, and every fan payment taking the paid plan's smaller cut —
+   instead of the three days the pages promise. A healthy subscription still counts
+   from the end: that covers a renewal whose answer has not arrived yet. A record
+   written before 0184 has no start; it keeps the old answer until its next sync. */
+const GRACE_MS = 3 * 86400e3;
+const renewalFailed = (status) => status === 'past_due' || status === 'unpaid';
+const graceEnd = (status, start, end) => ((renewalFailed(status) && start) ? start : end) + GRACE_MS;
 export async function readBilling(owner) {
   const { data } = await readDoc(BK(owner), null);
   return { ...emptyBilling(), ...(data || {}) };
@@ -135,6 +147,24 @@ export async function startCheckout({ owner, plan, email, name, origin, back }) 
      product. Two lists, two different questions. */
   if (b.subId && ['active', 'trialing', 'past_due', 'unpaid'].includes(b.status))
     return { ok: false, error: 'already-subscribed' };       // change the plan instead
+  /* ASK STRIPE TOO (decision 0184). The record above is only as fresh as the last
+     sync: an owner who paid in one tab and presses Upgrade in another, before the
+     webhook or the return trip has landed, passed it and could open a SECOND
+     subscription. Stripe knows every subscription on the customer. One that is
+     still live refuses the checkout the same way, and is synced on the spot so the
+     Studio's "change it instead" leads somewhere. No customer yet means nothing to
+     ask: the record's answer stands. */
+  if (b.customerId) {
+    let live;
+    try {
+      const subs = await stripe.subscriptions.list({ customer: b.customerId, status: 'all', limit: 10 });
+      live = (subs.data || []).find((s) => ['active', 'trialing', 'past_due', 'unpaid'].includes(s.status));
+    } catch (e) { return { ok: false, error: e.message || 'stripe error' }; }
+    if (live) {
+      await syncSubscription(owner, live.id).catch(() => {});
+      return { ok: false, error: 'already-subscribed' };
+    }
+  }
   const customer = await ensureCustomer(stripe, owner, email, rec.name);
   const discounts = [];
   const pct = Number(rec.discountPct) || 0;
@@ -179,24 +209,34 @@ export async function syncSubscription(owner, subId) {
   if (!id) return { ok: true, plan: null, none: true };
   let sub;
   try { sub = await stripe.subscriptions.retrieve(id); }
-  catch (e) { return { ok: false, error: e.message || 'could not read subscription' }; }
+  catch (e) {
+    /* A subscription Stripe says does not exist will never sync; answering an error
+       for it would only make Stripe redeliver the event for three days (0184). */
+    if (e && e.code === 'resource_missing') return { ok: true, plan: null, none: true, missing: true };
+    return { ok: false, error: e.message || 'could not read subscription' };
+  }
   const item = ((sub.items || {}).data || [])[0] || {};
   const key = (item.price && item.price.lookup_key) || '';
   const tier = planFromPriceKey(key);
   const paidStatus = ['active', 'trialing', 'past_due'].includes(sub.status);
+  const periodStart = (sub.current_period_start || 0) * 1000;
   const periodEnd = (sub.current_period_end || 0) * 1000;
   const now = Date.now();
-  await mutateBilling(owner, (d) => {
-    Object.assign(d, { subId: sub.id, priceKey: key, status: sub.status, currentPeriodEnd: periodEnd,
-                       cancelAtPeriodEnd: !!sub.cancel_at_period_end, lastSyncAt: now,
-                       customerId: d.customerId || (typeof sub.customer === 'string' ? sub.customer : (sub.customer && sub.customer.id) || '') });
-    return true;
-  });
   /* The registry: a paid subscription sets the plan until the end of the paid
-     period plus three days of grace for a late card; anything else falls to free
-     at the period end (a cancelled-at-period-end sub stays paid until then). */
+     period plus three days of grace for a late card — or, once a renewal has
+     failed, three days from that renewal (graceEnd); anything else falls to free
+     at the period end (a cancelled-at-period-end sub stays paid until then).
+
+     THE PLAN IS WRITTEN FIRST, AND THE SYNC IS STAMPED ONLY AFTER IT LANDS
+     (decision 0184). The stamp went first until 2026-10-03: a registry write that
+     failed under contention then left a sync that looked done, `maybeSync` waited
+     six hours, and the webhook — which swallowed the throw — had already told
+     Stripe "received". An artist who had just paid stayed on the old plan and every
+     fan payment took the old cut. Now a failed write throws: the webhook answers
+     500 so Stripe sends it again, and the unstamped record is re-synced on the next
+     Studio boot. */
   const plan = paidStatus && tier ? tier.plan : 'free';
-  const until = paidStatus ? periodEnd + 3 * 86400000 : Math.max(periodEnd, 0);
+  const until = paidStatus ? graceEnd(sub.status, periodStart, periodEnd) : Math.max(periodEnd, 0);
   await mutateOwner(owner, (r) => {
     if (plan === 'free') {
       // keep a comp untouched — it was never Stripe's to take away
@@ -206,6 +246,13 @@ export async function syncSubscription(owner, subId) {
       r.plan = plan; r.planUntil = until; r.billing = 'stripe'; delete r.compedBy;
       if (r.discountPct) { delete r.discountPct; delete r.discountCode; delete r.pendingPlan; }
     }
+    return true;
+  });
+  await mutateBilling(owner, (d) => {
+    Object.assign(d, { subId: sub.id, priceKey: key, status: sub.status,
+                       currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
+                       cancelAtPeriodEnd: !!sub.cancel_at_period_end, lastSyncAt: now,
+                       customerId: d.customerId || (typeof sub.customer === 'string' ? sub.customer : (sub.customer && sub.customer.id) || '') });
     return true;
   });
   // the payout schedule follows the plan (decision 0080); best-effort
@@ -334,8 +381,9 @@ export async function invoices(owner, limit = 12) {
 export async function billingStatus(owner) {
   const b = await readBilling(owner);
   /* THE CARD THAT DIDN'T GO THROUGH. Stripe marks the subscription `past_due` and
-     retries on its own schedule; syncSubscription keeps the plan alive for the
-     period end plus three days, so nothing is taken away while that is happening.
+     retries on its own schedule; syncSubscription keeps the plan alive for three
+     days from the renewal that failed (graceEnd, decision 0184), so nothing is taken
+     away while the first retries happen.
      What was missing is that nobody was TOLD. `graceUntil` is the date the Studio
      puts in the sentence, so the warning names a day rather than a threat. */
   const pastDue = b.status === 'past_due' || b.status === 'unpaid';
@@ -348,29 +396,38 @@ export async function billingStatus(owner) {
     retentionUsed: !!(b.retention && b.retention.acceptedAt),
     portal: !!b.customerId,
     pastDue,
-    graceUntil: pastDue ? (b.currentPeriodEnd || 0) + 3 * 86400e3 : 0,
+    graceUntil: pastDue ? graceEnd(b.status, b.currentPeriodStart, b.currentPeriodEnd || 0) : 0,
   };
 }
 
 /* ---------- the webhook's half ---------- */
 export async function handleBillingEvent(event) {
   const obj = (event.data || {}).object || {};
+  /* NOTHING HERE IS CAUGHT (decisions 0138, 0184). webhook.mjs lets a throw reach
+     guard(), which answers 500 so Stripe sends the event again — but each sync
+     below still swallowed its own failure, so a plan write that failed answered 200
+     and was never retried. A sync that could not read the subscription throws too.
+     Every branch only re-reads Stripe, so a redelivery is safe. */
+  const sync = async (owner, subId) => {
+    const r = await syncSubscription(owner, subId);
+    if (!r.ok) throw new Error(`billing sync for ${owner}: ${r.error}`);
+  };
   if (event.type === 'checkout.session.completed' && obj.mode === 'subscription') {
     const owner = (obj.metadata || {}).owner || obj.client_reference_id;
     const subId = typeof obj.subscription === 'string' ? obj.subscription : (obj.subscription && obj.subscription.id);
-    if (owner && subId) await syncSubscription(owner, subId).catch(() => {});
+    if (owner && subId) await sync(owner, subId);
     return true;
   }
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const owner = (obj.metadata || {}).owner;
-    if (owner) await syncSubscription(owner, obj.id).catch(() => {});
+    if (owner) await sync(owner, obj.id);
     return true;
   }
   if (event.type === 'invoice.payment_failed') {
     const subId = typeof obj.subscription === 'string' ? obj.subscription : '';
     const owner = (obj.subscription_details && obj.subscription_details.metadata || {}).owner
                || (obj.metadata || {}).owner || '';
-    if (owner && subId) await syncSubscription(owner, subId).catch(() => {});   // status → past_due; grace applies
+    if (owner && subId) await sync(owner, subId);   // status → past_due; grace applies
     return true;
   }
   return false;

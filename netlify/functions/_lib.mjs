@@ -744,11 +744,26 @@ export function unspentPaid(fan, show, fanId) {
   if (extra <= 0) return 0;
   return Math.max(0, extra - paidUsed(fan, show, fanId));
 }
+/* HOW MANY GRANT RECEIPTS A FAN RECORD KEEPS (decision 0180). `gr` is the proof that
+   a paid session's votes reached this fan, and it is what makes a second delivery
+   attempt a no-op. It was 20 in _pay.mjs and here, 40 in grantPaidSongVotes — and
+   the 20 trim dropped song-vote receipts too. One number now. */
+export const GR_KEEP = 40;
+
 export async function carryFans(aid, show) {
+  /* THE RECEIPTS OUTLIVE THE RECORD (decision 0180). A record with nothing to carry
+     is deleted below, and its `gr` receipts with it. If a paid session's
+     "delivered" flip had been lost, that marker still said undelivered — and with
+     the receipt gone, the next delivery attempt (the bell, the Studio's sweep)
+     granted the pack a second time. So before a record goes, every receipt it holds
+     is written into the meta marker it proves: a receipt on the fan IS delivery. */
+  const proofs = Array.from({ length: SHARDS }, () => []);
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        proofs[n] = [];
         for (const id of Object.keys(bag)) {
+          for (const sid of bag[id].gr || []) proofs[n].push(sid);
           /* A fan who chose "let the artist keep it" pledged, rather than being
              debited on the spot — see gift.mjs. THIS is the real end of the show, so
              this is where the pledge is honoured. A restart in between quietly
@@ -757,13 +772,23 @@ export async function carryFans(aid, show) {
           const carry = Math.max(0, unspentPaid(bag[id], show, id) - pledged);
           const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show, id)) : 0);
           // `gr` rides along: it is what makes a paid grant idempotent (_pay.mjs)
-          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-20) };
+          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-GR_KEEP) };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;
-      }, null).catch(() => {})
+      }, null).catch(() => { proofs[n] = []; })
     )
   );
+  const seen = new Set(proofs.flat());
+  if (!seen.size) return;
+  await mutateMeta(aid, (m) => {
+    let changed = false;
+    for (const sid of seen) {
+      const p = m.paid[sid];
+      if (p && p.delivered === false) { p.delivered = true; p.deliveredAt = Date.now(); p.settledBy = 'carry'; changed = true; }
+    }
+    return changed;
+  }).catch((e) => console.error(`carryFans: could not settle grant receipts for ${aid}:`, String((e && e.message) || e)));
 }
 
 /* Deleting a song from the library used to strand every credit held on it:
@@ -1087,7 +1112,7 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
     me.ts[songId] ||= Date.now();
     if (marker) {
       me.gr.push(marker);
-      if (me.gr.length > 40) me.gr = me.gr.slice(-40);
+      if (me.gr.length > GR_KEEP) me.gr = me.gr.slice(-GR_KEEP);
     }
     target = held + n;
     return true;
@@ -1784,7 +1809,8 @@ export async function publicArtist(req) {
      resolves and checks the deletion mark from the SAME single read that
      artistBySlug would have done on its own. */
   if (!slug) return DEFAULT_ARTIST;
-  const { readArtistsPublic, cleanSlug } = await import('./_auth.mjs');
+  const { readArtistsPublic, publicCopyAt, cleanSlug } = await import('./_auth.mjs');
+  const { publicSlug } = await import('./_lookup.mjs');
   const want = cleanSlug(slug);
   /* Own properties only: `?a=constructor` used to resolve to Object's constructor,
      a truthy function, and the endpoints then worked on a phantom room keyed by its
@@ -1793,10 +1819,18 @@ export async function publicArtist(req) {
     const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
     return aid && !(own(reg.byId, aid) || {}).del ? aid : null;
   };
-  /* The instance's copy, up to a minute old, answers a YES (decision 0141). A NO is
-     asked of the store itself — so on a warm instance a room's polls cost no
-     registry read at all, and a page made a moment ago still opens at once. */
-  return find(await readArtistsPublic()) || find(await readArtistsPublic({ fresh: true }));
+  /* The address's own two small copies answer first (decision 0176): a few hundred
+     bytes, where the list is a few hundred kilobytes at a thousand artists. Only when
+     they cannot say yes — missing, unreadable, disagreeing, or the artist leaving — is
+     the list asked: the instance's copy of it, up to a minute old, for a YES (decision
+     0141), and a NO from the store itself, so a page made a moment ago still opens at
+     once. A yes is kept a minute on a warm instance, so a room's polls cost no read. */
+  return publicSlug(want, async () => {
+    const asked = Date.now();
+    const yes = find(await readArtistsPublic());
+    if (yes || publicCopyAt() >= asked) return yes;        // a copy read just now is the store's answer
+    return find(await readArtistsPublic({ fresh: true }));
+  });
 }
 /** Is this account on its way out? The Studio needs to know; the public does not. */
 export async function deletionOf(aid) {
