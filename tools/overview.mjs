@@ -163,6 +163,7 @@ async function facts() {
       clipRedirectCacheSecs: r2.CACHE_SECS,
       defaultFreeCredits: lib.DEFAULT_FREE_CREDITS,
       defaultReplayCost: 5,
+      defaultSongCost: lib.defaultShow().songCost,
       defaultAskCost: lib.DEFAULT_ASK_COST,
       defaultPacks: lib.DEFAULT_PACKS(),
       ladder: heads.map((n) => ({ heads: n, pollMs: lib.pollFloorFor(n), board: lib.boardLimitFor(n) })),
@@ -363,7 +364,7 @@ Up to **${f.venuePlans.maxMerch}** merch items. Not built: ${f.venuePlans.notBui
 | | Value | Where it lives |
 |---|---|---|
 | Free votes per person, per NIGHT (default) | ${f.constants.defaultFreeCredits} | \`show.freeCredits\`, artist-settable in the Studio |
-| Cost of a vote on a song not yet played | 1 | \`costOf()\` in \`_lib.mjs\` |
+| Cost of a vote on a song not yet played (default) | ${f.constants.defaultSongCost} | \`show.songCost\`, artist-settable 1–20 (decision 0172); \`costOf()\` in \`_lib.mjs\` |
 | Cost of a vote on an already-played song (default) | ${f.constants.defaultReplayCost} | \`show.replayCost\`, artist-settable |
 | Vote packs (default) | ${Object.entries(f.constants.defaultPacks).map(([k, x]) => `${x.votes} for ${money(x.cents)}`).join(' · ')} | \`DEFAULT_PACKS()\`, artist-settable, clamped $1–$500 and 1–100 votes |
 | Song request / birthday shout-out | ${f.constants.defaultAskCost} votes by default; song requests may add an optional $1-per-paid-vote offer | \`show.requests\`, \`show.birthdays\`, \`request_hold\`; off by default |

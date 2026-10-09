@@ -174,6 +174,7 @@ await AS(P.token, 'addSong', { title: 'Wonderwall', artist: 'Oasis', tags: ['sin
 /* The two that Sheets would otherwise run as formulas. */
 await AS(P.token, 'addSong', { title: '=1+1', artist: '+Plus Band' });
 await AS(P.token, 'addSong', { title: 'Half', artist: 'Nobody' });
+await (await import('../netlify/functions/_lib.mjs')).mutateShow(P.aid, (sh) => { sh.freeCredits = 3; return true; });   // the votes below need more than the one free vote a fresh phone holds since decision 0172
 await AS(P.token, 'status', { status: 'live' });
 
 const voteFn = (await import('../netlify/functions/vote.mjs')).default;

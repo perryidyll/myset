@@ -55,6 +55,7 @@ const freeOf = (r) => (r.credits || {}).freeRemaining;
 
 console.log('\nSETUP');
 for (const t of ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']) await A('addSong', { title: t, artist: 'T' });
+await A('freeCredits', { n: 3 });   // three a phone, more than the default of one since decision 0172
 await A('status', { status: 'live' });
 const show = await getShow(AID);
 ok('the room is live, three free votes a phone', show.status === 'live' && show.freeCredits === 3);

@@ -69,6 +69,7 @@ console.log('\nTHE APPEND-ONLY LOG  (chunk of 20 for the test)');
 
 console.log('\nA NIGHT, FILED AS IT HAPPENS');
 for (const t of ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']) await A('addSong', { title: t, artist: 'T' });
+await A('freeCredits', { n: 3 });   // the votes below need more than the one free vote a fresh phone holds since decision 0172
 await A('status', { status: 'live' });
 const showId = (await readDoc(KEY.show(AID), null)).data.showId;
 ok('a live show with an id', !!showId, showId);

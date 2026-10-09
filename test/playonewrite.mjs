@@ -41,6 +41,7 @@ const AID = DEFAULT_ARTIST;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 for (const t of ['Alpha', 'Bravo', 'Charlie']) await A('addSong', { title: t, artist: 'Test' });
+await A('freeCredits', { n: 3 });   // the votes below need more than the one free vote a fresh phone holds since decision 0172
 await A('newShow');
 const show0 = await getShow(AID);
 const [alpha, bravo, charlie] = show0.songs.map((s) => s.id);

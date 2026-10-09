@@ -34,7 +34,7 @@ Three tabs: **Live** (run the show) · **Setlist** (add/hide/remove songs) · **
   you start tonight** (already done once).
 - **■ End show** — audience sees "That's a wrap".
 
-Each fan gets **3 free votes per round**. They can un-vote to move a vote.
+Each fan gets the night's free votes (the default is in §2.1 of the master overview; the artist can change it), and each vote on a song costs the night's votes per song.
 Votes reset every time you start a new song, so people stay engaged all night.
 
 ---

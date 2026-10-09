@@ -84,7 +84,7 @@ export async function stagePayload(aid, seat) {
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       // the ids of the last Play taps that started a song, so a retry can look first (0151)
       taps: show.taps.map((t) => t.id),
-      played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
+      played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost, songCost: show.songCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
       artistId: aid, slug: (who && who.slug) || slugHint || '',
       unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],

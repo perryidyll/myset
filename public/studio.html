@@ -484,6 +484,17 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .act.ico{display:inline-flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent)}   /* all three like the ✕ (the founder, 2026-09-14) */
 .act.ico svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
 .act.warn.ico{font-size:12px}
+/* The setlist row's "…" (decision 0172): one quiet button where three circles were.
+   It opens the hold sheet; the three real buttons stay in the row, out of sight,
+   for that sheet and the swipe tray to read (still laid out, so offsetParent holds). */
+.songmore{flex:0 0 34px;width:34px;height:34px;align-self:center;display:inline-flex;align-items:center;justify-content:center;
+  border:0;border-radius:50%;background:transparent;color:var(--muted);padding:0;cursor:pointer;
+  transition:transform .22s var(--spring),background-color .18s ease,color .18s ease;-webkit-tap-highlight-color:transparent}
+.songmore svg{width:18px;height:18px;fill:currentColor;display:block}
+.songmore:hover,.songmore:focus-visible{background:var(--accent-soft);color:var(--accent)}
+.songmore:active{transform:scale(.84);background:var(--accent-soft);color:var(--accent)}
+.songcard .songactions.rowacts{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.songmore{transition:none}.songmore:active{transform:none}}
 /* .gigcard is the Gigs tab's "Coming up" row in the same shape: .gighead holds the
    date and the words, .songactions the buttons beneath (the founder, 2026-09-12). */
 .gigcard{display:block;padding:15px 16px 13px}
@@ -908,7 +919,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
 <script src="/tips.js?v=6dd18982"></script>   <!-- the tab decks and the practice round's (decision 0102); stamped like studio.js -->
-<script src="/studio.js?v=85a3e1e4"></script>
+<script src="/studio.js?v=87d2e539"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api; a page seen tonight comes from the phone's copy

@@ -133,6 +133,23 @@ eq('three free and two off the pack, charged there and then', await packLeft('ev
 await A('playTop');                                          // her replay wins
 eq('and winning does not re-price it', await packLeft('eve'), 7);
 
+console.log('\nTHE ARTIST SETS WHAT A SONG COSTS (decision 0172)');
+await A('newShow'); await A('freeCredits', { n: 3 }); await A('replayCost', { n: 5 });
+const sc = await A('songCost', { n: 2 });
+ok('the song cost is taken', sc.ok, sc);
+const sv = await vote('ivy', ids[2]);
+eq('a vote on an unplayed song costs two', sv.cost, 2);
+eq('two of her three free votes are gone', (await pub('ivy')).credits.used, 2);
+const short = await vote('ivy', ids[3]);
+ok('one vote left is not enough for a two-vote song', !short.ok || !short.voted, short);
+eq('and the refusal charged nothing', (await pub('ivy')).credits.used, 2);
+await A('play', { song: ids[2] }); await A('play', { song: ids[4] });
+await buy('jon', 9, 'cs_jon');
+eq('a replay still costs the replay price', (await vote('jon', ids[2])).cost, 5);
+eq('a cast keeps its price when the setting moves', ((await A('songCost', { n: 1 })).ok && (await pub('ivy')).credits.used), 2);
+eq('out-of-range numbers are clamped', (await A('songCost', { n: 99 })).stage.show.songCost, 20);
+await A('songCost', { n: 1 });
+
 console.log('\nA SONG REQUEST SPENDS FROM THE SAME PURSE');
 await A('askSet', { kind: 'song', on: true, cost: 4 });
 await buy('finn', 9, 'cs_finn');

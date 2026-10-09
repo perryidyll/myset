@@ -213,7 +213,8 @@ eq('and f9 got their votes without ever returning',
    ((await readFans(ana.artistId)).f9 || {}).extra, 15);
 
 console.log('\nA HELD REQUEST STAYS ON THE SAME CONNECTED ACCOUNT');
-await AS(TA, 'askSet', { kind: 'song', on: true, cost: 3 });
+// one vote: a fresh phone holds one free vote since decision 0172
+await AS(TA, 'askSet', { kind: 'song', on: true, cost: 1 });
 const offer = await hit(payFn, 'https://myset.vip/api/pay?a=ana-reyes',
   { fan: 'holdfan', kind: 'request_hold', title: 'A New Song', amount: 5, attempt: 'hold-one' });
 ok('the authorization checkout opens', offer.ok, offer);

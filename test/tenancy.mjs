@@ -137,19 +137,19 @@ const boSong  = (await pub('bo-tran')).songs[0].id;
 
 const v1 = await vote('ana-reyes', 'phone1', anaSong);
 ok('the phone votes at Ana\'s gig', v1.ok && v1.voted === true, v1);
-eq('and spent one of its three default votes there', v1.remaining, 2);
+eq('and spent its one default vote there (decision 0172)', v1.remaining, 0);
 
 const pB2 = await pub('bo-tran', 'phone1');
-eq("the same phone still has all three votes at Bo's", pB2.credits.remaining, 3);
+eq("the same phone still has its vote at Bo's", pB2.credits.remaining, 1);
 eq('the audience payload separates the free allowance from bought votes',
-   [pB2.credits.freeRemaining, pB2.credits.freeTotal], [3, 3]);
+   [pB2.credits.freeRemaining, pB2.credits.freeTotal], [1, 1]);
 eq('the default packs are 3 for $5 and 15 for $20',
    pB2.packs, { small: { votes: 3, cents: 500 }, big: { votes: 15, cents: 2000 } });
 
 const pA2 = await pub('ana-reyes', 'phone1');
 eq("Ana's song shows the vote", pA2.songs.find((s) => s.id === anaSong).votes, 1);
-eq('and the free-vote counter has moved from 3/3 to 2/3',
-   [pA2.credits.freeRemaining, pA2.credits.freeTotal], [2, 3]);
+eq('and the free-vote counter has moved from 1/1 to 0/1',
+   [pA2.credits.freeRemaining, pA2.credits.freeTotal], [0, 1]);
 const pB3 = await pub('bo-tran', 'phone1');
 eq("no vote leaked into Bo's tally", pB3.songs.reduce((n, s) => n + s.votes, 0), 0);
 
@@ -249,6 +249,7 @@ const packed = await A(TA4, 'packs', { small: { votes: 1, cents: 100 }, big: { v
 eq('changing pack prices -> 402', packed.status, 402);
 const rc = await A(TA4, 'replayCost', { n: 9 });
 eq('changing the replay cost -> 402', rc.status, 402);
+eq('changing what a song costs -> 402', (await A(TA4, 'songCost', { n: 2 })).status, 402);
 ok('and the refusal says what to do about it', /Bar Star/.test(priced.error || ''), priced.error);
 
 const tog = await A(TA4, 'askSet', { kind: 'song', on: true });
