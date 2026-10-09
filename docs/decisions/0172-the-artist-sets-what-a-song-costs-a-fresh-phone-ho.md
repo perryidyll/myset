@@ -83,3 +83,17 @@ Live on myset.vip as `7c87dbe` (#250), production deploy 6ac8a059, checked by co
 
 **Not checked:** the fan vote sheet at 2 votes per song in a browser; the swipe
 tray and long press on a real phone after the change.
+
+## Since: the price under every Vote button (2026-10-09)
+
+The founder asked for each song's price on the fan page's list, not only in the
+vote sheet. Every row's Vote button now has a grey line under it, "cost: +N
+votes" ("+1 vote" at 1), on every row so they line up. The button shrank (40 → 34 px
+tall, 74 → 66 px wide) and sits a little above the row's middle to make room. The
+replay's "5 votes" pill beside the title is gone: the line under its button says
+the same thing. The round "+" in Up next is unchanged.
+
+Verified in headless Chrome at 390 px with every song at 2 votes and one replay:
+five rows read "cost: +2 votes" / "+5 votes", grey (rgb 161,161,166), no sideways
+scroll. `node tools/uicheck.mjs`: every vote-page check passes; the same seven
+Studio, Money and home-theme checks fail on origin/main without this change.
