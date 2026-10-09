@@ -720,6 +720,11 @@ const postOf=m=>(m.ship==='ship'&&m.post>0)?m.post:0;
 /* a size is sold out by its flag or its count at zero; an item with sizes is sold out when every size is (the server's merchSoldOut) */
 const vOut=v=>!!v.out||v.stock===0;
 const soldOut=m=>!!m.out||m.stock===0||((m.variants||[]).length>0&&m.variants.every(vOut));
+/* held (0195): each count arrives less what buyers on Stripe's page are holding, and `held` says how much is held. A count at zero
+   only because of holds is out FOR NOW — it comes back if they don't pay — so the page says check back, never "ask about a restock" */
+const gone=x=>!!x.out||(x.stock===0&&!(x.held>0));
+const heldOut=m=>soldOut(m)&&!gone(m)&&!((m.variants||[]).length>0&&m.variants.every(gone));
+const HELD='Sold out — check back in a few minutes. Someone’s checking out with what’s left; if they don’t pay, it comes back within half an hour.';
 /* what is left, said only when it is small enough to matter: the size's count once one is picked, else the item's, else
    the sizes' total when every size is counting (one uncounted size means "as many as you like") */
 const leftOf=(m,size)=>{ const vs=m.variants||[]; if(size){ const v=vs.find(x=>x.label===size); return v&&v.stock!=null?v.stock:(m.stock!=null?m.stock:null); }
@@ -751,7 +756,7 @@ addEventListener('popstate',()=>{
 /* the fulfilment line — only what the server backs */
 function ledeFor(m){
   const d=D, post=postOf(m);
-  if(soldOut(m)) return `Sold out — ask about a restock at ${TABLE}.`;
+  if(soldOut(m)) return heldOut(m)?HELD:`Sold out — ask about a restock at ${TABLE}.`;
   if(d.canBuy&&m.cents>=100){
     if(m.ship==='ship') return post?`Shipped to you — the total includes ${money(post)} shipping. You’ll give an address on the next page.`
                                    :'Shipped to you, shipping included — you’ll give an address on the next page.';
@@ -771,7 +776,7 @@ function paintSheet(){
     <div class="prow"><b class="price">${m.cents?money(m.cents):'No price listed'}</b>${where?`<span>${where}</span>`:''}<span class="left" id="left">${buyable&&fewLeft(m,SIZE)?`Only ${fewLeft(m,SIZE)} left${SIZE?' in '+esc(SIZE):''}`:''}</span></div>
     ${galleryBlock(m,out)}
     <p class="lede" id="lede">${ledeFor(m)}</p>`;
-  if(buyable&&vars.length) h+=`<fieldset class="sizes" id="sizes" data-nopull><legend class="kick">Size</legend><div class="row">${vars.map(v=>`<label class="chip${vOut(v)?' is-out':''}"><input type="radio" name="size" value="${esc(v.label)}"${vOut(v)?' disabled':''}${SIZE===v.label?' checked':''}><span>${esc(v.label)}</span>${vOut(v)?'<span class="sr">, sold out</span>':''}</label>`).join('')}</div></fieldset>`;
+  if(buyable&&vars.length) h+=`<fieldset class="sizes" id="sizes" data-nopull><legend class="kick">Size</legend><div class="row">${vars.map(v=>`<label class="chip${vOut(v)?' is-out':''}"><input type="radio" name="size" value="${esc(v.label)}"${vOut(v)?' disabled':''}${SIZE===v.label?' checked':''}><span>${esc(v.label)}</span>${vOut(v)?`<span class="sr">, ${gone(v)?'sold out':'held by someone checking out'}</span>`:''}</label>`).join('')}</div></fieldset>`;
   if(buyable){
     h+=`<div class="tiles qty"><button class="tile" id="qMinus" aria-label="One fewer">−</button><b id="qty" aria-label="Quantity">${QTY}</b><button class="tile" id="qPlus" aria-label="One more">＋</button></div>
     <p class="fine" id="qmax" hidden>Five is the most per order.</p>
@@ -844,7 +849,7 @@ function moreBlock(m){
   const others=(D&&D.merch||[]).filter(x=>x.id!==m.id&&x.on!==false);
   if(others.length<2) return '';
   const cards=others.map(x=>{ const out=soldOut(x), p=x.cents?money(x.cents):'No price listed';
-    return `<button class="pk${out?' out':''}" data-more="${esc(x.id)}" aria-label="${esc(x.title)}, ${x.cents?money(x.cents):'no price listed'}${out?', sold out':''}"><span class="pic">${pic(x,'pk')}</span><span class="b"><span class="t">${esc(x.title)}</span><span class="p">${p}${out?' · Sold out':''}</span></span></button>`; });
+    return `<button class="pk${out?' out':''}" data-more="${esc(x.id)}" aria-label="${esc(x.title)}, ${x.cents?money(x.cents):'no price listed'}${out?(heldOut(x)?', sold out for now':', sold out'):''}"><span class="pic">${pic(x,'pk')}</span><span class="b"><span class="t">${esc(x.title)}</span><span class="p">${p}${out?(heldOut(x)?' · Sold out for now':' · Sold out'):''}</span></span></button>`; });
   const twice=!STILL&&!REDUCED(), gb=c=>c.replace(/^<button /,'<button tabindex="-1" aria-hidden="true" ');
   return `<div class="sect"><i></i>More from ${esc(VENUE?'the bar':firstName())}<span></span></div><div class="more" id="more" data-nopull>${cards.join('')}${twice?cards.map(gb).join(''):''}</div>`;
 }
@@ -954,11 +959,11 @@ function card(m,i){
   const price=m.cents?money(m.cents):'No price listed', where=m.ship==='ship'?'· shipped':'· pick up';
   let small='', act='', state='', ship='', pline=m.cents?`<b>${money(m.cents)}</b>`:'No price listed';
   /* the fulfilment words and the Tonight tag are said only of what MySet sells or sold out of, never of a link-out or an ask item */
-  if(out){ small=where; state='sold out'; ship=m.ship==='ship'?'shipped to you':(VENUE?'pick up at the bar':'pick up at a show'); }
+  if(out){ small=where; state=heldOut(m)?'sold out for now, check back in a few minutes':'sold out'; ship=m.ship==='ship'?'shipped to you':(VENUE?'pick up at the bar':'pick up at a show'); }
   else if(buyable){ act=`<span class="act buy">Buy · ${money(m.cents)}</span>`; small=post?`+ ${money(post)} shipping`:where; state='Buy'; ship=m.ship==='ship'?'shipped to you':(VENUE?'pick up at the bar':'pick up at a show'); }
   else if(m.link){ const hn=host(m.link); act=`<span class="act ext">Get it ↗</span>`; state='opens '+hn; if(m.cents) small='· '+hn; else pline=esc(hn); }   // unpriced: the host takes the price line, so it fits at 320
   else { act=`<span class="act ask">${VENUE?'Ask at the bar':'Ask at the show'}</span>`; state=VENUE?'ask at the bar':'ask at the show'; }
-  const tag=out?'<span class="tag out">Sold out</span>':(buyable&&d.live&&!VENUE&&m.ship==='pickup'?'<span class="tag">Tonight</span>':(buyable&&fewLeft(m)?`<span class="tag">Only ${fewLeft(m)} left</span>`:''));   // a true statement, not scarcity: the count is the artist's own
+  const tag=out?`<span class="tag out">${heldOut(m)?'Sold out for now':'Sold out'}</span>`:(buyable&&d.live&&!VENUE&&m.ship==='pickup'?'<span class="tag">Tonight</span>':(buyable&&fewLeft(m)?`<span class="tag">Only ${fewLeft(m)} left</span>`:''));   // a true statement, not scarcity: the count is the artist's own
   const label=`${m.title}, ${price}${post&&ship?' plus '+money(post)+' shipping':''}${ship?', '+ship:''}, ${state}`;
   return `<button class="pcard${out?' out':''}" data-item="${esc(m.id)}" aria-label="${esc(label)}"><span class="pic">${pic(m,i)}${tag}</span><span class="b"><span class="t">${esc(m.title)}</span><span class="p">${pline}${small?` <small>${esc(small)}</small>`:''}</span>${act}</span></button>`;
 }
@@ -1062,10 +1067,10 @@ async function buy(){
       const e=String(d.error||'');
       if(r.status===503||e==='payments-not-configured'){ toast(`Card payments just went off for ${VENUE?D.name:firstName()} — ${TABLE} takes cash tonight.`); D.canBuy=false; render(); paintSheet(); return; }
       if(r.status===404){ toast('That one just came off sale. Pull down to refresh.'); closeSheet(); return; }
-      if(r.status===409&&/size/i.test(e)){ const v=(m.variants||[]).find(x=>x.label===SIZE); if(v) v.out=true; const left=(m.variants||[]).filter(x=>!x.out).map(x=>x.label); toast(`${SIZE} just went${left.length?' — '+left.join(', ')+' left':''}.`); SIZE=''; paintSheet(); return; }
+      if(r.status===409&&/size/i.test(e)){ const v=(m.variants||[]).find(x=>x.label===SIZE); if(v&&/checking out/.test(e)&&v.stock!=null){ v.held=(v.held||0)+v.stock; v.stock=0; } else if(v) v.out=true; const left=(m.variants||[]).filter(x=>!vOut(x)).map(x=>x.label); toast(`${SIZE} just went${left.length?' — '+left.join(', ')+' left':''}.`); SIZE=''; paintSheet(); return; }
       const left=/^Only (\d+) left(?: in (.+))?$/.exec(e);   // the count came down under the thumb: keep the sheet, cap the quantity, say so
       if(r.status===409&&left){ const n=parseInt(left[1],10), v=left[2]&&(m.variants||[]).find(x=>x.label===left[2]); if(v) v.stock=n; else m.stock=n; QTY=Math.min(QTY,Math.max(1,n)); toast(`${e} — the quantity came down.`); render(); paintSheet(); return; }
-      if(r.status===409){ m.out=true; toast(e||'That one’s sold out'); render(); paintSheet(); return; }
+      if(r.status===409){ if(/checking out/.test(e)&&m.stock!=null){ m.held=(m.held||0)+m.stock; m.stock=0; } else m.out=true; toast(e||'That one’s sold out'); render(); paintSheet(); return; }
       /* a 400 refuses THIS request (sizes added, price changed): retrying never clears it — re-read and repaint, never a Buy that fails the same way */
       if(r.status===400){
         toast(e||'That one just changed. Have another look.');
@@ -1090,6 +1095,7 @@ async function redeem(sid,found){
     const d=await r.json();
     if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){} CHECKING='';
       if(d.kind&&d.kind!=='merch'){ RECEIPT={sid,tip:true,already:!!d.already}; render(); return true; }   // the shared key can hold a tip started on the community page
+      if(d.short){ RECEIPT={sid,short:true,order:d.order||{}}; render(); return true; }   // sold out before the money landed: refunded in full, nothing to pick up (0178)
       const p=pend(), o=d.order||{}, pm=p&&p.id===sid?p:null;
       const order={sid,slug:SLUG,venue:VENUE,item:o.item||(pm&&pm.item)||'',title:o.title||(pm&&pm.title)||'Your order',
         qty:o.qty!=null?o.qty:(pm?pm.qty:null),variant:o.variant||(pm&&pm.size)||'',ship:o.ship||(pm&&pm.ship)||'pickup',
@@ -1104,6 +1110,8 @@ const tick=()=>`<svg class="ok" viewBox="0 0 24 24" aria-hidden="true"><circle c
 function receiptCard(R){
   const o=R.order||{}, N=esc(D.name), q=R.quiet?' quiet':'';
   if(R.tip) return `<div class="receipt${q}" role="status"><b>${tick()}Paid — thank you</b>${R.already?'That tip was already in.':`${esc(firstName())} has your tip.`}</div>`;
+  if(R.short) return `<div class="receipt${q}" role="status"><b>Sold out — you’ve been refunded</b><div>The last ${esc(o.title||'one')}${o.variant?' ('+esc(o.variant)+')':''} went to someone else while you were paying. Your money is on its way back to your card.</div>
+    <div class="acts"><button class="btn btn-text btn-sm" data-keep>Keep shopping</button></div></div>`;
   const head=R.already?'Already in':R.found?'Found it — you paid earlier':'Paid — thank you';
   const line=`${o.qty?o.qty+' × ':''}${esc(o.title||'Your order')}${o.variant?' ('+esc(o.variant)+')':''}${o.cents!=null?' · '+money(o.cents):''}${o.post?' + '+money(o.post)+' shipping':''}`;
   const code=o.code?`<b class="code" aria-label="${esc(o.code.split('').join(' '))}">${o.code.split('').map(c=>`<i>${esc(c)}</i>`).join('')}</b>`:'';

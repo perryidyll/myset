@@ -58,6 +58,18 @@ const main = async (req) => {
     return json({ received: true });
   }
 
+  /* MONEY THAT WENT BACK (decision 0177): a refund, or a chargeback opening, moving
+     or being decided — on the platform's own charges and, through the Connect
+     endpoint, on every artist's and venue's. The payment's marker and its row say
+     what went back, the fan's unspent wallet votes from it are taken back, and the
+     artist is told once. Not caught (0138): a throw answers 500 and Stripe sends the
+     event again; every step is safe to repeat. See _refunds.mjs. */
+  if (event.type === 'charge.refunded' || String(event.type || '').startsWith('charge.dispute.')) {
+    const { settleLoss } = await import('./_refunds.mjs');
+    await settleLoss(event);
+    return json({ received: true });
+  }
+
   /* An account finished (or lost) onboarding. This is the ONE writer that flips a
      room's money buttons on, so it also mirrors the answer onto the show record
      where the audience poll can read it for free. */
@@ -96,6 +108,19 @@ const main = async (req) => {
        200, so it never did. The handler only re-reads the subscription from Stripe,
        so a redelivery is safe. */
     await handleBillingEvent(event);
+    return json({ received: true });
+  }
+
+  /* A MERCH CHECKOUT THAT RAN OUT (decision 0178) lets its stock go now rather than
+     when the hold's own clock runs out a few minutes later. Only a nicety: a hold
+     past its checkout's expiry stops counting whether or not this ever arrives. */
+  if (event.type === 'checkout.session.expired') {
+    const s = event.data.object || {}, md = s.metadata || {};
+    if (md.kind === 'merch' && md.hold) {
+      const owner = cleanOwnerId(md.artist) || (event.account ? await artistForAccount(event.account) : '') || DEFAULT_ARTIST;
+      const { releaseHold } = await import('./_profile.mjs');
+      await releaseHold(owner, String(md.hold));
+    }
     return json({ received: true });
   }
 

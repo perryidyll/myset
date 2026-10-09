@@ -59,7 +59,8 @@ export async function keysForVenue(vid, namers = null) {
     /* Three a venue grew after this list was written, so none had a second home and
        each outlived the venue (0146): the pitches it was sent (0123), its alert
        devices (0124), and its answers to shows listed at its place (0128). */
-    `vpitch_${vid}`, `push_${o}`, `gigok_${vid}`];
+    `vpitch_${vid}`, `push_${o}`, `gigok_${vid}`,
+    `mhold_${o}`];                                   // merch held while a buyer pays (0178)
   // the payment markers that left meta for their year (0193) — every year since MySet's first, computed
   for (const y of paidArcYears()) keys.push(PAIDARC(o, y));
   const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);

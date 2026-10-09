@@ -160,7 +160,7 @@ export const FAMILIES = [
   [/^watch$/, 'skip', 'what the watch has already told the founder (0157): rebuilt at its next ring'],
   [/^(aslug_.+|arow_.+|alookheal)$/, 'skip', "small copies of the artist list's lines and their heal's cursor (0176): rebuilt from `artists`, which is copied; a copy put back beside a list from another moment could disagree with it"],
   /* an owner's */
-  [/^(show|meta|profile|histidx|histids|histpend|hist|req|ev|lists|learn|push|connect|fb|fbarch|apitch|songstats|posts|postsarch|likes|billing|log|rec|pkeys|vidpend|ledger|ledidx|feats|rsvp|biz|wishes|diary|img|lyr|chart|evt|ver|vers|cred|inbox|inboxarch|msg|sample|bugs|paidarc)_/, 'owner'],
+  [/^(show|meta|profile|histidx|histids|histpend|hist|req|ev|lists|learn|push|connect|fb|fbarch|apitch|songstats|posts|postsarch|likes|billing|log|rec|pkeys|vidpend|ledger|ledidx|feats|rsvp|biz|wishes|diary|img|lyr|chart|evt|ver|vers|cred|inbox|inboxarch|msg|sample|bugs|paidarc|mhold)_/, 'owner'],
   [/^(vprofile|vouch|gigok|vpitch)_/, 'owner'],
   [/^feat_/, 'global'],         // a city's featured slots: named by the city index, and by each artist who bought one
 ];

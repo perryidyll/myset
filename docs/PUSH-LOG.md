@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 15:52 — ac8b93e — scale-p2-money@fix/refunds-and-stock (36 files since origin/main)
+**tl;dr:** Nothing new for a person: the refunds-and-merch-hold change (#238) now sits on today's main, ready to merge
+**Other sessions:** Restacked onto main e996865 (#227 b2dbfec + #150). money/02: refunds are w14, expired checkouts w15 (week one's w12/w13 kept); mhold in FAMILIES owner regex + keysFor/keysForVenue; moneyForShow keeps 0153's resume AND 0177's lostOf. Suite 6,466 ✓ exit 0.
+
 ### 2026-10-09 09:13 — 2895729 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** setCode reads the page's name from the artist list, not its small copy — the line decision 0176 deferred until #150; on PR #257 beside the slice C paperwork, brought up to today's main (e52d6f5)
 **Other sessions:** NOT docs only any more: #257's merge needs a production build (no [skip ci] in the subject). admin.mjs: pageSlug = own((await readArtists()).byId, aid); artistById is no longer statically imported there. test/studiocode.mjs +4 (42 ✓). Suite 6,441 ✓ / 0 ✗ on the merged tree (4b8fe5e). The push log was the one merge collision: every entry from both sides kept, newest first.
@@ -21,6 +25,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-09 08:45 — 91c1a84 — myset@claude/myset-encryption-security-460mph (9 files since origin/main)
 **tl;dr:** Security slice C is LIVE as e996865 (#150, 08:41 UTC): MYSET_SECRET signs everything, the records that hold a person are sealed at rest from the first write on, a session lasts a week and renews itself (0199), the activity log is complete (0200); docs only on this branch — the records carry the commit
 **Other sessions:** Verified by content on myset.vip: /api/health seal.secret true, ring absent until the first protected write (then ours). Decisions 0199/0200 and INVARIANTS 0jb/0jc are on main. A new kind of document needs a FAMILIES line (sealkeys global, fmgate skip are in). Follow-up for whoever has the suite open: 0176's deferred line — setCode in admin.mjs should read the page's name through readArtists() now that #150 is in.
+
+### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
+**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
+**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
 
 ### 2026-10-03 04:04 — 4499b59 — scale-paidarc@fix/paid-archive (60 files since origin/main)
 **tl;dr:** No change for people yet: old payment records now wait 130 days, not 90, before moving to the archive
@@ -53,6 +61,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-09 07:58 — 75bdcbb — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
 **tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
 **Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
+
+### 2026-10-03 04:02 — dbae03a — scale-p2-money@fix/refunds-and-stock (76 files since origin/main)
+**tl;dr:** MySet now hears refunds and chargebacks: the night's money drops, only unspent paid votes are taken back; the last merch items are held while a buyer pays, and a payment that still comes up short is refunded at once (0177, 0178)
+**Other sessions:** STACKED on week one's #227. New _refunds.mjs. NEW FIELDS: lost (cents) on payment markers, tip rows and order rows — anything summing money subtracts lost (_evlog, _metrics, warehouse export, venue tip list, revenue.mjs still read face value); refunded/dispute on markers; refunded/dispute/short on orders; wallet on song-vote markers; sid on tip rows; rb receipts on fan records (carryFans carries them). New key mhold_<owner> (FAMILIES skip). Needs 5 Stripe events on BOTH webhook destinations: charge.refunded, charge.dispute.created, charge.dispute.closed, charge.dispute.funds_withdrawn, checkout.session.expired.
 
 ### 2026-10-03 03:02 — 0fc2913 — scale-money@fix/money-path (22 files since origin/main)
 **tl;dr:** Payments are harder to lose or double: a lost 'delivered' mark is caught and fixed by the scheduler, song votes bought for a replay that already started go to the fan's wallet, a full request queue is said before the card, a paused Stripe account still finds its payments, the Money tab's sweep does only what's owed, plan billing stops leaking, and every fan Stripe call has a 10 s clock (0180–0184, 0188)
@@ -222,7 +234,6 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
 **tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
 **Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
-
 
 
 ### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)

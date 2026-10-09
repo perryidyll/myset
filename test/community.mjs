@@ -262,6 +262,52 @@ await OWNER('merchSave', { item: { id: scap.id, variants: [{ label: 'S', stock: 
 r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'M', attempt: 'tsz7' });
 ok('every size gone is the item sold out', r.status === 409 && /That one’s sold out/.test(r.error || ''), r);
 
+console.log('\nHELD STOCK ON THE SHOP  (decision 0195, the contract in 0178: what a buyer on Stripe’s page holds is not offered)');
+{
+  const { holdStock, HOLD_KEY } = await import('../netlify/functions/_profile.mjs');
+  const { readDoc } = await import('../netlify/functions/_lib.mjs');
+  const shop = async (id) => (await GET('?fan=phoneH')).merch.find((m) => m.id === id);
+  const sharedRaw = async () => commFn(new Request('https://x/api/community'));
+  r = await OWNER('merchSave', { item: { title: 'Held tee', cents: 2000, stock: 3 } });
+  const ht = r.merch.find((m) => m.title === 'Held tee');
+  eq('nobody paying: the count as saved, nothing held', [(await shop(ht.id)).stock, (await shop(ht.id)).held], [3, undefined]);
+  ok('one fan opens checkout for one', (await hit(payFn, 'https://x/api/pay', { fan: 'phoneHA', kind: 'merch', item: ht.id, qty: 1, attempt: 'th1' })).ok);
+  eq('the shop shows two left, and says one is held', [(await shop(ht.id)).stock, (await shop(ht.id)).held], [2, 1]);
+  let raw = await sharedRaw(), sh = (await raw.json()).merch.find((m) => m.id === ht.id);
+  eq('the shared read says the same', [sh.stock, sh.held], [2, 1]);
+  ok('and is still kept at the edge (nothing personal on it)', /public, durable, s-maxage=30/.test(raw.headers.get('netlify-cdn-cache-control') || ''), raw.headers.get('netlify-cdn-cache-control'));
+  eq('the Studio’s own list still shows the real count', (await OWNER('merchList')).merch.find((m) => m.id === ht.id).stock, 3);
+  ok('a second fan opens checkout for the other two', (await hit(payFn, 'https://x/api/pay', { fan: 'phoneHB', kind: 'merch', item: ht.id, qty: 2, attempt: 'th2' })).ok);
+  eq('every one left is held: the shop reads zero, all three held', [(await shop(ht.id)).stock, (await shop(ht.id)).held], [0, 3]);
+  r = await hit(payFn, 'https://x/api/pay', { fan: 'phoneHC', kind: 'merch', item: ht.id, qty: 1, attempt: 'th3' });
+  ok('and the server refuses a third the same way the page now shows it (no button to a shrug)', r.status === 409 && /checking out/.test(r.error || ''), r);
+
+  r = await OWNER('merchSave', { item: { title: 'Old hold', cents: 1500, stock: 1 } });
+  const oh = r.merch.find((m) => m.id && m.title === 'Old hold');
+  await holdStock(DEFAULT_ARTIST, oh, '', 1, 'hx-expired', 'fx', Date.now() - 40 * 60e3);
+  ok('a hold past its checkout is still on the document', !!((await readDoc(HOLD_KEY(DEFAULT_ARTIST), null)).data.h['hx-expired']));
+  eq('but no longer counts on the shop', [(await shop(oh.id)).stock, (await shop(oh.id)).held], [1, undefined]);
+
+  r = await OWNER('merchSave', { item: { title: 'Held sizes', cents: 2500, variants: [{ label: 'S', stock: 1 }, { label: 'M' }, { label: 'L', stock: 2 }] } });
+  const hs = r.merch.find((m) => m.title === 'Held sizes');
+  ok('a fan opens checkout for the last S', (await hit(payFn, 'https://x/api/pay', { fan: 'phoneHD', kind: 'merch', item: hs.id, variant: 'S', qty: 1, attempt: 'th4' })).ok);
+  const hsr = await shop(hs.id);
+  eq('the size’s own count comes down, the others untouched', hsr.variants.map((v) => [v.stock, v.held]), [[0, 1], [null, undefined], [2, undefined]]);
+  eq('and the item’s count is left alone', [hsr.stock, hsr.held], [null, undefined]);
+
+  r = await OWNER('merchSave', { item: { title: 'Taken under a hold', cents: 1000, stock: 1 } });
+  const tu = r.merch.find((m) => m.title === 'Taken under a hold');
+  await holdStock(DEFAULT_ARTIST, tu, '', 1, 'hx-taken', 'fy');
+  await OWNER('merchSave', { item: { id: tu.id, stock: 0 } });
+  eq('a hold on stock that is already gone is not "coming back": zero, nothing held', [(await shop(tu.id)).stock, (await shop(tu.id)).held], [0, undefined]);
+
+  const mh = (log) => log.filter((l) => /mhold_/.test(l)).length;
+  __opsStart(); await GET('?a=ana-reyes'); const anaLog = __opsStop();
+  __opsStart(); await GET(''); const ownLog = __opsStop();
+  eq('a shop with nothing counted never reads the holds', mh(anaLog), 0);
+  eq('a shop with a count reads them once', mh(ownLog), 1);
+}
+
 console.log('\nTHE ORDER OF THE ITEMS  (merchMove — the first is the one on top of the community card)');
 r = await OWNER('merchList');
 const [first, second] = r.merch;

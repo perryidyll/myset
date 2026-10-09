@@ -45,6 +45,15 @@ eq('the real night names its gig', part.nights[0].gig && part.nights[0].gig.venu
 eq('hours are read from the record', part.nights[0].hours, 2.5);
 eq('money: the tip and the pack, never the fan; a tip in paid is not counted twice', part.money.map((m) => [m.kind, m.amount]), [['tip', 10], ['pack', 3]]);
 ok('nothing in the part names a device', !JSON.stringify(part).includes('DEVICE'));
+{ /* decision 0194, after 0177: `lost` is the cents a refund or a chargeback took back */
+  const lostMeta = { tips: [{ amount: 10, at: 5, lost: 500 }, { amount: 4, at: 6, lost: 400 }],
+    paid: { cs_1: { kind: 'votes', amount: 3, granted: 5, at: 7, lost: 100 }, cs_3: { kind: 'merch', amount: 20, at: 8, lost: 2000 } } };
+  const lp = artistPart('kai', { idx: { shows: [] }, meta: lostMeta, ev: { list: [] } });
+  eq('money is net of what went back; a payment gone in full is not money', lp.money.map((m) => [m.kind, m.amount]), [['tip', 5], ['pack', 2]]);
+  const { moneyEvents } = await import('../netlify/functions/_evlog.mjs');
+  const ev = moneyEvents({ ...lostMeta, orders: [{ amount: 20, at: 8, lost: 500 }] }, 'sx', 0, 100);
+  eq('the night\'s event log is net too, in cents', ev.map((e) => [e.k, e.a]), [['tip', 500], ['pack', 200], ['order', 1500]]);
+}
 eq('posts and rsvps are timestamps only', [part.posts.length, part.rsvps.length], [1, 1]);
 ok('gig occurrences for the calendar view', part.gigs.length >= 3);
 

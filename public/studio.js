@@ -2671,7 +2671,7 @@ function render(){
           <div class="m">
             <div class="t">$${p.amount.toFixed(2)} · ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
             <div class="by">${esc(p.email||'—')}${p.note?' · “'+esc(p.note)+'”':''}</div>
-            <div class="s">${dstamp(p.at)}${p.redeemed?'':' · not delivered'}</div>
+            <div class="s">${dstamp(p.at)}${p.redeemed?'':' · not delivered'}${lossNote(p)}${p.lost?` · was $${(+p.gross||0).toFixed(2)}`:''}</div>
           </div>
           <span class="cnt" style="font-size:15px;color:${p.redeemed?'var(--good)':'var(--accent)'}">${p.redeemed?'✓':'!'}</span>
         </div>`).join('')||'<div class="row muted">No payments yet.</div>'}${foldMore(R.payments,'pays')}</div>
@@ -4578,7 +4578,7 @@ function earnChart(L){
 }
 
 /* Votes against tips — the split the ledger does not carry. REV is the Checkout view
-   (dollars, gross, 180 days), so it is labelled as such and fails the same way the
+   (dollars, before fees, less refunds and lost disputes (0194), 180 days), so it is labelled as such and fails the same way the
    payments list above it does. */
 function revDonut(R){
   const head=`<div class="sec"><span class="kick">Where it came from · 180 days</span></div>`;
@@ -4705,7 +4705,11 @@ async function saveCosts(month){
    at the table, so it has to be readable across one. It is a lookup key minted
    from the session id — never a secret, never proof of payment; the button under
    it is the only fulfilment. The verb on that button is the thing the artist
-   actually does: hands it over, or posts it. */
+   actually does: hands it over, or posts it. An order refunded in full has no
+   button at all — it must never be handed over (decision 0177) — and nor has one
+   that came in after the last one sold (`short`, 0178), while its refund goes through. */
+/* what a refund or a chargeback did to a row that still stands (`lost` is cents) */
+const lossNote=(x)=>x.dispute==='won'?' · Dispute won':x.dispute&&x.dispute!=='warning_closed'?' · Disputed':x.lost?' · '+money(x.lost)+' refunded':'';
 function ordersSection(){
   const o=ORDERS||[]; const open=o.filter(x=>x.status!=='done');
   return `<div class="sec" id="orders"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
@@ -4714,10 +4718,10 @@ function ordersSection(){
       <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">
         ${x.code?`<b style="font-size:24px;font-weight:800;letter-spacing:.08em;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--ink)">${esc(x.code)}</b>`:''}
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''}&nbsp;·&nbsp;$${Number(x.amount||0).toFixed(2)}</div>
-          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+money(x.post)+' shipping':''} · ${when(x.at)}${done?' · '+verb:''}</div></div></div>
+          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+money(x.post)+' shipping':''} · ${when(x.at)}${x.refunded?' · Refunded — don’t hand it over':x.short?' · Sold out before it was paid — refunding the buyer':(done?' · '+verb:'')+lossNote(x)}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
         <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
-        <button class="act ${done?'':'pri'}" data-ed="merch" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button></div></div>`;}).join('')
+        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" data-ed="merch" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button>`}</div></div>`;}).join('')
       ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
 }
 /* THE ITEM EDITOR. Sizes are typed as one comma-separated line and become

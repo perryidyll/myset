@@ -3,7 +3,7 @@
    bundles, and a top-level import made every cold start of those public reads pay
    for evaluating the whole SDK before answering a fan who wanted a name and a
    photo (speed pass two, decision 0048). */
-import { casDoc, readDoc, voteCounts, roomCounts, KEY, DEFAULT_ARTIST } from './_lib.mjs';
+import { casDoc, readDoc, readMeta, voteCounts, roomCounts, KEY, DEFAULT_ARTIST } from './_lib.mjs';
 import { closeLog } from './_evlog.mjs';
 
 const HIST = KEY.hist;                  // flat key — INVARIANT 2
@@ -148,6 +148,10 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
        payments whose fee Stripe did not hand back (a hold not yet captured, a charge
        still settling); the figure is exact only when it is 0. */
     fees: { usd: 0, charges: 0, missing: 0 },
+    /* MONEY THAT WENT BACK (decision 0177): refunded, or held by a chargeback that is
+       open or was lost. Taken off every figure above; a payment that went back in
+       full is not counted at all, though Stripe's fee on it was still paid. */
+    lost: { amount: 0, count: 0 },
   };
   if (!key) return going || out;
   // carrying on: the sums so far are the starting point, and the window is the one it began with
@@ -169,6 +173,21 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
   const untaggedUntil = going ? (going.partial.until ?? Infinity) : closedByNext ? end : Infinity;
   let after = going ? going.partial.after : null;
   let asked = 0, complete = false;
+  /* A REFUND DOES NOT CHANGE A SESSION — it stays `paid` for ever — so what went back
+     is read from two places and the larger wins: the charge's own `amount_refunded`
+     (Stripe's figure, on the expansion already asked for the fee) and the payment's
+     marker, whose `lost` also knows a chargeback the charge does not (_refunds.mjs).
+     The marker is a cache of Stripe's events, never the takings themselves, so a
+     payments document that cannot be read is not a reason to report nothing: the
+     night is still read from Stripe, and only a chargeback goes unseen until the
+     next Re-check. */
+  const paidMarks = (await readMeta(aid).catch(() => null) || {}).paid || {};
+  const lostOf = (s) => {
+    const pi = s.payment_intent, ch = pi && typeof pi === 'object' ? pi.latest_charge : null;
+    const refunded = ch && typeof ch === 'object' ? Math.max(0, Number(ch.amount_refunded) || 0) : 0;
+    const mark = Math.max(0, Number((paidMarks[s.id] || {}).lost) || 0);
+    return Math.min(Math.max(0, s.amount_total || 0), Math.max(refunded, mark));
+  };
   try {
     /* Scoped, for the same reason revenue.mjs is: without it a connected artist's
        night was archived as gross 0 with source:'stripe' — claiming Stripe was asked
@@ -208,9 +227,13 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
            sessions predate artist tagging and belong to the founding artist, the
            same convention confirm.mjs, webhook.mjs and revenue.mjs use. */
         if ((md.artist || DEFAULT_ARTIST) !== aid) continue;
-        const amt = (s.amount_total || 0) / 100;
         if (md.show && md.show !== showId) continue;
-        if (!md.show) { if ((s.created || 0) * 1000 < untaggedUntil) { out.unattributed = round(out.unattributed + amt); addFee(out.fees, s); } continue; }
+        if (!md.show && (s.created || 0) * 1000 >= untaggedUntil) continue;
+        const lost = lostOf(s);
+        const amt = Math.max(0, (s.amount_total || 0) - lost) / 100;
+        if (lost > 0) { out.lost.amount = round(out.lost.amount + lost / 100); out.lost.count += 1; }
+        if (lost > 0 && amt <= 0) { addFee(out.fees, s); continue; }   // gone in full: its fee was still paid
+        if (!md.show) { out.unattributed = round(out.unattributed + amt); addFee(out.fees, s); continue; }
         out.gross = round(out.gross + amt);
         addFee(out.fees, s);
         if (['votes', 'song_votes', 'request_hold'].includes(md.kind)) {

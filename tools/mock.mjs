@@ -20,6 +20,7 @@
      ?live=1      the room is live (fab, "Tonight", pickup-tonight copy)
      ?canbuy=0    card payments off
      ?allout=1    every item sold out
+     ?short=1     the return trip: sold out before the payment landed, refunded (decision 0178)
      ?plan=free   the Studio on the free plan (the merch editor behind its lock)
      ?tour=1      the artist has a tour poster (the artist page's View tour dates, the Studio's card)
      ?founder=1   the Studio is the founding page: the founder's cards (codes, venues, sheet, books)
@@ -276,14 +277,14 @@ const SHOW_LABEL = 'Fri, Sep 11 · The Room';
    The address on a PAGE request sets the cookies; the API calls that page makes carry the
    cookies back. The query on the API call itself and the referer are read too, so a call
    made by hand (curl) can name a state without a cookie. */
-const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat', 'access'];
+const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat', 'access', 'short'];
 const cookies = (rq) => Object.fromEntries((rq.headers.cookie || '').split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
 function stateOf(rq, q) {
   const ck = cookies(rq);
   let ref = null; try { ref = new URL(rq.headers.referer || '', 'http://x').searchParams; } catch { ref = null; }
   const pick = (k) => q.get(k) ?? ck['mock_' + k] ?? (ref && ref.get(k)) ?? null;
   return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1', first: pick('first') === '1',
-           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner', access: pick('access') || '' };
+           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner', access: pick('access') || '', short: pick('short') === '1' };
 }
 /* what the page request does to the cookies: a flag in the address sets it; a return trip
    from checkout (?paid= / ?cancelled=) keeps them; a plain address clears them all */
@@ -759,6 +760,7 @@ const GROUPS = [
     ['/demo/shop?live=1', 'Live tonight', 'the fab, "Tonight" tags, pickup-tonight copy'],
     ['/demo/shop?canbuy=0', 'Card payments off', 'no Buy anywhere; links still work; "takes cash"'],
     ['/demo/shop?allout=1', 'Everything sold out', 'every card dimmed, prices kept, no Buy'],
+    ['/demo/shop?short=1&paid=cs_test_demo', 'Sold out before the payment landed', 'refunded in full: no code, nothing to pick up (0178)'],
     ['/one/shop', 'One item', 'the grid\'s .one column; no "More from" strip in the sheet'],
     ['/none/shop', 'Empty shop', '"Nothing on the table right now"'],
     ['/v/demo/shop', 'Venue shop', '"Ask at the bar", "pick up at the bar"'],
@@ -887,7 +889,8 @@ function confirmStub(st) {
   const order = item
     ? { item: item.id, title: item.title, qty, variant: (item.variants || []).length ? String(p.variant || '') : '', ship: item.ship, cents: item.cents * qty, post: postOf(item), code: 'K7PQ', show: p.live ? SHOW_LABEL : '', at: p.at }
     : { item: 'm000001', title: 'Tour tee', qty: 2, variant: 'M', ship: 'pickup', cents: 5000, post: 0, code: 'K7PQ', show: st.live ? SHOW_LABEL : '', at: Date.now() };
-  return { ok: true, kind: 'merch', amount: (order.cents + order.post) / 100, granted: 0, song: '', fan: (p && p.fan) || '', at: order.at, order };
+  return { ok: true, kind: 'merch', amount: (order.cents + order.post) / 100, granted: 0, song: '', fan: (p && p.fan) || '', at: order.at, order,
+           ...(st.short ? { short: true, refunded: true } : {}) };   // sold out before the money landed (0178)
 }
 
 const srv = http.createServer(async (rq, rs) => {

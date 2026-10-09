@@ -900,7 +900,7 @@ function tipsSection(){
     </div>
     <div class="list">${recent.length?recent.map(t=>`<div class="row"><div class="m">
         <div class="t mono">${vm$(Math.round(t.amount*100))}</div>
-        <div class="s">${t.note?`“${esc(t.note)}” · `:''}${vdate(new Date(t.at).toISOString())}</div></div></div>`).join('')
+        <div class="s">${t.lost?`<span style="color:var(--accent)">${vm$(t.lost)} went back</span> · `:''}${t.note?`“${esc(t.note)}” · `:''}${vdate(new Date(t.at).toISOString())}</div></div></div>`).join('')
       :`<div class="row muted">Your page shows <b>&nbsp;Tip the staff&nbsp;</b> — the first one lands here.</div>`}</div>
     <p class="muted" style="font-size:12px;padding:10px 20px 0">Tips land in your Stripe account${pct!=null?`, less MySet’s ${pct}% fee`:''}. Share them however your team does.${V.slug&&!SAMPLE?` <a href="/v/${esc(V.slug)}" style="color:var(--accent);font-weight:600">See your page ↗</a>`:''}</p>`;
 }
@@ -946,7 +946,11 @@ async function payDash(){
 /* THE ORDERS. The pickup code comes first and big: it is what the buyer reads out
    at the bar. It is a lookup key minted from the session id — never a secret,
    never proof of payment; the button under it is the only fulfilment, and its
-   verb is what the venue actually does: hands it over, or posts it. */
+   verb is what the venue actually does: hands it over, or posts it. An order
+   refunded in full has no button at all — it must never be handed over (0177) — and
+   nor has one that came in after the last one sold (`short`, 0178). */
+/* what a refund or a chargeback did to a row that still stands (`lost` is cents) */
+const vlossNote=(x)=>x.dispute==='won'?' · Dispute won':x.dispute&&x.dispute!=='warning_closed'?' · Disputed':x.lost?' · '+vmoney(x.lost)+' refunded':'';
 function ordersSection(){
   const o=VORDERS||[]; const open=o.filter(x=>x.status!=='done');
   return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
@@ -955,10 +959,10 @@ function ordersSection(){
       <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">
         ${x.code?`<b style="font-size:24px;font-weight:800;letter-spacing:.08em;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--ink)">${esc(x.code)}</b>`:''}
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''} · $${Number(x.amount||0).toFixed(2)}</div>
-          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' shipping':''} · ${vdate(x.at)}${done?' · '+verb:''}</div></div></div>
+          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' shipping':''} · ${vdate(x.at)}${x.refunded?' · Refunded — don’t hand it over':x.short?' · Sold out before it was paid — refunding the buyer':(done?' · '+verb:'')+vlossNote(x)}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
         <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
-        <button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button></div></div>`;}).join('')
+        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button>`}</div></div>`;}).join('')
       ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
 }
 async function orderDone(sid,done){ const d=await post('/venueadmin',{action:'orderDone',sid,done}); if(d&&d.ok){ VORDERS=null; loadOrders(); } else toast((d&&d.error)||'Couldn’t update that'); }
