@@ -232,6 +232,21 @@ export async function redeemSession(aid, session, fallbackFan = '') {
     const o = pre.paid[sid].kind === 'merch' ? pubOrder(orderOf(pre, sid)) : null;
     return { ok: true, already: true, ...pre.paid[sid], ...(o ? { order: o } : {}) };
   }
+  /* AN OLD SESSION MAY HAVE BEEN CLAIMED AND MOVED (decision 0193, INVARIANT 0ih).
+     A delivered marker older than PAID_KEEP_DAYS leaves `meta.paid` for its year's
+     archive — written and read back there before it is removed here — so "not in
+     meta" no longer means "never claimed" for an old session. Without this look a
+     sweep, a late webhook or the bell would claim it afresh and grant the pack a
+     second time; the fan's receipt is long gone by then (carryFans). A session
+     younger than the margin cannot have been moved, so the claim path a fan is
+     waiting on costs nothing extra. A read that fails throws: no grant on a guess. */
+  if (!pre.paid[sid]) {
+    const arc = await archivedMarker(aid, session);
+    if (arc) {
+      const o = arc.kind === 'merch' ? pubOrder(orderOf(pre, sid)) : null;
+      return { ok: true, already: true, ...arc, ...(o ? { order: o } : {}) };
+    }
+  }
   const retrying = !!pre.paid[sid];        // claimed before, never delivered
 
   const md = session.metadata || {};
@@ -351,6 +366,183 @@ export async function redeemSession(aid, session, fallbackFan = '') {
   const order = md.kind === 'merch' ? pubOrder(orderRow || orderOf(pre, sid)) : null;
   return { ok: true, kind: md.kind || 'unknown', amount, granted, song: md.song || '', fan: who, at,
            redelivered: retrying || undefined, asCredits: asCredits || undefined, ...(order ? { order } : {}) };
+}
+
+/* ---------- OLD PAYMENT MARKERS MOVE TO THEIR YEAR (decision 0193) ----------
+
+   `meta.paid` holds one marker per paid Checkout session — about 255 bytes — and
+   nothing ever removed one, while every payment rewrites the whole document (the
+   claim, the flip) and many readers load all of it. A busy act reached about a
+   megabyte a year (scale audit PAY-2). So a DELIVERED marker older than
+   PAID_KEEP_DAYS moves to `paidarc_<owner>_<YYYY>`, the UTC year of its `at` (which
+   is the session's `created`), shaped `{ v:1, paid: { <sid>: <marker> } }`.
+
+   The order is the whole safety (INVARIANT 0ih): the marker is merged into its
+   year and READ BACK there first; only then is it deleted from meta, and only if
+   it is still the same delivered marker. So at every moment it is in meta, in the
+   archive, or in both — never neither. An undelivered marker never moves, however
+   old: it is work still owed, and every delivery path looks for it in meta.
+
+   A hundred and thirty days is past everything that can still change a marker:
+   Stripe and the bell retry for three days, and a cardholder may dispute a charge
+   for up to 120 days — the refund and dispute handlers (0177) write to the marker in
+   meta, so it must still be there. The Studio's sweep looks back 180 days, and it and
+   every claim check consult the archive for any session older than
+   PAID_ARC_MARGIN_MS, ten days inside the move, so clocks that disagree a little
+   cannot open a gap. Every key is computable: the years run from PAID_FIRST_YEAR
+   (MySet's first) to now — never `list()` (INVARIANT 1). */
+export const PAID_KEEP_DAYS = 130;
+export const PAID_KEEP_MS = PAID_KEEP_DAYS * 86400e3;
+export const PAID_ARC_MARGIN_MS = 120 * 86400e3;
+export const PAID_FIRST_YEAR = 2026;
+export const PAID_ARC_LIMIT = 200;
+export const PAIDARC = (owner, year) => `paidarc_${owner}_${year}`;
+const yearOf = (ms) => new Date(Number(ms) || 0).getUTCFullYear();
+const emptyArc = () => ({ v: 1, paid: {} });
+const isDelivered = (p) => !!p && p.delivered !== false;
+
+/** Every archive year that can exist for an owner: PAID_FIRST_YEAR (or `since`, if later) to now. */
+export function paidArcYears(now = Date.now(), since = PAID_FIRST_YEAR) {
+  const out = [];
+  for (let y = Math.max(PAID_FIRST_YEAR, Number(since) || PAID_FIRST_YEAR); y <= yearOf(now); y++) out.push(y);
+  return out;
+}
+
+/** The archived markers of the given years, merged. Read in parallel; a read that
+ *  fails THROWS (0hq) — every caller is deciding whether something was paid for. */
+export async function readPaidArc(owner, years) {
+  const docs = await Promise.all([...new Set(years)].map((y) => readDoc(PAIDARC(owner, y), null)));
+  return Object.assign({}, ...docs.map((d) => (d.data && d.data.paid) || {}));
+}
+
+/** Every payment marker the owner has: the archives since `sinceYear`, then meta's
+ *  own on top (a marker in both is the same one, half-way through its move). Pass
+ *  `meta` when it is already in hand. For lifetime readers, never a hot path. */
+export async function readPaidAll(owner, { sinceYear = PAID_FIRST_YEAR, meta = null, now = Date.now() } = {}) {
+  const m = meta || await readMeta(owner);
+  return { ...(await readPaidArc(owner, paidArcYears(now, sinceYear))), ...((m && m.paid) || {}) };
+}
+
+/* The archive years a session's marker can be in: the year of its `created`, and
+   the year after (a marker whose `at` was stamped later — a capture after New
+   Year) — never one before MySet's first or after now. With no `created` at all
+   (Stripe always sends one) the last two years are read rather than none. */
+function yearsFor(createdSec, now = Date.now()) {
+  const y = createdSec ? yearOf(createdSec * 1000) : yearOf(now) - 1;
+  return [y, y + 1].filter((x) => x >= PAID_FIRST_YEAR && x <= yearOf(now));
+}
+
+/** The archived marker of one session, or null. Reads nothing for a session younger
+ *  than the margin, because nothing that young has been moved. */
+export async function archivedMarker(owner, session, now = Date.now()) {
+  if (!session || !session.id) return null;
+  if (session.created && now - session.created * 1000 < PAID_ARC_MARGIN_MS) return null;
+  const years = yearsFor(session.created, now);
+  if (!years.length) return null;
+  const got = (await readPaidArc(owner, years))[session.id];
+  return got || null;
+}
+
+/** For a list of Stripe sessions (the Money tab's window): the archived markers of
+ *  any that meta does not hold and that are old enough to have moved. One read per
+ *  year the window spans — at most two for 180 days — and none when nothing needs it. */
+export async function archivedAmong(owner, sessions, meta, now = Date.now()) {
+  const need = (sessions || []).filter((s) => s && s.id && !(meta && meta.paid && meta.paid[s.id])
+    && !(s.created && now - s.created * 1000 < PAID_ARC_MARGIN_MS));
+  if (!need.length) return {};
+  return readPaidArc(owner, need.flatMap((s) => yearsFor(s.created, now)));
+}
+
+/**
+ * Move this owner's old delivered markers out of meta (decision 0193). Bounded by
+ * `limit` per call, oldest first. Returns { moved, left, failedYears }. Throws only
+ * if meta itself cannot be read — nothing has been written by then.
+ */
+export async function archivePaid(owner, { now = Date.now(), limit = PAID_ARC_LIMIT } = {}) {
+  const cutoff = now - PAID_KEEP_MS;
+  const m = await readMeta(owner);
+  const due = Object.entries(m.paid || {})
+    .filter(([, p]) => isDelivered(p) && Number(p.at) > 0 && Number(p.at) < cutoff && yearOf(p.at) >= PAID_FIRST_YEAR)
+    .sort((a, b) => Number(a[1].at) - Number(b[1].at));
+  const pick = due.slice(0, Math.max(0, limit));
+  if (!pick.length) return { moved: 0, left: 0, failedYears: [] };
+  // exactly what was read, so the delete below can tell an untouched marker from a changed one
+  const snap = Object.fromEntries(pick.map(([sid, p]) => [sid, JSON.stringify(p)]));
+  const byYear = {};
+  for (const [sid, p] of pick) (byYear[yearOf(p.at)] ||= {})[sid] = p;
+
+  /* 1. Into the year, and read back. Only a sid seen in its archive, byte for byte,
+        may leave meta. A year that fails keeps all its markers where they were. */
+  const safe = [], failedYears = [];
+  for (const [y, rows] of Object.entries(byYear)) {
+    try {
+      await casDoc(PAIDARC(owner, y), emptyArc, (d) => {
+        d.v = 1; d.paid = d.paid && typeof d.paid === 'object' ? d.paid : {};
+        let changed = false;
+        for (const [sid, p] of Object.entries(rows)) {
+          if (JSON.stringify(d.paid[sid]) === snap[sid]) continue;
+          d.paid[sid] = p; changed = true;
+        }
+        return changed;
+      });
+      const { data } = await readDoc(PAIDARC(owner, y), null);
+      const held = (data && data.paid) || {};
+      const ok = Object.keys(rows).filter((sid) => JSON.stringify(held[sid]) === snap[sid]);
+      safe.push(...ok);
+      if (ok.length < Object.keys(rows).length) failedYears.push(Number(y));
+    } catch (e) {
+      failedYears.push(Number(y));
+      console.error(`paidarc: could not archive ${owner}'s ${y} markers; they stay in meta:`, String((e && e.message) || e));
+    }
+  }
+  if (!safe.length) return { moved: 0, left: due.length, failedYears };
+
+  /* 2. Out of meta — exactly those, and only while each is still the delivered
+        marker that was archived. Anything that changed in between stays. */
+  let moved = 0;
+  try {
+    await mutateMeta(owner, (mm) => {
+      moved = 0;
+      for (const sid of safe) {
+        const cur = mm.paid[sid];
+        if (cur && isDelivered(cur) && JSON.stringify(cur) === snap[sid]) { delete mm.paid[sid]; moved += 1; }
+      }
+      return moved > 0;
+    });
+  } catch (e) {
+    moved = 0;   // still in meta AND in the archive: the next pass finishes it
+    console.error(`paidarc: archived ${owner}'s markers but could not trim meta; the next pass will:`, String((e && e.message) || e));
+  }
+  return { moved, left: due.length - moved, failedYears };
+}
+
+/**
+ * The bell's daily pass (decision 0193): every artist and venue, from where the last
+ * ring stopped, a few at a time, until `deadline`. Returns the next cursor and
+ * whether the pass reached the end. Never throws per owner; an owner that fails is
+ * picked up on tomorrow's pass. Accounts on their way out are left alone — their
+ * purge deletes the archive by key, and a write racing it would leave one behind.
+ */
+export const PAIDARC_CHUNK = 5;
+export async function archiveDue({ now = Date.now(), deadline = Date.now() + 2000, cursor = 0, limit = PAID_ARC_LIMIT } = {}) {
+  const { readArtists } = await import('./_auth.mjs');
+  const { readVenues } = await import('./_venues.mjs');
+  const [a, v] = await Promise.all([readArtists(), readVenues()]);
+  const owners = [...new Set([
+    ...Object.entries(a.byId || {}).filter(([, r]) => !(r && r.del)).map(([id]) => id),
+    ...Object.entries(v.byId || {}).filter(([, r]) => !(r && r.del)).map(([vid]) => `v_${vid}`),
+  ])].sort();
+  let i = Math.min(Math.max(0, Number(cursor) || 0), owners.length), moved = 0, looked = 0;
+  while (i < owners.length) {
+    if (looked && Date.now() > deadline) break;
+    const chunk = owners.slice(i, i + PAIDARC_CHUNK);
+    const got = await Promise.all(chunk.map((o) => archivePaid(o, { now, limit }).catch((e) => {
+      console.error(`paidarc: ${o} skipped this pass:`, String((e && e.message) || e)); return { moved: 0 }; })));
+    moved += got.reduce((s, r) => s + (r.moved || 0), 0);
+    looked += chunk.length; i += chunk.length;
+  }
+  const done = i >= owners.length;
+  return { moved, looked, of: owners.length, next: done ? 0 : i, done };
 }
 
 /* ---------- A PAYMENT STILL OWED (decision 0138) ----------
