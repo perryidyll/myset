@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 07:58 — 75bdcbb — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
+**tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
+**Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
+
 ### 2026-10-07 14:56 — fa9c189 — sample-cover@ux/sample-decks-every-visit (8 files since origin/main)
 **tl;dr:** A sample's Studio (artist and venue) now shows its welcome every time it opens, and each tab's tip deck the first time that tab is opened in the visit — no longer once per phone.
 **Other sessions:** studio.js / venue-studio.js: tipOnce + VISIT (in-memory Set) replace Tips.first for samples only; real accounts unchanged (once per phone); practice-round pr-* decks still once per phone. Decision 0171.
