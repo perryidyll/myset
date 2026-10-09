@@ -609,7 +609,7 @@ export async function inTurn(items, fn, width = 8) {
    0148): a receipt past RECEIPT_MS is dropped and one in the old long shape is
    shortened. The file is being rewritten whole anyway, so this costs no read and no
    write — only the bytes the next writer of this file no longer has to move. */
-export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
+export const mutateFan = (aid, fanId, fn, verifyFan = null, tries = 40) =>
   casDoc(
     shardKey(aid, shardOf(fanId)),
     () => ({}),
@@ -620,7 +620,8 @@ export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
       if (out !== false) pruneReceipts(bag);
       return out;
     },
-    verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
+    verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null,
+    tries
   );
 
 /** All fan records, merged from every shard (parallel strong reads). */
@@ -1360,6 +1361,14 @@ export const presenceCurrent = (me, show, fanId, now = Date.now()) =>
  *  also where it is let into tonight's free votes or held out of them (`settleFree`);
  *  a phone held out with nothing on its record is not written at all. Returns the
  *  record as written, or null when nothing was. */
+/** One write per device per show. Called only from the voting page, only while a
+ *  show is live, and skipped entirely once the stamp is already there.
+ *  AT MOST PRESENCE_TRIES GOES (decision 0185). It shares a shard with the votes, and
+ *  a room scanning in at once used to spend up to forty tries — seconds — per phone
+ *  on a head-count, taking the turns votes needed. A stamp that loses three times is
+ *  simply missed: the next personal call tries again, and a phone that votes is
+ *  counted by its vote (roomCounts). */
+export const PRESENCE_TRIES = 3;
 export async function markPresence(aid, fanId, show, req, now = Date.now()) {
   if (!fanId || !show || show.status !== 'live') return null;
   const ipH = roomHash(aid, clientIp(req));
@@ -1379,7 +1388,7 @@ export async function markPresence(aid, fanId, show, req, now = Date.now()) {
       const blank = blankFan(me);                               // before settleFree writes on it
       if (settleFree(me, bag, fanId, show, ipH, now)) return true;      // let in, and stamped
       return !blank;                     // held out: written only if the record holds something real
-    });
+    }, null, PRESENCE_TRIES);
     return r && r.ok ? own(r.data, fanId) || null : null;
   } catch { return null; /* a missed head-count must never break the voting page */ }
 }

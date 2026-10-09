@@ -83,7 +83,12 @@ console.log('\nTHE DOORS OPEN: 5,000 PHONES ARRIVE IN A MINUTE');
 const doors = room({ P: 0, arrive: 5000, arriveSec: 60 });
 ok('the room ran', !doors.error && doors.unfinished === 0 && !doors.err, doors);
 ok('every phone got its page', doors.me.status[200] === 5000, doors.me);
-ok('and every one was counted in the room', doors.presenceLanded === 5000, doors);
+/* Since decision 0185 a head-count stamp gets PRESENCE_TRIES (three) goes at its shard,
+   not forty: in a minute's rush about one phone in seven loses all three and is counted
+   at its next personal poll instead (the vote page asks again every ME_EVERY seconds,
+   and a phone that votes is counted by its vote). The room is whole within a poll; on
+   arrival it is nearly whole, and the votes kept their turns. */
+ok('and nearly every one was counted on arrival (the rest at their next poll, 0185)', doors.presenceLanded >= 0.8 * 5000 && doors.presenceLanded <= 5000, doors);
 ok('nobody waited past the function limit', doors.me.overTimeout === 0, doors.me);
 console.log('    ' + times(doors.me));
 

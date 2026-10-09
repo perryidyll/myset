@@ -692,7 +692,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=15f13758"></script>
+<script src="/fan.js?v=0831c190"></script>
 <script>
 /* /<slug>/shop or /v/<slug>/shop — and the bare file with ?a=|?v= so tools/uicheck.mjs can open it */
 const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
@@ -908,7 +908,6 @@ let RECEIPT=null, CHECKING='', HID=0;
 const STILL=false;   // the strips have no pause control since 2026-09-14 (the founder); a finger stops them, reduced motion draws them still
 /* the picks strip (S8) is a founder toggle, OFF in v1 (NN/g, Baymard: no auto-forwarding strip above the grid); ?picks=1 previews it */
 const PICKS=qs.get('picks')==='1';
-const WV=(()=>{const m=/Instagram|FBAN|FBAV|FB_IAB|BytedanceWebview|musical_ly/i.exec(navigator.userAgent||''); if(!m) return ''; const s=m[0].toLowerCase(); return /instagram/.test(s)?'Instagram':/bytedance|musical/.test(s)?'TikTok':'Facebook';})();
 let HINT=!!WV&&(()=>{try{return localStorage.getItem('myset.shop.hint')!=='1'}catch(e){return true}})();
 async function load(){
   try{
