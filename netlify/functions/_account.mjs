@@ -103,6 +103,7 @@ export async function keysFor(aid, namers = null) {
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
     `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`,
     `paylim_${aid}`,    // the checkout limiter (0111)
+    `cliplim_${aid}`,   // the clip-upload limiter (0189)
     KEY.diary(aid),     // the artist diary (0085)
     `bugs_${aid}`,      // what fans reported from this room (0146: it had no second home, and outlived the account)
     `mhold_${aid}`];    // merch held while a buyer is on Stripe's page (0178)
