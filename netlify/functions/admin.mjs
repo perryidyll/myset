@@ -580,9 +580,12 @@ async function handleEvents(aid, action, body) {
   if (action === 'eventDelete') {
     await mutateEvents(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
     const [events, hidx] = await Promise.all([readEvents(aid), readDoc(KEY.histIdx(aid), { shows: [] })]);
-    // every night already filed under a gig, so the rule can be kept on the ones
-    // that have nothing else saying what they were worth (0198)
-    const filed = (((hidx.data && hidx.data.shows) || [])).map((r) => r && r.key).filter(Boolean);
+    /* Every night already filed under a gig, so the rule can be kept on the ones that
+       have nothing else saying what they were worth (0198). A sealed index that would
+       not open reads as EMPTY (0hb) — that is no index, not a gig with no nights, so
+       it prunes nothing rather than re-pricing the past. A read that failed threw. */
+    const filed = hidx.sealed ? null
+      : (((hidx.data && hidx.data.shows) || [])).map((r) => r && r.key).filter(Boolean);
     await Promise.all([reindexCities(aid, events), reindexSched(aid, events),
       /* The gig's default pay/costs go with it (0065) — but a night already PLAYED
          under it keeps those figures as its own record first, because the rule was
@@ -1665,7 +1668,8 @@ async function handleBiz(aid, action, body) {
          drops is written onto the nights already played under it first (0198). */
       const [ev, hidx] = await Promise.all([readEvents(aid), readDoc(KEY.histIdx(aid), { shows: [] })]);
       events = ev;
-      filed = (((hidx.data && hidx.data.shows) || [])).map((r) => r && r.key).filter(Boolean);
+      filed = hidx.sealed ? null
+        : (((hidx.data && hidx.data.shows) || [])).map((r) => r && r.key).filter(Boolean);
       if (!events.list.some((e) => e && e.id === rule)) return bad('That gig isn’t on your calendar', 400);
     }
     let res = null, full = false;

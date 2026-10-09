@@ -81,7 +81,7 @@ can see the others' chat. This file is the one place they all speak.
 
 ### 2026-10-09 15:00 — 7a27f36 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (40 files since origin/main)
 **tl;dr:** Deleting a repeating gig no longer wipes the pay and hours off nights you already played — five of the founder's nights were showing $0 and no time after Wednesday's tidy-up, and have been restored (0198)
-**Other sessions:** pruneRules now takes a third argument: the <eventId>@<date> keys from the history index. It writes a dying rule onto every night already filed under that gig that has no record of its own, THEN deletes the rule. Pass it nothing and it prunes NOTHING — any new caller must read histidx_<aid> (eventDelete and bizSave's orphan sweep both do). INVARIANT 0ja.
+**Other sessions:** pruneRules now takes a third argument: the <eventId>@<date> keys from the history index. It writes a dying rule onto every night already filed under that gig that has no record of its own, THEN deletes the rule. Pass it nothing — including a sealed index that would not open (0hb) — and it prunes NOTHING — any new caller must read histidx_<aid> (eventDelete and bizSave's orphan sweep both do). INVARIANT 0ja.
 
 ### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
 **tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record
