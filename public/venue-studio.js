@@ -34,7 +34,10 @@ async function api(p,o={}){
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
   if(SAMPLE){ h['x-sample-key']=SAMPLE.key; h['x-sample-venue']=SAMPLE.slug; }
   if(!o.quiet) busy(true);
-  try{ const r=await fetch(API+p,{...o,headers:h}); return await r.json(); }
+  try{ const r=await fetch(API+p,{...o,headers:h});
+    // a token more than a day old comes back fresh for this device (decision 0172); kept here, nowhere else
+    try{ const nt=r.headers.get('x-myset-token'); if(nt&&!SAMPLE){ TOKEN=nt; localStorage.setItem('myset.vtoken',nt); } }catch(e){}
+    return await r.json(); }
   catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
   finally{ if(!o.quiet) busy(false); }
 }

@@ -35,22 +35,28 @@ const norm = (d) => {
 /** Append `items` (and optionally mutate the head's `x` — small state that is
  *  REPLACED, not appended: a show's leftover votes, its end time). One CAS write;
  *  a spill afterwards only when the head has filled. */
-export async function appendLog(key, items = [], extra = null) {
+export async function appendLog(key, items = [], extra = null, opts = {}) {
   const list = Array.isArray(items) ? items : [];
   if (!list.length && !extra) return null;
+  /* `size`: a smaller part for a log whose head is read on a hot-ish path (the activity
+     log, 0173: two hundred). `upgrade(d)`: a document kept the OLD way — a capped list
+     and nothing else — is taken over once, so the caller can put its entries in this
+     log's order (oldest first) before the first append lands behind them. */
+  const size = Math.max(20, parseInt(opts.size, 10) || 0) || CHUNK();
   const r = await casDoc(key, empty, (d) => {
+    if (opts.upgrade && d.n === undefined && d.parts === undefined && Array.isArray(d.list)) opts.upgrade(d);
     norm(d);
     for (const it of list) d.list.push(it);
     d.n += list.length;
     if (extra) extra(d.x, d);
     return true;
   });
-  if (r && r.data && r.data.list.length >= CHUNK()) await spill(key, r.data).catch(() => {});
+  if (r && r.data && r.data.list.length >= size) await spill(key, r.data, size).catch(() => {});
   return r && r.data;
 }
 
-async function spill(key, head) {
-  const i = head.parts, size = CHUNK();
+async function spill(key, head, size = CHUNK()) {
+  const i = head.parts;
   const body = JSON.stringify({ v: 1, part: i, list: head.list.slice(0, size) });
   // a part of a sealed log is sealed too (0113): readDoc opens it on the way back
   const pk = partKey(key, i);

@@ -153,6 +153,12 @@ echo
 echo "── the account system ──"
 node --import ./test/register.mjs test/accounts.mjs
 echo
+echo "── a session lasts a week and renews itself in use (0172) ──"
+node --import ./test/register.mjs test/sessionlife.mjs
+echo
+echo "── the activity log is complete (0173) ──"
+node --import ./test/register.mjs test/activity.mjs
+echo
 echo "── the signing key leaves the store (0112) ──"
 node --import ./test/register.mjs test/secret.mjs
 echo

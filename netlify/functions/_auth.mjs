@@ -10,7 +10,8 @@ import { keysFor } from './_secret.mjs';
    don't have a Google account. */
 
 const CODE_TTL = 10 * 60e3;          // a code is good for ten minutes
-const TOKEN_TTL = 30 * 24 * 3600e3;  // a session lasts a month
+const TOKEN_TTL = 7 * 24 * 3600e3;   // a session lasts a week, renewed in use (decision 0172)
+const RENEW_AFTER = 24 * 3600e3;    // a token more than a day old is renewed on its next use
 const MAX_TRIES = 5;                 // wrong guesses before the code is burned
 const MAX_SENDS = 5;                 // codes per email per hour
 
@@ -287,13 +288,24 @@ export const revOf = (reg, aid) =>
 /** `sid` names the device this token belongs to, so one phone can be signed out
  *  without signing out the band. Omitted, the body is the old three-field one and
  *  every token minted before this change keeps working. */
-export async function signToken(email, rev, sid) {
-  const exp = Date.now() + TOKEN_TTL;
+export async function signToken(email, rev, sid, now = Date.now()) {
+  const exp = now + TOKEN_TTL;
   const body = sid ? `${email}|${exp}|${rev}|${sid}` : `${email}|${exp}|${rev}`;
   const sig = mac((await signingKeys()).sign, body);
   return `${Buffer.from(body).toString('base64url')}.${sig}`;
 }
 export const TOKEN_LIFE = TOKEN_TTL;
+export const RENEW_AFTER_MS = RENEW_AFTER;
+/* A SESSION RENEWS ITSELF IN USE (decision 0172). A week is as long as a copied token
+   is worth anything, and a device that opens the Studio inside the week never notices:
+   a token more than a day old is answered with a fresh one for the SAME device — the
+   same address, the same rev, the same sid, so the session list and every sign-out
+   keep meaning what they meant — and the Studio keeps it. Once a day, never once a
+   poll. A token that is still young renews nothing. */
+export async function renewToken(me, now = Date.now()) {
+  if (!me || !me.email || !Number(me.exp) || Number(me.exp) - now > TOKEN_TTL - RENEW_AFTER) return null;
+  return signToken(me.email, me.rev, me.sid || null, now);
+}
 export async function verifyToken(token) {
   if (typeof token !== 'string' || token.length > 500) return null;
   const [b64, sig] = token.split('.');
@@ -332,7 +344,7 @@ export async function verifyToken(token) {
   if (sid && row.dead && Number(row.dead[sid]) > Date.now()) return null;
   // `access`: the tabs the owner has changed for this seat (decision 0105) — off the row already in hand
   return { email, artistId: link.artistId, role: link.role || 'owner', sid, access: link.access || null,
-           artist: reg.byId[link.artistId] };
+           exp: Number(exp), rev, artist: reg.byId[link.artistId] };
 }
 
 /* ---------- one-time codes ---------- */

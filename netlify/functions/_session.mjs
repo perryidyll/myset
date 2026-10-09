@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc } from './_lib.mjs';
 import { storeKey, mutateArtists, readArtists } from './_auth.mjs';
+import { appendLog, partKey } from './_append.mjs';
 
 /* SESSIONS, THE ACTIVITY LOG, AND RECOVERY CODES.
 
@@ -42,12 +43,10 @@ export const REC  = (owner) => `rec_${owner}`;
 const isVenue = (o) => String(o || '').startsWith('v_');
 
 const emptySess = () => ({ v: 1, list: [] });
-const emptyLog  = () => ({ v: 1, list: [] });
 const emptyRec  = () => ({ v: 1, madeAt: 0, codes: [] });
 
 const MAX_SESSIONS = 20;
 const MAX_DEAD = 12;
-const MAX_LOG = 100;
 const TOUCH_EVERY = 3600e3;
 
 /** A session id. Not a secret — it rides inside an already-signed token — but
@@ -181,20 +180,43 @@ export async function readSessions(owner, mySid, onlyEmail = null) {
 }
 
 /* ---------- the activity log ----------
-   Bounded by construction, and written best-effort: a logging failure must never
-   be the reason a musician cannot start a show. */
+   COMPLETE BY CONSTRUCTION (decision 0173). Until then this was a hundred entries,
+   newest first, and the hundred-and-first fell off — a record of who got into an
+   account that forgot the beginning. It is now an append-only log (_append.mjs,
+   decision 0068's shape): a head of at most LOG_CHUNK entries, oldest first, spilled
+   into write-once parts `log_<owner>_p<n>` that are never rewritten and never trimmed.
+   `log_` is a sealed family (0113), parts included, and every document an owner
+   holds is copied to R2 by the nightly mirror — a copy the mirror never deletes
+   (_mirror.mjs), so the record outlives the account that made it. One CAS write per
+   entry, as before; a part costs one extra write every two hundred entries.
+   Written best-effort: a logging failure must never be the reason a musician cannot
+   start a show. */
+const LOG_CHUNK = 200;
+/* A log kept the old way was newest-first and capped. appendLog takes it over on its
+   first append — oldest first, with its count — so nothing already recorded moves. */
+const upgrade = (d) => { d.list.reverse(); d.n = d.list.length; };
 export function note(owner, e, by, meta) {
-  return casDoc(LOG(owner), emptyLog, (d) => {
-    d.list ||= [];
-    d.list.unshift({ t: Date.now(), e: String(e).slice(0, 24), by: String(by || '').slice(0, 160),
-                     ...(meta ? { m: String(meta).slice(0, 80) } : {}) });
-    if (d.list.length > MAX_LOG) d.list.length = MAX_LOG;
-    return true;
-  }).catch(() => {});
+  const entry = { t: Date.now(), e: String(e).slice(0, 24), by: String(by || '').slice(0, 160),
+                  ...(meta ? { m: String(meta).slice(0, 80) } : {}) };
+  return appendLog(LOG(owner), [entry], null, { size: LOG_CHUNK, upgrade }).catch(() => {});
 }
+/** The newest `n`, newest first: the head, then the last part when the head is short
+ *  (one more read, only on the screen that asks and only just after a spill). A log
+ *  nobody has written to since before 0173 is still newest-first on disk and reads
+ *  the same as it did. */
 export async function readLog(owner, n = 25) {
-  const { data } = await readDoc(LOG(owner), null);
-  return ((data && data.list) || []).slice(0, n);
+  const key = LOG(owner);
+  const { data } = await readDoc(key, null);
+  if (!data) return [];
+  const list = Array.isArray(data.list) ? data.list : [];
+  if (data.n === undefined && data.parts === undefined) return list.slice(0, n);
+  let out = list.slice(-n).reverse();
+  const parts = Math.max(0, parseInt(data.parts, 10) || 0);
+  if (out.length < n && parts > 0) {
+    const { data: p } = await readDoc(partKey(key, parts - 1), null);
+    out = out.concat(((p && Array.isArray(p.list) && p.list) || []).slice(-(n - out.length)).reverse());
+  }
+  return out;
 }
 
 /* ---------- recovery codes ----------

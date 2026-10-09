@@ -12,6 +12,8 @@ import { readMeta } from './_lib.mjs';
 import { readArchivedPosts, archiveKeys as postArchiveKeys } from './_community.mjs';
 import { readArchivedFeedback, archiveKeys as fbArchiveKeys } from './_feedback.mjs';
 import { readEventLog, evtKeys } from './_evlog.mjs';
+import { logKeys } from './_append.mjs';
+import { LOG } from './_session.mjs';
 import { listVersions, versionKeys, verKey } from './_versions.mjs';
 import { credKey } from './_cred.mjs';
 import { messageKeys, exportMessages } from './_messages.mjs';
@@ -91,7 +93,7 @@ export async function keysFor(aid) {
   const keys = [KEY.show(aid), KEY.meta(aid), KEY.profile(aid), KEY.histIdx(aid), `req_${aid}`,
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
-    `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
+    `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
     `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`,
     `paylim_${aid}`,    // the checkout limiter (0111)
     KEY.diary(aid)];    // the artist diary (0085)
@@ -117,6 +119,8 @@ export async function keysFor(aid) {
     for (const k of await versionKeys(base).catch(() => [])) keys.push(k);
   for (const k of await postArchiveKeys(aid).catch(() => [])) keys.push(k);
   for (const k of await fbArchiveKeys(aid).catch(() => [])) keys.push(k);
+  // the activity log and its parts (0173): the head names them, one read
+  for (const k of await logKeys(LOG(aid)).catch(() => [LOG(aid)])) keys.push(k);
   // one password record per sign-in address (decision 0070) — deleted, never exported
   const reg = await readArtists().catch(() => ({ byEmail: {} }));
   for (const [e, v] of Object.entries(reg.byEmail || {})) if (v && v.artistId === aid) keys.push(credKey(aid, e));

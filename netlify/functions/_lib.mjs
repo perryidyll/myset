@@ -1336,13 +1336,24 @@ export const weakCode = (code, slug) => {
     || (slug && c === String(slug).toLowerCase());
 };
 
+/* A token that renewed itself while a request was being answered (decision 0172,
+   renewToken in _auth.mjs) waits here for guard() to put it on the reply — one
+   header, `x-myset-token`, read by the Studios' api(). Keyed by the Request itself,
+   so nothing about one request can reach another on a warm instance. */
+const RENEWALS = new WeakMap();
+export const offerRenewal = (req, token) => { if (req && token) RENEWALS.set(req, token); };
+export const renewalFor = (req) => (req && RENEWALS.get(req)) || null;
+
 export async function requireArtist(req, opts = {}) {
   const auth = req.headers.get('authorization') || '';
   if (auth.startsWith('Bearer ')) {
-    const { verifyToken } = await import('./_auth.mjs');
+    const { verifyToken, renewToken } = await import('./_auth.mjs');
     const me = await verifyToken(auth.slice(7));
     // `sid` says WHICH device, so "sign out" can mean this one and not all of them
-    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null, access: me.access || null };
+    if (me) {
+      offerRenewal(req, await renewToken(me));
+      return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null, access: me.access || null };
+    }
   }
 
   /* THE SAMPLE DOOR (decision 0101). A page the factory built opens its Studio to
