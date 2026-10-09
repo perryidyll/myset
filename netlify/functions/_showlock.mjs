@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { authSecret } from './_auth.mjs';
+import { authSecret, signingKeys } from './_auth.mjs';
 import * as L from './_hqlock.mjs';
 
 /* THE SHOW LOG'S LOCK (decision 0130). The founder, 2026-09-30: the money model needs
@@ -25,7 +25,8 @@ export const COOKIE = 'slk';
 export const DOC = 'showlock';
 const PATH = '/moneymodel';
 
-const mac = async (exp, env) => createHmac('sha256', await authSecret()).update(`show-unlock|${exp}|${L.fingerprint(env)}`).digest('base64url');
+const macWith = (key, exp, env) => createHmac('sha256', key).update(`show-unlock|${exp}|${L.fingerprint(env)}`).digest('base64url');
+const mac = async (exp, env) => macWith(await authSecret(), exp, env);
 const attrs = (maxAge, secure) => `Path=${PATH}; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`;
 
 export async function unlockCookie({ now = Date.now(), secure = true, env = process.env } = {}) {
@@ -41,8 +42,13 @@ export async function unlocked(req, { now = Date.now(), env = process.env } = {}
     const [exp, sig] = c.slice(COOKIE.length + 1).split('.');
     const e = Number(exp);
     if (!sig || !(e > now) || e > now + L.UNLOCK_HOURS * 3600e3) continue;
-    const want = Buffer.from(await mac(e, env)), got = Buffer.from(sig);
-    if (want.length === got.length && timingSafeEqual(want, got)) return true;
+    /* Every key a cookie may have been signed with (signingKeys, decision 0112): a Show
+       log opened the hour before MYSET_SECRET arrived stays open, not locked again. */
+    const got = Buffer.from(sig);
+    for (const k of (await signingKeys()).verify) {
+      const want = Buffer.from(macWith(k, e, env));
+      if (want.length === got.length && timingSafeEqual(want, got)) return true;
+    }
   }
   return false;
 }

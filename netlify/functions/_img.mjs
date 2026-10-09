@@ -1,4 +1,5 @@
 import { store } from './_lib.mjs';
+import { protectedKey, seal, open, sealFailed } from './_seal.mjs';
 
 /* Artist photos, stored as bytes in Blobs and served back by /api/img.
 
@@ -89,16 +90,27 @@ export function decodeTourFile(dataUrl) {
   return { bytes, type: 'application/pdf', kind: 'pdf' };
 }
 
+/* The ID photo is SEALED at rest (decision 0113, _seal.mjs): the most sensitive bytes
+   in the store, written and read only here, so a copy of the store is not a copy of
+   anybody's passport. Every other picture is public and stays as it is. */
 export async function putImage(aid, slot, bytes, type) {
-  await store().set(KEY(aid, slot), bytes, { metadata: { type } });
+  const key = KEY(aid, slot);
+  await store().set(key, protectedKey(key) ? await seal(key, bytes) : bytes, { metadata: { type } });
   return `/api/img?a=${encodeURIComponent(aid)}&s=${slot}&v=${Date.now().toString(36)}`;
 }
 
 export async function getImage(aid, slot) {
   try {
-    const r = await store().getWithMetadata(KEY(aid, slot), { type: 'arrayBuffer', consistency: 'strong' });
+    const key = KEY(aid, slot);
+    const r = await store().getWithMetadata(key, { type: 'arrayBuffer', consistency: 'strong' });
     if (!r || !r.data) return null;
-    return { bytes: Buffer.from(r.data), type: (r.metadata && r.metadata.type) || 'image/jpeg' };
+    let bytes = Buffer.from(r.data);
+    if (protectedKey(key)) {
+      const o = await open(key, bytes);
+      if (o.fail) { sealFailed(key, o.fail); return null; }
+      bytes = o.data;
+    }
+    return { bytes, type: (r.metadata && r.metadata.type) || 'image/jpeg' };
   } catch { return null; }
 }
 

@@ -22,7 +22,7 @@ usage
   python3 tools/prod.py keys       # every key in the store
   python3 tools/prod.py get <key>  # one document, pretty-printed
 """
-import json, os, subprocess, sys
+import datetime, json, os, subprocess, sys
 
 STORE = 'myset'
 ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.environ.get('PATH', '')}
@@ -53,7 +53,11 @@ def keys():
 def report():
     ks = keys()
     artists = blob('artists') or {}
-    idq = (blob('idqueue') or {}).get('by', {})
+    # sealed at rest once MYSET_SECRET is set (decision 0113): this tool has no key, so
+    # it says so rather than reading ciphertext as a queue
+    idq_raw = blob('idqueue')
+    idq = idq_raw.get('by', {}) if isinstance(idq_raw, dict) else {}
+    idq_sealed = isinstance(idq_raw, str) and idq_raw.startswith('MS1:')
     print('WHO IS ON THE PLATFORM')
     by = artists.get('byId', {})
     if not by:
@@ -66,6 +70,8 @@ def report():
         print(f"    verified tick .... {'YES' if a.get('verified') else 'no'}")
         print(f"    ID on file ....... {'yes' if f'img_{aid}_idcheck' in ks else 'no'}")
         q = idq.get(aid)
+        if idq_sealed:
+            print('    ID request ....... sealed at rest — the founder\'s Studio shows it')
         if q:
             print(f"    ID request ....... {q.get('state')}"
                   f"  legal name given: {'yes' if q.get('legalName') else 'NO (old upload)'}"
@@ -90,6 +96,14 @@ def report():
     print('\nTHINGS WORTH KNOWING')
     print('  off-site copy ....... mirrorcron copies every document to R2 once a day'
           ' (decisions 0069, 0146); `python3 tools/backup.py --coverage` names what it has not')
+    # the sealing keyring (decision 0113): after a rotation, MYSET_SECRET_PREVIOUS may be
+    # removed once "last wrapped" is later than the deploy that brought the new value
+    ring = blob('sealkeys')
+    if isinstance(ring, dict) and ring.get('keys'):
+        at = datetime.datetime.fromtimestamp((ring.get('at') or 0) / 1000, datetime.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+        print(f"  sealed at rest ...... on — {len(ring['keys'])} data key(s), keyring last wrapped {at}, {ring.get('rotations', 0)} rotation(s)")
+    else:
+        print('  sealed at rest ...... off — MYSET_SECRET is not set yet, or nothing has been sealed')
     if not any(k.startswith('connect_') for k in ks):
         print('  Stripe Connect ...... no artist has started it, so nothing can'
               ' auto-verify and no artist can take money yet')
@@ -105,7 +119,7 @@ if __name__ == '__main__':
         # A key, a credential hash or an ID photo never crosses into a terminal or a
         # chat window (INVARIANT 11b, decision 0110) — the report above says what it
         # needs to about them without printing them.
-        if key == 'authsecret' or key.endswith('_idcheck') or key.startswith(('cred_', 'rec_', 'sess_', 'authc_', 'idqueue')):
+        if key in ('authsecret', 'sealkeys') or key.endswith('_idcheck') or key.startswith(('cred_', 'rec_', 'sess_', 'authc_', 'idqueue')):
             sys.exit(f'refusing to print {key}: a signing key, a credential or an ID photo is never read out')
         print(json.dumps(blob(key), indent=1))
     else:

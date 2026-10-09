@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import { COUNTDOWN_MS, getShow, mutateShow, readFans, liveFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
-         MIN_CODE, weakCode, cleanArtistId,
+         MIN_CODE, weakCode, studioCodeHash, cleanArtistId,
          normPacks, normAsk,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, DEFAULT_ARTIST,
@@ -2077,6 +2077,10 @@ const main = async (req) => {
      so is taken before the CAS. `show.slug` was never a field, so that refusal
      silently never fired until 2026-09-28 (0110). */
   const pageSlug = action === 'setCode' ? ((await artistById(aid)) || {}).slug || '' : '';
+  /* …and its hash is a slow one (scrypt, decision 0112), made before the CAS because
+     the callback cannot wait — and only for a code that will be accepted. */
+  const newCodeHash = action === 'setCode' && !weakCode(String(body.code || ''), pageSlug)
+    ? await studioCodeHash(String(body.code || '')) : '';
 
   let libChanged = false;
   /* The night this write belongs to, and the record as it was — the event log
@@ -2401,7 +2405,7 @@ const main = async (req) => {
           err = [`Pick at least ${MIN_CODE} characters, and not your page name`, 400];
           return false;
         }
-        show.codeHash = sha(code);          // stored hashed, never in plaintext
+        show.codeHash = newCodeHash;        // a salted slow hash, never the code (studioCodeHash)
         break;
       }
       /* "Clear the votes" in the Studio. It wipes the BOARD — every fan's votes on

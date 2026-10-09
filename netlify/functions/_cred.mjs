@@ -1,6 +1,7 @@
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readDoc, casDoc, store, sha } from './_lib.mjs';
+import { seal } from './_seal.mjs';
 
 /* A PASSWORD, PER PERSON. Decision 0070 (the founder, 2026-09-14): "the fully
    standard shape" — the email address is the username, a password sits under it,
@@ -55,7 +56,8 @@ export async function setPassword(owner, email, pw) {
   const salt = randomBytes(16);
   const hash = await derive(pw, salt);
   const doc = { v: 1, alg: 'scrypt', N, r: R, p: P, salt: salt.toString('base64'), hash: hash.toString('base64'), setAt: Date.now() };
-  await store().set(credKey(owner, email), JSON.stringify(doc));
+  // sealed at rest (0113): a raw write, so it seals itself; readDoc opens it
+  await store().set(credKey(owner, email), await seal(credKey(owner, email), JSON.stringify(doc)));
   return true;
 }
 

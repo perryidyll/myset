@@ -1,5 +1,6 @@
 import { store, casDoc } from './_lib.mjs';
 import { appendLog, readLog, logKeys } from './_append.mjs';
+import { protectedKey, seal } from './_seal.mjs';
 
 /* A VERSION BEFORE EVERY OVERWRITE, FOR THE DOCUMENTS AN ARTIST WRITES BY HAND.
 
@@ -34,7 +35,9 @@ export async function keepVersion(key, before, now = Date.now()) {
     const last = idx.list.length ? Number(idx.list[idx.list.length - 1]) || 0 : 0;
     if (now - last < VER_GAP_MS()) return null;
     const ts = Math.max(now, last + 1);
-    const w = await store().set(verKey(key, ts), before, { onlyIfNew: true });
+    // a version of a sealed document is sealed too (0113) — none is kept today, and the rule holds anyway
+    const vk = verKey(key, ts);
+    const w = await store().set(vk, protectedKey(vk) ? await seal(vk, before) : before, { onlyIfNew: true });
     if (w && w.modified === false) return null;
     await appendLog(versKey(key), [ts]);
     return ts;

@@ -6,6 +6,7 @@ import { readEvents } from './_events.mjs';
 import { merchSlots } from './_profile.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
 import { readPending, vidKey } from './_video.mjs';
+import { logKeys } from './_append.mjs';
 
 /* A VENUE'S ACCOUNT — take it with you, or leave.
 
@@ -52,7 +53,7 @@ export async function keysForVenue(vid, namers = null) {
   const o = OWNER(vid);
   const named = (...ks) => { if (namers) for (const k of ks) if (k) namers.add(k); };
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
-    `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `log_${o}`, `rec_${o}`,
+    `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `rec_${o}`,
     `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`,   // paylim_: the checkout limiter (0111)
     /* Three a venue grew after this list was written, so none had a second home and
        each outlived the venue (0146): the pitches it was sent (0123), its alert
@@ -73,6 +74,9 @@ export async function keysForVenue(vid, namers = null) {
   for (const [e, v] of Object.entries(reg.byEmail || {})) if (v && v.venueId === vid) keys.push(credKey(o, e));
   // posts that left the feed still own their photos and clips (decision 0068)
   for (const k of await postArchiveKeys(o).catch(() => [])) { keys.push(k); named(k); }   // read whole for its photos
+  // the activity log and its parts (0200): the head names them, one read; the head is a namer
+  const logs = await logKeys(`log_${o}`).catch(() => [`log_${o}`]);
+  keys.push(...logs); named(logs[0]);
   const oldPosts = await readArchivedPosts(o).catch(() => []);
   for (const p of oldPosts) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(vid, `${p.id}_${i}`));
   for (const p of oldPosts) if (p && p.clip) { keys.push(vidKey(o, p.clip)); keys.push(IMG(vid, p.clip)); }

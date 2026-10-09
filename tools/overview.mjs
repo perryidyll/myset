@@ -63,6 +63,9 @@ async function facts() {
   const rsvpLim = await import(join(ROOT, 'netlify/functions/_rsvp.mjs'));
   const fbLim = await import(join(ROOT, 'netlify/functions/_feedback.mjs'));
   const errLim = await import(join(ROOT, 'netlify/functions/_errlog.mjs'));
+  const secretMod = await import(join(ROOT, 'netlify/functions/_secret.mjs'));   // the server's own secret (0112, 0113)
+  const gate = await import(join(ROOT, 'netlify/functions/_passgate.mjs'));
+  const sealMod = await import(join(ROOT, 'netlify/functions/_seal.mjs'));
   const smp = await import(join(ROOT, 'netlify/functions/_sample.mjs'));     // a sample page's clock (decision 0101)
   const crm = await import(join(ROOT, 'netlify/functions/_crm.mjs'));        // the CRM's contacts (decision 0108)
   const hq = await import(join(ROOT, 'netlify/functions/hq.mjs'));           // CRM's email pace (decision 0109)
@@ -143,10 +146,14 @@ async function facts() {
     /* The security dials (decision 0110 onward) — every limit a door keeps, read from the
        code so SECURITY.md and the ledger never type one. */
     security: { mailDeadlineMs: auth.MAIL_MS, lyricsDeadlineMs: lyr.LRCLIB_TIMEOUT_MS,
+                sessionDays: auth.TOKEN_LIFE / 86400e3, renewAfterHours: auth.RENEW_AFTER_MS / 3600e3,   // a week, renewed in use (decision 0199)
                 netCodesPerHour: auth.NET_CODES_PER_HOUR,
                 payBurst: payLim.PAY_BURST, payPerMin: payLim.PAY_PER_MIN, payNetBurst: payLim.PAY_NET_BURST, payNetPerMin: payLim.PAY_NET_PER_MIN,
                 rsvpPerNetwork: rsvpLim.RSVP_PER_NETWORK, feedbackPerNetworkPerDay: fbLim.FEEDBACK_PER_NETWORK_PER_DAY,
-                bugPerNetworkPerHour: errLim.BUG_PER_NETWORK_PER_HOUR },
+                bugPerNetworkPerHour: errLim.BUG_PER_NETWORK_PER_HOUR,
+                secretMin: secretMod.MIN_LENGTH, legacyDays: Math.round(auth.LEGACY_MS / 86400e3),
+                gateTries: gate.TRIES, gateWindowMin: Math.round(gate.WINDOW / 60e3), gateLockMin: Math.round(gate.LOCK_FOR / 60e3),
+                gateLockCapHours: Math.round(gate.LOCK_CAP / 3600e3), sealed: sealMod.FAMILIES },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -395,12 +402,16 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | New phones one network brings into a show with free votes — the founder's number, the count each fan file allows, and the most a script on one network can get (\`NEW_DEVICES_PER_NETWORK\`, \`NET_QUOTA\`, decision 0149) | ${f.constants.newDevicesPerNetwork} / ${f.constants.netQuota} a file / ${f.constants.netMax} |
 | The room's head count, for the polling rung and the board's length: phones seen in the last (\`PRESENCE_WINDOW_MS\`) | ${f.constants.presenceMinutes} minutes |
 | A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
+| A sign-in session lasts / renews itself on a reply once it is older than (\`TOKEN_LIFE\`, \`RENEW_AFTER_MS\`, decision 0199) | ${f.security.sessionDays} days / ${f.security.renewAfterHours} hours |
 | Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |
 | …and a whole network — sized so a packed bar on one wifi never meets it (\`PAY_NET_BURST\`, \`PAY_NET_PER_MIN\`) | ${f.security.payNetBurst} / ${f.security.payNetPerMin} |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (\`NET_CODES_PER_HOUR\`) | ${f.security.netCodesPerHour} |
 | Phones one network may put on one night's RSVP count (\`RSVP_PER_NETWORK\`) | ${f.security.rsvpPerNetwork} |
 | Ratings one network may leave for one artist in a day (\`FEEDBACK_PER_NETWORK_PER_DAY\`) | ${f.security.feedbackPerNetworkPerDay} |
 | Bug reports one network may file for one artist in an hour (\`BUG_PER_NETWORK_PER_HOUR\`) | ${f.security.bugPerNetworkPerHour} |
+| \`MYSET_SECRET\`: the shortest value used, and how long the old store-kept key still verifies a token after the switch (decision 0112) | ${f.security.secretMin} characters · ${f.security.legacyDays} days |
+| The money model's passcode: wrong codes inside a window that shut the door, and for how long, doubling to a cap (\`_passgate.mjs\`) | ${f.security.gateTries} in ${f.security.gateWindowMin} min → ${f.security.gateLockMin} min, up to ${f.security.gateLockCapHours} h |
+| Record families sealed at rest (\`_seal.mjs\`, decision 0113) — nothing the room reads is on the list | ${f.security.sealed.map((k) => `\`${k}\``).join(', ')} |
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
 | A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
 | The artist's book, per show (decision 0065) | ${f.constants.biz.merch} merch lines · ${f.constants.biz.gear} gear lines of ${f.constants.biz.gearChars} characters · names ${f.constants.biz.name} · note ${f.constants.biz.note} · one amount up to $${(f.constants.biz.cents / 100).toLocaleString('en-US')} · ${f.constants.biz.minutes / 60} hours per kind of time (${f.constants.biz.timeKinds.join(', ')}) · ${f.constants.biz.rules} rule defaults · the document ${(f.constants.biz.maxBytes / 1000).toFixed(0)} KB, then a year shard |

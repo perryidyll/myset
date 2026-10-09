@@ -1,5 +1,7 @@
 import { getStore } from '@netlify/blobs';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { keysFor } from './_secret.mjs';
+import { protectedKey, seal, open, sealFailed } from './_seal.mjs';
 
 /* ONE STORE PER DEPLOY CONTEXT.
 
@@ -333,15 +335,27 @@ export class StoreError extends Error {
 export const isStoreError = (e) => !!e && e.code === 'store-read';
 
 export async function readDoc(key, fallback) {
+  /* A sealed document (decision 0113, _seal.mjs) is read as bytes and opened. Every
+     other key takes the path it always took — one prefix test is all the poll pays. */
+  const sealed = protectedKey(key);
   let r, timer;
   try {
     r = await Promise.race([
-      store().getWithMetadata(key, { type: 'json', consistency: 'strong' }),
+      store().getWithMetadata(key, { type: sealed ? 'arrayBuffer' : 'json', consistency: 'strong' }),
       new Promise((_, no) => { timer = setTimeout(() => no(new Error('read timed out')), READ_TIMEOUT_MS); }),
     ]);
   } catch (e) { throw new StoreError(key, e); }
   finally { clearTimeout(timer); }
-  if (r && r.data) return { data: r.data, etag: r.etag || null };
+  if (r && r.data) {
+    if (!sealed) return { data: r.data, etag: r.etag || null };
+    /* One that cannot be opened reads as missing and says so in `sealed`, which is
+       what makes casDoc refuse to write over it. (A keyring the STORE would not hand
+       over is a StoreError from open(), and reaches the caller as one — 0142.) */
+    const o = await open(key, Buffer.from(r.data));
+    if (o.fail) { sealFailed(key, o.fail); return { data: fallback, etag: null, sealed: o.fail }; }
+    try { return { data: JSON.parse(o.data.toString('utf8')), etag: r.etag || null }; }
+    catch { sealFailed(key, 'shape'); return { data: fallback, etag: null, sealed: 'shape' }; }
+  }
   return { data: fallback, etag: null };
 }
 
@@ -359,14 +373,20 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
        row is the store being down: say so, rather than spend forty tries (and forty
        timeouts) finding out. A failed read is never written over: there is no
        document in hand to write. */
-    let data, etag;
-    try { ({ data, etag } = await readDoc(key, fallback())); unread = 0; }
+    let data, etag, sealed;
+    try { ({ data, etag, sealed } = await readDoc(key, fallback())); unread = 0; }
     catch (e) { if (++unread >= 2 || i === tries - 1) throw e; await pause(); continue; }
+    /* Fails CLOSED: a document that exists but cannot be opened is never written
+       over with a fresh one — it is kept, whole, for the day the key comes back. */
+    if (sealed) throw new Error('sealed');
     const out = fn(data);
     if (out === false) return { aborted: true, data };
+    /* Sealed before the write, outside its try: a ring that cannot be opened throws
+       here and ends the loop, rather than looking like a lost race forty times. */
+    const body = protectedKey(key) ? await seal(key, JSON.stringify(data)) : JSON.stringify(data);
     let w;
     try {
-      w = await store().set(key, JSON.stringify(data), etag ? { onlyIfMatch: etag } : { onlyIfNew: true });
+      w = await store().set(key, body, etag ? { onlyIfMatch: etag } : { onlyIfNew: true });
     } catch { w = { modified: false }; }
 
     if (!w || w.modified !== false) {
@@ -1186,8 +1206,17 @@ export const clientIp = (req) =>
   (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
   req.headers.get('client-ip') || '';
 
-export const roomHash = (aid, ip) =>
-  ip ? sha(`myset-room|${aid}|${ip}`).slice(0, 16) : '';
+/* Keyed when the server holds its own secret (MYSET_SECRET, _secret.mjs, decision
+   0112): a plain hash of an address is a pseudonym anybody holding the document can
+   reverse in seconds — there are only four billion IPv4 addresses. Same cost either
+   way (one hash). The switch, and any rotation, changes every hash once: a phone is
+   stamped present again, and the limiters of decision 0111 start a fresh window. */
+export const roomHash = (aid, ip) => {
+  if (!ip) return '';
+  const body = `myset-room|${aid}|${ip}`;
+  const k = keysFor('room');
+  return (k ? createHmac('sha256', k.sign).update(body).digest('hex') : sha(body)).slice(0, 16);
+};
 
 export function roomCounts(fans) {
   const nets = new Set();
@@ -1638,6 +1667,43 @@ export const clearCodeFailures = (aid) =>
     d.fails = []; d.until = 0; return true;
   }).catch(() => {});
 
+/* THE STUDIO CODE'S HASH (decision 0112). `s1:<salt>:<scrypt>` — a salted, memory-hard
+   hash that depends on no server key, like a password (_cred.mjs). The bare SHA-256
+   it replaces was one graphics-card afternoon from the code for anybody holding a copy
+   of the show record (the mirror, a backup, a version, a leaked store). Depending on
+   no key is deliberate: a new MYSET_SECRET can never strand a code set before it.
+   scrypt costs tens of milliseconds, and the Studio sends its code on every poll, so a
+   match is remembered for this warm instance (CODE_OK, keyed by the stored hash and a
+   hash of the code given): a poll pays one lookup, a cold start pays one scrypt, and a
+   wrong code — never remembered — always pays the full price, so the time taken says
+   nothing about how close a guess was. A code set the old way still opens the door
+   and is rewritten in the new form on that first use. */
+const SCODE = { N: 1 << 14, r: 8, p: 1, len: 32 };
+const scodeKdf = (code, salt) => new Promise((ok, no) =>
+  scrypt(String(code), salt, SCODE.len, { N: SCODE.N, r: SCODE.r, p: SCODE.p }, (e, k) => (e ? no(e) : ok(k))));
+export async function studioCodeHash(code) {
+  const salt = randomBytes(16);
+  return `s1:${salt.toString('base64url')}:${(await scodeKdf(code, salt)).toString('base64url')}`;
+}
+const CODE_OK = new Map();
+const CODE_OK_MAX = 64;
+/** Does `given` open a door whose stored hash is `stored`? { ok, legacy } */
+export async function studioCodeMatches(given, stored) {
+  if (!stored || typeof stored !== 'string' || !given) return { ok: false, legacy: false };
+  const m = /^s1:([\w-]{16,}):([\w-]{32,})$/.exec(stored);
+  if (!m) return { ok: sameHash(sha(given), stored), legacy: true };
+  const memo = `${stored}|${sha(given)}`;
+  if (CODE_OK.has(memo)) return { ok: true, legacy: false };
+  const want = Buffer.from(m[2], 'base64url');
+  const got = await scodeKdf(given, Buffer.from(m[1], 'base64url')).catch(() => null);
+  const ok = !!got && got.length === want.length && timingSafeEqual(got, want);
+  if (ok) {
+    if (CODE_OK.size >= CODE_OK_MAX) CODE_OK.delete(CODE_OK.keys().next().value);
+    CODE_OK.set(memo, true);
+  }
+  return { ok, legacy: false };
+}
+
 /** The shortest a self-set studio code may be. Four characters with no lockout is
  *  a ten-thousand-guess space, and the audit found no lockout anywhere. */
 export const MIN_CODE = 8;
@@ -1651,13 +1717,24 @@ export const weakCode = (code, slug) => {
     || (slug && c === String(slug).toLowerCase());
 };
 
+/* A token that renewed itself while a request was being answered (decision 0199,
+   renewToken in _auth.mjs) waits here for guard() to put it on the reply — one
+   header, `x-myset-token`, read by the Studios' api(). Keyed by the Request itself,
+   so nothing about one request can reach another on a warm instance. */
+const RENEWALS = new WeakMap();
+export const offerRenewal = (req, token) => { if (req && token) RENEWALS.set(req, token); };
+export const renewalFor = (req) => (req && RENEWALS.get(req)) || null;
+
 export async function requireArtist(req, opts = {}) {
   const auth = req.headers.get('authorization') || '';
   if (auth.startsWith('Bearer ')) {
-    const { verifyToken } = await import('./_auth.mjs');
+    const { verifyToken, renewToken } = await import('./_auth.mjs');
     const me = await verifyToken(auth.slice(7));
     // `sid` says WHICH device, so "sign out" can mean this one and not all of them
-    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null, access: me.access || null };
+    if (me) {
+      offerRenewal(req, await renewToken(me));
+      return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null, access: me.access || null };
+    }
   }
 
   /* THE SAMPLE DOOR (decision 0101). A page the factory built opens its Studio to
@@ -1701,8 +1778,15 @@ export async function requireArtist(req, opts = {}) {
 
   if (await codeLocked(aid)) return null;      // same silence as a wrong code
   const show = await getShow(aid);
-  if (show.codeHash && sameHash(sha(given), show.codeHash)) {
+  const match = await studioCodeMatches(given, show.codeHash);
+  if (match.ok) {
     await clearCodeFailures(aid);
+    /* A code stored the old way is re-stored the new way, once, on its first
+       successful use — only if nobody changed it meanwhile. */
+    if (match.legacy) {
+      const fresh = await studioCodeHash(given);
+      await mutateShow(aid, (s) => { if (s.codeHash !== show.codeHash) return false; s.codeHash = fresh; return true; }).catch(() => {});
+    }
     return { aid, email: null, role: 'owner', by: 'studio-code' };
   }
   await noteCodeFailure(aid);

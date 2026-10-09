@@ -12,6 +12,8 @@ import { readMeta } from './_lib.mjs';
 import { readArchivedPosts, archiveKeys as postArchiveKeys } from './_community.mjs';
 import { readArchivedFeedback, archiveKeys as fbArchiveKeys } from './_feedback.mjs';
 import { readEventLog, evtKeys } from './_evlog.mjs';
+import { logKeys } from './_append.mjs';
+import { LOG } from './_session.mjs';
 import { listVersions, versionKeys, verKey } from './_versions.mjs';
 import { credKey } from './_cred.mjs';
 import { messageKeys, exportMessages } from './_messages.mjs';
@@ -97,7 +99,7 @@ export async function keysFor(aid, namers = null) {
   const keys = [KEY.show(aid), KEY.meta(aid), KEY.profile(aid), KEY.histIdx(aid), `req_${aid}`,
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
-    `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
+    `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
     `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`,
     `paylim_${aid}`,    // the checkout limiter (0111)
     KEY.diary(aid),     // the artist diary (0085)
@@ -124,16 +126,18 @@ export async function keysFor(aid, namers = null) {
   const nightIds = [...new Set(keys.filter((k) => k.startsWith(`hist_${aid}_`)).map((k) => k.slice(`hist_${aid}_`.length)))];
   const bases = [KEY.show(aid), KEY.profile(aid), `lists_${aid}`, `ev_${aid}`, KEY.diary(aid)];
   const { sampleImgKeys } = await import('./_img.mjs');
-  const [evts, vers, pArch, fArch, reg, oldPosts, msgs] = await Promise.all([
+  const [evts, vers, pArch, fArch, reg, oldPosts, msgs, logs] = await Promise.all([
     inTurn(nightIds, (id) => evtKeys(aid, id).catch(() => [])),
     Promise.all(bases.map((base) => versionKeys(base).catch(() => []))),
     postArchiveKeys(aid).catch(() => []), fbArchiveKeys(aid).catch(() => []),
     readArtists().catch(() => ({ byEmail: {} })), readArchivedPosts(aid).catch(() => []),
-    messageKeys(aid).catch(() => [`inbox_${aid}`, `inboxarch_${aid}`])]);
+    messageKeys(aid).catch(() => [`inbox_${aid}`, `inboxarch_${aid}`]),
+    logKeys(LOG(aid)).catch(() => [LOG(aid)])]);
   for (const ks of evts) { keys.push(...ks); named(ks[0]); }                    // a night's log head names its parts
   for (const ks of vers) { keys.push(...ks); named(...ks.filter((k) => k.startsWith('vers_'))); }   // the version index, read whole
   keys.push(...pArch); named(...pArch);                                         // the post archive, read whole for its photos
   keys.push(...fArch); named(fArch[0]);                                         // the feedback archive's head names its parts
+  keys.push(...logs); named(logs[0]);                                           // the activity log's head names its parts (0200)
   // one password record per sign-in address (decision 0070) — deleted, never exported
   for (const [e, v] of Object.entries(reg.byEmail || {})) if (v && v.artistId === aid) keys.push(credKey(aid, e));
   for (const p of oldPosts) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(aid, `${p.id}_${i}`));

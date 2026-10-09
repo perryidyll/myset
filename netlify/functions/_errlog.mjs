@@ -1,4 +1,4 @@
-import { casDoc, readDoc, bad, roomHash, isStoreError } from './_lib.mjs';
+import { casDoc, readDoc, bad, roomHash, isStoreError, renewalFor } from './_lib.mjs';
 
 /* WHAT BROKE, KEPT PAST THE NIGHT.
 
@@ -77,9 +77,29 @@ export async function recentErrs(hours = BUG_HOURS, now = Date.now()) {
   return docs.flatMap((d) => (d && Array.isArray(d.list) ? d.list : [])).sort((a, b) => a.at - b.at);
 }
 
+/* A SESSION THAT RENEWED ITSELF rides back on the reply (decision 0199): the token
+   requireArtist / requireVenue minted for a device whose token was more than a day
+   old goes out as `x-myset-token`, exposed so a Studio served from another origin
+   can read it too. ONLY on a reply that is nobody else's: `json()` says `no-store`
+   and every personal reply goes through it; a shared reply (`jsonCached`, a page)
+   never carries a token, whatever was offered — a cache would hand it to the next
+   phone. */
+const RENEW_HEADER = 'x-myset-token';
+export const withRenewal = (req, res) => {
+  const t = renewalFor(req);
+  if (!t || !(res instanceof Response)) return res;
+  if (!/no-store/.test(res.headers.get('cache-control') || '')) return res;
+  try { res.headers.set(RENEW_HEADER, t); res.headers.set('access-control-expose-headers', RENEW_HEADER); return res; }
+  catch {
+    const h = new Headers(res.headers);
+    h.set(RENEW_HEADER, t); h.set('access-control-expose-headers', RENEW_HEADER);
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+  }
+};
+
 /** Wrap a handler so an uncaught exception is recorded, then answered honestly. */
 export const guard = (where, h) => async (req, ctx) => {
-  try { return await h(req, ctx); }
+  try { return withRenewal(req, await h(req, ctx)); }
   catch (e) {
     /* THE STORE DID NOT ANSWER (decision 0142). Not a bug to file — and filing it
        is a write to the same store, which would hang this reply behind the thing

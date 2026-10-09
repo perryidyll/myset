@@ -1,6 +1,6 @@
 import { scrypt, randomBytes, timingSafeEqual, createHmac, createHash } from 'node:crypto';
 import { readDoc, casDoc } from './_lib.mjs';
-import { authSecret } from './_auth.mjs';
+import { authSecret, signingKeys } from './_auth.mjs';
 
 /* CRM'S PASSCODE (decision 0108, INVARIANT 0hk). The founder, 2026-09-28: "make the url
    www.myset.vip/crm and put a legit passcode lock on it". CRM opens to the founding
@@ -60,7 +60,8 @@ export async function checkPasscode(code, env = process.env) {
    fingerprint of the stored hash, so a copied cookie opens nothing for another
    account, and a new passcode invalidates every earlier one. */
 export const fingerprint = (env) => createHash('sha256').update(String(env.HQ_PASSCODE || '').trim()).digest('base64url').slice(0, 16);
-const mac = async (aid, exp, env) => createHmac('sha256', await authSecret()).update(`hq-unlock|${aid}|${exp}|${fingerprint(env)}`).digest('base64url');
+const macWith = (key, aid, exp, env) => createHmac('sha256', key).update(`hq-unlock|${aid}|${exp}|${fingerprint(env)}`).digest('base64url');
+const mac = async (aid, exp, env) => macWith(await authSecret(), aid, exp, env);
 const attrs = (maxAge, secure) => `Path=${PATH}; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`;
 
 export async function unlockCookie(aid, { now = Date.now(), secure = true, env = process.env } = {}) {
@@ -77,8 +78,13 @@ export async function unlocked(req, aid, { now = Date.now(), env = process.env }
     const [exp, sig] = c.slice(COOKIE.length + 1).split('.');
     const e = Number(exp);
     if (!sig || !(e > now) || e > now + UNLOCK_HOURS * 3600e3) continue;
-    const want = Buffer.from(await mac(aid, e, env)), got = Buffer.from(sig);
-    if (want.length === got.length && timingSafeEqual(want, got)) return true;
+    /* Every key a cookie may have been signed with (signingKeys, decision 0112): an
+       HQ opened the hour before MYSET_SECRET arrived stays open, not locked again. */
+    const got = Buffer.from(sig);
+    for (const k of (await signingKeys()).verify) {
+      const want = Buffer.from(macWith(k, aid, e, env));
+      if (want.length === got.length && timingSafeEqual(want, got)) return true;
+    }
   }
   return false;
 }

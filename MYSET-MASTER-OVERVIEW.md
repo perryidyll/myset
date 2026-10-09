@@ -537,7 +537,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 20 — about.html, artist.html, artists.html, community.html, crm.html, dash.html, diary.html, factory.html, index.html, mediadash.html, privacy.html, report.html, shop.html, sign.html, stage.html, studio.html, terms.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 42 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `songs`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 8 — autocron, citycron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
-| Shared libraries | 75 |
+| Shared libraries | 77 |
 | Artist Studio actions | 137 |
 | Venue Studio actions | 57 |
 | Fan-record shards | 12 |
@@ -546,21 +546,25 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | New phones one network brings into a show with free votes — the founder's number, the count each fan file allows, and the most a script on one network can get (`NEW_DEVICES_PER_NETWORK`, `NET_QUOTA`, decision 0149) | 200 / 28 a file / 336 |
 | The room's head count, for the polling rung and the board's length: phones seen in the last (`PRESENCE_WINDOW_MS`) | 30 minutes |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
+| A sign-in session lasts / renews itself on a reply once it is older than (`TOKEN_LIFE`, `RENEW_AFTER_MS`, decision 0199) | 7 days / 24 hours |
 | Checkouts a device may open in a row / per minute after that (`PAY_BURST`, `PAY_PER_MIN`, decision 0111) | 40 / 10 |
 | …and a whole network — sized so a packed bar on one wifi never meets it (`PAY_NET_BURST`, `PAY_NET_PER_MIN`) | 300 / 120 |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (`NET_CODES_PER_HOUR`) | 60 |
 | Phones one network may put on one night's RSVP count (`RSVP_PER_NETWORK`) | 400 |
 | Ratings one network may leave for one artist in a day (`FEEDBACK_PER_NETWORK_PER_DAY`) | 150 |
 | Bug reports one network may file for one artist in an hour (`BUG_PER_NETWORK_PER_HOUR`) | 12 |
+| `MYSET_SECRET`: the shortest value used, and how long the old store-kept key still verifies a token after the switch (decision 0112) | 32 characters · 31 days |
+| The money model's passcode: wrong codes inside a window that shut the door, and for how long, doubling to a cap (`_passgate.mjs`) | 10 in 15 min → 15 min, up to 24 h |
+| Record families sealed at rest (`_seal.mjs`, decision 0113) — nothing the room reads is on the list | `msg_`, `inbox_`, `inboxarch_`, `cred_`, `rec_`, `sess_`, `log_`, `push_`, `bugs_`, `err_`, `crm`, `idqueue`, `suggest`, `img_<owner>_idcheck` |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
-| Invariants | 320 (last: 0gx) |
-| Test suites | 88 |
-| Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 180 |
+| Invariants | 325 (last: 0jc) |
+| Test suites | 94 |
+| Assertions | **6,305**, 0 failing, last run 2026-10-09 |
+| Decision records | 184 |
 
 ### Feature flags in force
 

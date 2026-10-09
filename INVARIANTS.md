@@ -2861,3 +2861,58 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     night meets; never remove the limit. `test/request-payments.mjs` "A WHOLE BAR FITS
     UNDER IT", `test/email.mjs`, `test/rsvp.mjs`, `test/feedback.mjs`,
     `test/errlog.mjs`.
+
+## The security pass, slice C — the server's own secret (2026-09-28, decisions `0112`, `0113`)
+
+0gy. **What signs is not in the store, and nothing long-lived is keyed with it.** With
+    `MYSET_SECRET` set, every token, ticket, six-digit code and cookie is signed with a
+    key cut from it (`signingKeys`, `_auth.mjs`); the store-kept key only verifies, and
+    only for `LEGACY_MS` after the switch. Recovery codes, Studio codes and passwords
+    are slow salted hashes that depend on no key, so a new secret can never strand one;
+    a recovery set made before the switch keeps working against the store key, which
+    is never deleted. `MYSET_SECRET_PREVIOUS` never verifies a token — a rotation signs
+    every device out once. `test/secret.mjs`, `test/studiocode.mjs`.
+
+0gz. **The money model's door has no published key and counts its guesses.** On
+    Netlify it opens for nobody until `FINMODEL_CODE` is set; the cookie is a MAC under
+    the signing key; `TRIES` wrong codes inside `WINDOW` shut it, doubling to `LOCK_CAP`,
+    and shut refuses the right code too. Since decision 0130 the money model is open
+    and nothing calls this door; this holds for the day a passcode comes back, and the
+    Show log's own lock (`_showlock.mjs`) checks its cookie under every signing key, as
+    HQ's does. `test/passgate.mjs`, `test/secret.mjs`.
+
+0hb. **A record that holds a person is sealed at rest, and a new secret strands none.**
+    The families on `protectedKey` (`_seal.mjs`) are sealed by `casDoc` and opened by
+    `readDoc` — and by the four raw doors — under data keys kept wrapped in `sealkeys`.
+    Nothing the room's poll reads is on the list. A record that cannot be opened reads
+    as missing and is never written over; nothing protected is written in the clear
+    while a secret is set; the keyring is never made twice. A rotation re-wraps the one
+    document and keeps every old data key. `MYSET_SECRET` is never removed and
+    `sealkeys` never deleted; the mirror and the backup carry it. `/api/health` and
+    the watch (0157) read how the ring stands against the secret (`ringState`, read-only,
+    never a key): `other` — a secret that did not wrap the ring — is a problem somebody
+    is told about, because new sign-ins fail until it is fixed. `test/seal.mjs`.
+
+## The security pass, slice C, continued — a week, and a whole record (2026-10-09, decisions `0199`, `0200`)
+
+0jb. **A session lasts a week and renews itself in use; a renewal is never a way back
+    in, and never shared.** `TOKEN_LIFE` is seven days (`_auth.mjs`; the venue token
+    reads the same constant). On an authenticated request whose token is more than
+    `RENEW_AFTER_MS` old, `requireArtist` / `requireVenue` mint a fresh token for the
+    SAME address, `rev` and `sid`, and `guard()` sends it as `x-myset-token` — only on
+    a reply that says `cache-control: no-store`, never on `jsonCached` or a page, so a
+    cache can never hand one phone's token to the next. The Studios' `api()` keep it.
+    No read and no write: the verifier already holds everything the renewal needs
+    (0ci stands). A device signed out stays signed out across a renewal (0dd: the
+    dead entry outlives every token, old or new). A token minted before this keeps its
+    own expiry and renews on first use. `test/sessionlife.mjs`.
+
+0jc. **The activity log is complete.** `log_<owner>` is an append-only log in parts
+    (`_append.mjs`, 0068's shape): a head of at most `LOG_CHUNK` entries, oldest
+    first, spilled into write-once `log_<owner>_p<n>` that are never rewritten and
+    never trimmed. The screen reads the newest twenty-five newest first — from the
+    last part too, just after a spill. A log kept the old way (newest first, capped)
+    is taken over on its first new note without an entry moving. Head and parts are a
+    sealed family (0hb), on both account key lists (export, delete, the mirror), and
+    the mirror's R2 copy is never deleted, so the record outlives the account. Still
+    written best-effort: a logging failure never stops a show. `test/activity.mjs`.

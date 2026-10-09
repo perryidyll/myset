@@ -3,7 +3,97 @@
 Claude never sees or handles a secret (INVARIANT 11). Everything below is done in
 a browser, by you, and takes about twenty minutes in total.
 
-Ordered by value. Do 1 and 2; 3 is worth an evening when you have one.
+Ordered by value. Do 0 before the security pass's last slice is merged; then 1 and 2;
+3 is worth an evening when you have one.
+
+---
+
+## 0 · The server's own secret (two minutes, before decisions 0112/0113 merge)
+
+One variable, `MYSET_SECRET`, made on your own Mac and never shown anywhere. In Terminal:
+
+    curl -fsSL https://raw.githubusercontent.com/perryidyll/myset/main/tools/serversecret.mjs | node --input-type=module
+
+(or `node tools/serversecret.mjs` from a checkout; `--dry-run` looks first). It makes a
+random value, keeps a copy in your login Keychain, and sets it in Netlify for
+**Production, Deploy Previews and Branch deploys**, marked secret — never **Local
+development**, where Netlify shows a value to anyone who can open the project, secret or
+not. It reads it back, says *Done*, and never prints the value. It refuses if the
+variable is already there. It needs the Netlify command line, logged in (`netlify
+login`) — the one `tools/prod.py` and `tools/hqpass.mjs` use.
+
+**If it is already set, there is nothing to run.** The Notion record says a session set
+`MYSET_SECRET` on the founder's word on 2026-09-28 (Production, Deploy Previews and
+Branch deploys, marked secret), with a Keychain copy under the account name `mysetvip`;
+the tool then refuses, which is right — and on 2026-10-09 the deploy preview of PR #150
+confirmed it by content: `seal: { secret: true, ring: 'absent' }`. `/api/health` says by content whether a deploy
+holds a secret (`seal.secret`) and whether the keyring opens under it (`seal.ring`:
+`absent` before the first sealed write, then `ours`; `other` means the value is not the
+one that wrapped the ring, and the watch tells the founder). The rotation below reads
+the Keychain copy with whichever account name it was saved under.
+
+By hand instead: https://app.netlify.com/projects/mysetvip/configuration/env → **Add a
+variable** → **Add a single variable**; key `MYSET_SECRET`; tick **Contains secret
+values**; the value from `openssl rand -hex 32 | pbcopy` in Production, Deploy Previews
+and Branch deploys and nothing in Local development; **Create variable**. Paste the same
+value into your password manager, then clear the clipboard: `pbcopy < /dev/null`.
+
+**Keep the copy.** Netlify never shows a secret value again, and changing it later needs
+the old one (below). Never paste it into a chat, a file or a commit (INVARIANT 11) — not
+even one a session made for you.
+
+The value takes effect on the next deploy — the merge of the pull request that carries
+0112/0113 is that deploy. Nobody is signed out by it: tokens made before it keep
+working for a month.
+
+**Never remove `MYSET_SECRET` once it is set.** The records sealed under it would read
+as missing until it came back. They are kept, never written over, and the room keeps
+voting, but sign-in with a password, the booker inbox and HQ would fail closed. If it is
+ever deleted by mistake, run the tool again: it puts the Keychain's copy back.
+
+**`FINMODEL_CODE` is no longer needed.** Since decision 0130 the money model is open and
+nothing calls its old door; the Show log stands behind the CRM's passcode, whose cookie
+verifies under every signing key like HQ's. The door in `_passgate.mjs` stays hardened
+for the day a passcode comes back; then `FINMODEL_CODE` is required on Netlify again.
+
+### Changing it later (a rotation, or a leak)
+
+Not during a show: every device signs in again once, by design — after a leak, the old
+key must stop opening anything at once.
+
+1. Keep the old value as `MYSET_SECRET_PREVIOUS`, in the Keychain and in Netlify:
+
+       security add-generic-password -a myset.vip -s MYSET_SECRET_PREVIOUS -w "$(security find-generic-password -a myset.vip -s MYSET_SECRET -w)"
+       security find-generic-password -a myset.vip -s MYSET_SECRET_PREVIOUS -w | pbcopy
+
+   In Netlify add `MYSET_SECRET_PREVIOUS` with it: **Contains secret values**;
+   Production, Deploy Previews and Branch deploys.
+2. Make the new value, keep it, and set it:
+
+       security add-generic-password -U -a myset.vip -s MYSET_SECRET -w "$(openssl rand -hex 32)"
+       security find-generic-password -a myset.vip -s MYSET_SECRET -w | pbcopy
+
+   In Netlify, `MYSET_SECRET` → **Options** → **Edit**: paste it into the same three
+   contexts. Then `pbcopy < /dev/null`, and redeploy (Deploys → Trigger deploy → Deploy
+   site).
+3. Wait for the keyring to move. The mirror's twenty-minute bell opens it, and the
+   first open wraps it under the new value. `python3 tools/prod.py` shows
+   `sealed at rest ... keyring last wrapped <time>`: once that time is after the
+   deploy, it has moved.
+4. Delete `MYSET_SECRET_PREVIOUS` in Netlify and redeploy. A week later, with nothing
+   gone missing, delete its Keychain copy:
+   `security delete-generic-password -a myset.vip -s MYSET_SECRET_PREVIOUS`.
+
+Nothing is stranded by step 4. Recovery codes, Studio codes and passwords are slow
+salted hashes that depend on no key; every sealed record opens under the re-wrapped
+keyring, and the keyring gives everything written from step 2 on a fresh data key.
+If step 4 happens too early, sealed records read as missing — put
+`MYSET_SECRET_PREVIOUS` back from the Keychain, redeploy, and wait for step 3.
+
+If a copy of the store leaked together with the old value, records written before the
+rotation stay readable to whoever holds both, until each is next written (which seals
+it under the fresh key). Say so to the people affected; nothing in code can undo a
+copy that already left.
 
 ---
 

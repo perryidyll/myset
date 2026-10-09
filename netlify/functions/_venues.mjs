@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { casDoc, readDoc, own } from './_lib.mjs';
-import { authSecret, cleanSlug, normEmail } from './_auth.mjs';
+import { casDoc, readDoc, own, offerRenewal } from './_lib.mjs';
+import { signingKeys, cleanSlug, normEmail, TOKEN_LIFE, RENEW_AFTER_MS } from './_auth.mjs';
 import { normPlace, mapLinks, safeMapUrl, clean } from './_maps.mjs';
 import { normMerch } from './_profile.mjs';
 
@@ -115,7 +115,7 @@ const eq = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   try { return timingSafeEqual(Buffer.from(a), Buffer.from(b)); } catch { return false; }
 };
-const TOKEN_TTL = 30 * 24 * 3600e3;
+const TOKEN_TTL = TOKEN_LIFE;   // a week, renewed in use — the artist token's, in one place (0199)
 
 /** This venue's own rev, falling back to the registry-wide one for records that
  *  predate per-venue revs. See revOf() in _auth.mjs for why the fallback matters. */
@@ -157,10 +157,16 @@ export const venuePaid = (v) => venuePlanOf(v) !== 'free';
 export const vRevOf = (reg, vid) =>
   ((reg.byId || {})[vid] || {}).rev ?? reg.rev ?? 1;
 
-export async function signVenueToken(email, rev, sid) {
-  const body = `v|${email}|${Date.now() + TOKEN_TTL}|${rev}` + (sid ? `|${sid}` : '');
-  const mac = createHmac('sha256', await authSecret()).update(body).digest('base64url');
+export async function signVenueToken(email, rev, sid, now = Date.now()) {
+  const body = `v|${email}|${now + TOKEN_TTL}|${rev}` + (sid ? `|${sid}` : '');
+  const mac = createHmac('sha256', (await signingKeys()).sign).update(body).digest('base64url');
   return `${Buffer.from(body).toString('base64url')}.${mac}`;
+}
+/** The venue side of renewToken (_auth.mjs, decision 0199): a fresh token for the same
+ *  device once this one is more than a day old, else nothing. */
+export async function renewVenueToken(me, now = Date.now()) {
+  if (!me || !me.email || !Number(me.exp) || Number(me.exp) - now > TOKEN_TTL - RENEW_AFTER_MS) return null;
+  return signVenueToken(me.email, me.rev, me.sid || null, now);
 }
 export async function verifyVenueToken(token) {
   if (typeof token !== 'string' || token.length > 500) return null;
@@ -168,8 +174,10 @@ export async function verifyVenueToken(token) {
   if (!b64 || !mac) return null;
   let body;
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
-  const want = createHmac('sha256', await authSecret()).update(body).digest('base64url');
-  if (!eq(mac, want)) return null;
+  /* Every key the token could have been signed with — the same list, and the same
+     legacy window, as the artist token (signingKeys in _auth.mjs, decision 0112). */
+  const { verify } = await signingKeys();
+  if (!verify.some((k) => eq(mac, createHmac('sha256', k).update(body).digest('base64url')))) return null;
   /* Popped from the end, for the same reason the artist token is (see normEmail in
      _auth.mjs): the fixed fields must not be movable by anything inside an
      address. `v|` still leads, so the tag is read off the front. */
@@ -187,7 +195,7 @@ export async function verifyVenueToken(token) {
   if (String(vRevOf(reg, link.venueId)) !== String(rev)) return null;
   const row = reg.byId[link.venueId] || {};
   if (sid && row.dead && Number(row.dead[sid]) > Date.now()) return null;   // signed out
-  return { email, venueId: link.venueId, role: link.role || 'owner', sid, venue: reg.byId[link.venueId] };
+  return { email, venueId: link.venueId, role: link.role || 'owner', sid, exp: Number(exp), rev, venue: reg.byId[link.venueId] };
 }
 
 /** Who is making this request, and which venue do they run? */
@@ -205,7 +213,9 @@ export async function requireVenue(req, opts = {}) {
   const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
   const me = await verifyVenueToken(auth.slice(7));
-  return me ? { vid: me.venueId, email: me.email, role: me.role || 'owner', sid: me.sid || null } : null;
+  if (!me) return null;
+  offerRenewal(req, await renewVenueToken(me));
+  return { vid: me.venueId, email: me.email, role: me.role || 'owner', sid: me.sid || null };
 }
 
 /* ---------- matching a typed venue name to a venue page ----------

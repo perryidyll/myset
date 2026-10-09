@@ -190,6 +190,24 @@ echo
 echo "── the account system ──"
 node --import ./test/register.mjs test/accounts.mjs
 echo
+echo "── a session lasts a week and renews itself in use (0199) ──"
+node --import ./test/register.mjs test/sessionlife.mjs
+echo
+echo "── the activity log is complete (0200) ──"
+node --import ./test/register.mjs test/activity.mjs
+echo
+echo "── the signing key leaves the store (0112) ──"
+node --import ./test/register.mjs test/secret.mjs
+echo
+echo "── the founder's passcode door (0112) ──"
+node --import ./test/register.mjs test/passgate.mjs
+echo
+echo "── sealed at rest, and a rotation strands nothing (0113) ──"
+node --import ./test/register.mjs test/seal.mjs
+echo
+echo "── setting MYSET_SECRET from the founder's Mac, never on screen (0112) ──"
+node test/serversecret.mjs
+echo
 echo "── sign-in email delivery ──"
 node --import ./test/register.mjs test/email.mjs
 echo

@@ -10,6 +10,14 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 08:35 — 92ad67a — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
+**tl;dr:** PR #150 (security slice C) is on main b2dbfec with five merges in and the founder's word to merge: the week-long session is decision 0199 (0jb) and the complete activity log 0200 (0jc) — 0172/0173 and 0hs/0ht were taken; fmgate joins the mirror's skip list; the rebuilt preview says MYSET_SECRET is already set (seal.secret true), so nothing is left for the founder to run
+**Other sessions:** Decisions 0199/0200 and INVARIANTS 0jb/0jc are taken on this branch, merging today. keysFor/keysForVenue: the activity log's head is read for its parts (logKeys) and is a namer, parts before head (0im). FAMILIES: sealkeys global, fmgate skip. After the merge every protected family is sealed on first write and the keyring sealkeys appears; readDoc/casDoc fail closed on a record that cannot be opened. x-myset-token rides back on no-store replies from guard(); both Studios' api() keep it.
+
+### 2026-10-09 07:58 — 75bdcbb — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
+**tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
+**Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
+
 ### 2026-10-03 03:02 — 0fc2913 — scale-money@fix/money-path (22 files since origin/main)
 **tl;dr:** Payments are harder to lose or double: a lost 'delivered' mark is caught and fixed by the scheduler, song votes bought for a replay that already started go to the fan's wallet, a full request queue is said before the card, a paused Stripe account still finds its payments, the Money tab's sweep does only what's owed, plan billing stops leaking, and every fan Stripe call has a 10 s clock (0180–0184, 0188)
 **Other sessions:** NOT MERGED — waits on the founder's word. _lib.mjs: GR_KEEP=40 (one receipt cap), carryFans settles gr receipts into meta before deleting (INVARIANT 0ia — anything that deletes a fan record must too). _pay.mjs markDelivered (verified flip → noteOwed). stripeFor scopes by c.acct even when charges are paused (0ic; every caller must only READ). STRIPE_OPTS in _connect.mjs. _billing: plan written before lastSyncAt; handleBillingEvent throws (webhook 500). confirm answers asCredits.
@@ -265,6 +273,9 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Show log: the intro, both table notes and the seven 'How these numbers are made' cards are now short coloured bullet points
 **Other sessions:** ul.pts / ul.lede in finance/shows.html mirror the money model's; text only, no math or columns changed.
 
+### 2026-10-01 13:26 — 1e46a1f — myset@claude/myset-encryption-security-460mph (44 files since origin/main)
+**tl;dr:** Slice C (still not live) is up to date with today's main and can be switched on with one command: tools/serversecret.mjs sets MYSET_SECRET from the founder's Mac without ever showing it. The Show log stays open the day it lands, and the Studios' suggestions box is sealed too
+**Other sessions:** PR #150 merged main at e56a4af. _showlock.mjs verifies slk under signingKeys().verify like _hqlock. 'suggest' is sealed (_seal.mjs EXACT): read it through readDoc only. FINMODEL_CODE no longer blocks the merge (0130, PER-018 cancelled). MYSET_SECRET goes in Production, Deploy Previews and Branch deploys only, never Local development (Netlify never hides those); Netlify never shows a secret again, so the founder's Keychain copy is the only one
 ### 2026-10-01 13:20 — 6aa5158 — wt4@model-bullets (1 files since origin/main)
 **tl;dr:** Money model: the dials column folds away (remembered per browser); every long explainer is now short coloured bullets; the size table is '4 core show categories' with its dial group 'Core show sizes'
 **Other sessions:** ul.pts is the bullet style in finance/model.html; dial groups are details.grp inside #dialsList. Text only otherwise — no math changed.
@@ -424,6 +435,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-28 20:25 — f7eee61 — sample-profiles@ui/hq-message-presets (10 files since origin/main)
 **tl;dr:** HQ (myset.vip/crm) has a message library: the eight outreach openers are in every conversation's template picker, [Name] fills itself in, and Message library (the book icon, Settings or ⌘K) edits them and shows which ones get replies
 **Other sessions:** Decision 0117, UX-064. New store doc crmlib (C.readLib/saveLib, action savelib, summary carries lib); addMessage keeps pre/soft on outgoing non-note messages; rowOf and deriveRows carry pre {k,t,s} = the FIRST opener sent. No new INVARIANT. localhost's /dev/hq demo messages now carry openers.
+
+### 2026-09-28 10:40 — dd7a82a — myset@claude/myset-encryption-security-460mph (41 files since origin/main)
+**tl;dr:** Slice C of the security pass is ready but not live: the sign-in key moves out of the store into MYSET_SECRET, and passwords, recovery codes, the booker inbox, sessions, logs, ID photos and HQ's contacts get sealed at rest. It waits for you to set MYSET_SECRET and FINMODEL_CODE in Netlify
+**Other sessions:** Decisions 0112/0113, INVARIANTS 0gy/0gz/0hb, NOT MERGED. New modules _secret.mjs (keysFor: auth/room/wrap) and _seal.mjs (protectedKey, seal/open, ring() over the sealkeys keyring). readDoc/casDoc seal protectedKey families; any raw store().set/get of those families must go through seal/open. signingKeys() replaces authSecret() for verification; storeKey() is the old key for legacy recovery codes and v1 Gmail tokens. Studio codes and recovery codes are scrypt now (s1). sealkeys must never be deleted and MYSET_SECRET never removed once set. HARDENING.md §0 is the rotation runbook.
 
 ### 2026-09-28 16:15 — 693768c — quizzical-haslett-6f8f8b@fix/passcode-door-any-characters (1 files since origin/main)
 **tl;dr:** The money model's passcode box now takes letters and long passcodes, hides what you type, and has Show/Hide

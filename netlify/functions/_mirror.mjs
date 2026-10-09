@@ -85,7 +85,10 @@ export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 
                            delivery (0138). */
                         'samplereg', 'samplearc', 'samplesup', 'samplestat', 'crm', 'crmlib', 'crmgmail',
                         'factorycfg', 'factoryq', 'costs', 'suggest', 'gsheet',
-                        'mediadash/data', 'mediadash/boosts', 'payowed'];
+                        'mediadash/data', 'mediadash/boosts', 'payowed',
+                        /* the sealing keyring (0113): wrapped, so safe to copy — and a copy
+                           of the sealed records without it could never be opened again */
+                        'sealkeys'];
 /* How far back a pass looks for an hour of errors. A pass runs daily, so two days
    means every hour is seen twice before it leaves the window. */
 export const ERR_HOURS = 48;
@@ -133,6 +136,7 @@ export async function globalKeys(now = Date.now()) {
 export const FAMILIES = [
   [/^(artists|venues|cityindex|acctindex|flags|idqueue|promos|sheetsync|gigsched|vidqueue|delqueue|ledger_platform)$/, 'global'],
   [/^(register|register_work|registersync|register_\d{4}-\d{2}(_\d+)?)$/, 'global'],
+  [/^sealkeys$/, 'global'],     // the sealing keyring (0113): wrapped by MYSET_SECRET, so safe to copy — and the sealed copies are nothing without it
   [/^(samplereg|samplearc|samplesup|samplestat|samplearc_.+)$/, 'global'],
   [/^(crm|crmlib|crmgmail|crm_.+)$/, 'global'],
   [/^(factorycfg|factoryq|costs|suggest|gsheet|payowed)$/, 'global'],
@@ -143,7 +147,7 @@ export const FAMILIES = [
   [/^authsecret$/, 'skip', 'the key that mints every session (0110)'],
   [/_idcheck$/, 'skip', 'the ID photo is deleted the moment the owner decides (0bk); a copy would outlive that'],
   [/^paylim_/, 'skip', "a limiter's hour, never worth a copy (0111)"],
-  [/^(hqlock|showlock)$/, 'skip', 'wrong-passcode counts for the CRM and Show log doors: fifteen minutes of state'],
+  [/^(hqlock|showlock|fmgate)$/, 'skip', 'wrong-passcode counts for the CRM, Show log and money-model doors (0108, 0112): minutes of state'],
   [/^f\d+_/, 'skip', "the room's fan files: device records for tonight, never exported (0bu)"],
   [/^vid_/, 'skip', 'clip bytes already live on R2 under the same key (0dq)'],
   [/^(vidchunk_|vidup_)/, 'skip', 'an upload in pieces: gone once the clip is whole, or within the hour'],

@@ -1,6 +1,7 @@
 import { readDoc, casDoc, DEFAULT_ARTIST } from './_lib.mjs';
 import { OWED } from './_pay.mjs';
 import { recentErrs } from './_errlog.mjs';
+import { ringState } from './_seal.mjs';
 
 /* SOMEBODY IS TOLD WHEN PRODUCTION BREAKS (decision 0157).
 
@@ -13,6 +14,9 @@ import { recentErrs } from './_errlog.mjs';
      bell    did autocron ring in the last BELL_STALE_MS?  (shows start and end from it)
      owed    is any payment still undelivered after OWED_STALE_MS?  (decision 0138)
      errors  did the last hour log ERRS_PER_HOUR or more server errors?
+     seal    can the server's secret open the keyring the sealed records hang on?
+             (decision 0113; 'other' means MYSET_SECRET is not the value that wrapped
+             `sealkeys`, and new sign-ins fail until it is — HARDENING.md §0)
 
    It tells ONCE when a thing goes wrong, again every AGAIN_MS while it stays wrong,
    and once when it is right again — never every ten minutes. What it has told is
@@ -58,7 +62,13 @@ export async function look(now = Date.now()) {
     if (errors >= ERRS_PER_HOUR) problems.push({ kind: 'errors', title: `${errors} server errors in the last hour`,
       body: 'Something is failing repeatedly. The error log has the lines.' });
   } catch { /* as above */ }
-  return { problems, bellAgeMs, owed, owedOldestMs, errors };
+  let seal = null;
+  try {
+    seal = await ringState();
+    if (seal === 'other' || seal === 'malformed') problems.push({ kind: 'seal', title: 'MySet’s secret cannot open its keyring',
+      body: `${seal === 'other' ? 'MYSET_SECRET is not the value that wrapped sealkeys' : 'The sealkeys document is not a keyring'}: sealed records read as missing and nothing sealed can be written, so new sign-ins fail. HARDENING.md §0.` });
+  } catch { /* as above */ }
+  return { problems, bellAgeMs, owed, owedOldestMs, errors, seal };
 }
 
 /**
@@ -76,7 +86,7 @@ export async function watch({ now = Date.now(), tell } = {}) {
     if (now - (Number(state.told[p.kind]) || 0) >= AGAIN_MS) say.push({ ...p, tag: 'watch-' + p.kind });
   const better = Object.keys(state.told).filter((k) => !bad[k]);
   if (better.length) say.push({ kind: 'ok', tag: 'watch-ok', title: 'MySet is back to normal',
-    body: `Cleared: ${better.map((k) => ({ bell: 'the scheduler', owed: 'payments owed', errors: 'server errors', store: 'storage' }[k] || k)).join(', ')}.` });
+    body: `Cleared: ${better.map((k) => ({ bell: 'the scheduler', owed: 'payments owed', errors: 'server errors', store: 'storage', seal: 'the keyring' }[k] || k)).join(', ')}.` });
   for (const m of say) {
     try { await tell(DEFAULT_ARTIST, { title: m.title, body: m.body, url: '/studio', tag: m.tag }, { owner: true }); }
     catch (e) { console.error('watch: could not tell the founder:', String((e && e.message) || e)); }

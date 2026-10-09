@@ -206,13 +206,20 @@ def verify(out):
     # 2. every document parses as JSON — except images and clips, which are bytes, and
     #    the odd stray key a probe left behind (named, never fatal: a stray key is not
     #    something a restore needs, but a person should know it is there)
-    docs, stray = {}, []
+    docs, stray, sealed = {}, [], 0
     for k in rows:
         if k.startswith(BINARY):
             continue
         p = os.path.join(out, 'keys', fname(k))
         try:
             with open(p, 'rb') as f:
+                # sealed at rest (decision 0113): bytes only the site's keyring opens. A
+                # restore writes them back as they are, `sealkeys` with them, and the
+                # site opens them itself with its own MYSET_SECRET.
+                if f.read(4) == b'MS1:':
+                    sealed += 1
+                    continue
+                f.seek(0)
                 docs[k] = json.load(f)
         except (ValueError, UnicodeDecodeError):
             stray.append(k)
@@ -243,8 +250,10 @@ def verify(out):
     # (decision 0110). A restore from a newer copy signs everyone out once.
     if 'authsecret' in docs:
         print('  note: this copy carries the store-kept signing key — keep it as private as a password')
+    if sealed and 'sealkeys' not in docs:
+        print('  this copy holds sealed documents but not the keyring `sealkeys` that opens them'); ok = False
 
-    print(f'  {len(rows)} keys, {len(docs)} JSON documents, {len(rows) - len(docs) - len(stray)} binary, {len(stray)} stray')
+    print(f'  {len(rows)} keys, {len(docs)} JSON documents, {sealed} sealed, {len(rows) - len(docs) - len(stray) - sealed} binary, {len(stray)} stray')
     print('  copy is whole' if ok else '  COPY IS NOT WHOLE — do not rely on it')
     return ok
 
