@@ -275,3 +275,11 @@ collected as a namer, so a purge deletes the parts before the head. The suite's 
 step had also named `fmgate` — the money-model door's wrong-passcode counter (0112) — as
 a kind of document the mirror's table did not know; it is skipped now, like `hqlock` and
 `showlock`, which is what it is: minutes of lockout state, never worth a copy.
+
+**And once more.** `origin/main` `b2dbfec` — the audience finds an artist through two
+small copies of the artist list (0176, #237) and payments harder to lose or double
+(0180–0184, 0188, #227) — merged a fifth time (`eaf4318`). One line of code in conflict:
+both sides added an import at the top of `_auth.mjs`, and both stay. Checked on purpose:
+`verifyToken` still reads the artist list itself for `rev` and `dead` (0176 keeps the
+sign-in facts off the small copies), and `aslug_` / `arow_` hold nothing a person would
+call theirs, so they are not a sealed family.
