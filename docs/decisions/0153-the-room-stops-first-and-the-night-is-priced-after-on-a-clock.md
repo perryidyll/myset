@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [0ii, 17c, 0ga]
-commits: []
+commits: [3111e4c]
 tests: [test/endfirst.mjs, test/latetips.mjs, test/stripefees.mjs]
 files: [netlify/functions/_lifecycle.mjs, netlify/functions/_history.mjs, netlify/functions/history.mjs, netlify/functions/_register.mjs, public/studio.js, test/stripe-fake.mjs, test/endfirst.mjs]
 ---

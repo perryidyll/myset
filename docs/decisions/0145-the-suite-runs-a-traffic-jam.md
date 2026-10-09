@@ -8,7 +8,7 @@ area: scale
 reverses:
 superseded_by:
 invariants: [0ht]
-commits: []
+commits: [a202836]
 tests: [test/contention.mjs]
 files: [tools/roomsim.mjs, test/contention.mjs, test/blobs-fake.mjs, test/run.sh]
 ---

@@ -8,7 +8,7 @@ area: plans
 reverses:
 superseded_by:
 invariants: [0il, 9d9]
-commits: []
+commits: [3111e4c]
 tests: [test/vibesandresume.mjs, test/limits.mjs, test/tenancy.mjs]
 files: [netlify/functions/_requests.mjs, netlify/functions/_lifecycle.mjs, netlify/functions/_lib.mjs, netlify/functions/stage.mjs, public/studio.js, test/vibesandresume.mjs, test/limits.mjs, test/tenancy.mjs]
 ---
