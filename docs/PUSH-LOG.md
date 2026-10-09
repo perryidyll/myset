@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
+**tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record
+**Other sessions:** PENDING.md row for 8f9bde6 (_passgate.mjs); clear it with ./tools/decide.sh if anyone writes 0115-style record for the passcode door
+
 ### 2026-10-07 14:56 — fa9c189 — sample-cover@ux/sample-decks-every-visit (8 files since origin/main)
 **tl;dr:** A sample's Studio (artist and venue) now shows its welcome every time it opens, and each tab's tip deck the first time that tab is opened in the visit — no longer once per phone.
 **Other sessions:** studio.js / venue-studio.js: tipOnce + VISIT (in-memory Set) replace Tips.first for samples only; real accounts unchanged (once per phone); practice-round pr-* decks still once per phone. Decision 0171.
