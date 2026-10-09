@@ -263,3 +263,15 @@ pull requests carry decisions 0172 (#250) and 0173–0175 (#233) and invariants 
 complete activity log is decision `0200`, INVARIANT 0jc — forty-seven mentions in the
 files this branch wrote, by word boundary; the push log's earlier entry is left as the
 record it is.
+
+**Main moved again before the push.** Four more merges landed while the suite ran —
+votes per song and one free vote by default (0172, #250, its docs #252), the background
+jobs, the city index and the dated copies (0173–0175, #233), the probe tool's dependency
+bump (#203) — so `origin/main` `401961a` merged a fourth time (`04e5163`). `keysFor` and
+`keysForVenue` are main's now (the purge walks the list from the end, and `namers` are
+the documents read to name others — 0173, INVARIANT 0im), with slice C's one change put
+back on them: the activity log's head is read for its parts, pushed before them, and
+collected as a namer, so a purge deletes the parts before the head. The suite's last
+step had also named `fmgate` — the money-model door's wrong-passcode counter (0112) — as
+a kind of document the mirror's table did not know; it is skipped now, like `hqlock` and
+`showlock`, which is what it is: minutes of lockout state, never worth a copy.
