@@ -179,6 +179,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0169](0169-notes-for-the-generator-on-the-generate-form.md) | Notes for the generator sit on CRM's Generate form, and a setlist pasted into them goes first on the song list | 2026-10-04 | ui | decided | perry |
 | [0170](0170-suggested-songs-are-ten-world-bar-classics-and-ten.md) | suggested songs are ten world bar classics and ten of the act's country | 2026-10-07 | ui | decided | perry |
 | [0171](0171-a-sample-s-studio-replays-its-tip-decks-on-every-v.md) | A sample's Studio replays its tip decks on every visit | 2026-10-07 | ui | decided | founder |
+| [0172](0172-the-artist-sets-what-a-song-costs-a-fresh-phone-ho.md) | The artist sets what a song costs, a fresh phone holds one free vote, and a setlist row has one menu button | 2026-10-09 | voting | decided | perry |
 
 ## By area
 
@@ -224,7 +225,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **venues** — [0127](0127-venue-plans-tips-for-the-staff-25-and-5-percent-fi.md) · [0128](0128-a-venue-approves-the-shows-artists-list-at-its-pla.md) · [0129](0129-a-venue-page-leads-with-its-photos-and-its-next-th.md) · [0131](0131-a-venue-page-s-header-a-cover-always-four-doors-be.md) · [0134](0134-a-venue-sample-carries-its-hours-menu-link-and-goo.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md) · [0172](0172-the-artist-sets-what-a-song-costs-a-fresh-phone-ho.md)
 
 ## What counts as a decision
 

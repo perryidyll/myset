@@ -46,6 +46,7 @@ const cast = (fan, song, id) => hit(voteFn, 'https://x/api/vote', { fan, song, n
 console.log('\nSETUP  a live show with a vote from each of two phones');
 await A('addSong', { title: 'Alpha', artist: 'T' });
 await A('addSong', { title: 'Bravo', artist: 'T' });
+await A('freeCredits', { n: 3 });   // ann votes twice; a fresh phone holds 1 since decision 0172
 await A('status', { status: 'live' });
 const alpha = (await getShow(AID)).songs[0].id;
 ok('ann votes', (await cast(ann, alpha, 'storefail0000001')).ok);

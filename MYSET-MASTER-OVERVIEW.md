@@ -510,8 +510,8 @@ Up to **12** merch items. Not built: `speakerVotes`.
 
 | | Value | Where it lives |
 |---|---|---|
-| Free votes per person, per NIGHT (default) | 3 | `show.freeCredits`, artist-settable in the Studio |
-| Cost of a vote on a song not yet played | 1 | `costOf()` in `_lib.mjs` |
+| Free votes per person, per NIGHT (default) | 1 | `show.freeCredits`, artist-settable in the Studio |
+| Cost of a vote on a song not yet played (default) | 1 | `show.songCost`, artist-settable 1–20 (decision 0172); `costOf()` in `_lib.mjs` |
 | Cost of a vote on an already-played song (default) | 5 | `show.replayCost`, artist-settable |
 | Vote packs (default) | 3 for $5 · 15 for $20 | `DEFAULT_PACKS()`, artist-settable, clamped $1–$500 and 1–100 votes |
 | Song request / birthday shout-out | 3 votes by default; song requests may add an optional $1-per-paid-vote offer | `show.requests`, `show.birthdays`, `request_hold`; off by default |
@@ -538,7 +538,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 42 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `songs`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 7 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
 | Shared libraries | 74 |
-| Artist Studio actions | 136 |
+| Artist Studio actions | 137 |
 | Venue Studio actions | 57 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
@@ -560,7 +560,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 312 (last: 0gx) |
 | Test suites | 84 |
 | Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 169 |
+| Decision records | 170 |
 
 ### Feature flags in force
 

@@ -66,7 +66,7 @@ export async function exportArtist(aid) {
                verified: !!me.verified, emails: Object.entries(reg.byEmail).filter(([, v]) => v.artistId === aid).map(([e, v]) => ({ email: e, role: v.role })) },
     profile: { name: profile.name, tagline: profile.tagline, bio: profile.bio, links: profile.links, media: profile.media, merch: profile.merch,
                photo: profile.photo, avatar: profile.avatar, photos: profile.photos, tour: profile.tour },
-    show: { venue: sh.venue, city: sh.city, songs: sh.songs || [], freeCredits: sh.freeCredits, replayCost: sh.replayCost, packs: sh.packs,
+    show: { venue: sh.venue, city: sh.city, songs: sh.songs || [], freeCredits: sh.freeCredits, replayCost: sh.replayCost, songCost: sh.songCost, packs: sh.packs,
             requests: sh.requests, birthdays: sh.birthdays, tags: sh.tags || [] },
     gigs: events.list,
     setlists: lists.lists, songsToLearn: learn.list,

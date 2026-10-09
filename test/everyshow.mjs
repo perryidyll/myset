@@ -200,7 +200,7 @@ const g = bkk(Date.now() - 125 * 60e3);
 ok('a gig on the calendar, two hours ago, in Koh Phangan, Thailand', (await AS(TK, 'eventSave', { event: { venue: 'Seaflower Bungalows', city: 'Koh Phangan', country: 'Thailand', date: g.date, time: g.time, tz: 'Asia/Bangkok', durationMin: 180 } })).ok);
 for (const t of ['Valerie', 'Zombie', 'Wonderwall']) await AS(TK, 'addSong', { title: t, artist: 'Cover' });
 ok('the show starts (a hand start near the gig)', (await AS(TK, 'newShow')).ok);
-await mutateShow(kai.artistId, (s) => { s.startedAt = Date.now() - 120 * 60e3; return true; });   // it has run two hours
+await mutateShow(kai.artistId, (s) => { s.startedAt = Date.now() - 120 * 60e3; s.freeCredits = 3; return true; });   // it has run two hours; 3 free votes, more than the default of 1 (0172)
 for (const f of ['ann', 'bob', 'cy']) { await hit(meFn, `https://x/api/me?a=kai-rivers&fan=${f}&in=1`); await hit(voteFn, 'https://x/api/vote?a=kai-rivers', { fan: f, song: 'valerie' }); }
 await AS(TK, 'play', { song: 'valerie' });
 await hit(voteFn, 'https://x/api/vote?a=kai-rivers', { fan: 'ann', song: 'zombie' });

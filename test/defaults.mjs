@@ -23,7 +23,8 @@ const seed = (aid, values) => casDoc(KEY.show(aid), () => ({}), (show) => {
 
 console.log('\nFRESH ROOMS USE THE CURRENT DEFAULTS');
 const fresh = defaultShow();
-eq('three free votes', fresh.freeCredits, 3);
+eq('one free vote (decision 0172)', fresh.freeCredits, 1);
+eq('a song costs one vote', fresh.songCost, 1);
 eq('3 for $5 and 15 for $20', fresh.packs, {
   small: { votes: 3, cents: 500 }, big: { votes: 15, cents: 2000 },
 });
@@ -37,9 +38,19 @@ await seed('legacy-defaults', {
   packs: { small: { votes: 5, cents: 500 }, big: { votes: 15, cents: 1000 } },
 });
 const migrated = await getShow('legacy-defaults');
-eq('five becomes three globally', migrated.freeCredits, 3);
+eq('five becomes one globally', migrated.freeCredits, 1);
 eq('both former packs become the current defaults', migrated.packs, fresh.packs);
 eq('the normalized room is marked current', migrated.voteDefaultsVersion, VOTE_DEFAULTS_VERSION);
+
+console.log('\nA VERSION-2 ROOM STILL ON THREE MOVES TO ONE (decision 0172)');
+await seed('v2-three', { freeCredits: 3 });
+await casDoc(KEY.show('v2-three'), () => ({}), (show) => { show.voteDefaultsVersion = 2; return true; });
+eq('three becomes one', (await getShow('v2-three')).freeCredits, 1);
+await seed('v2-eight', { freeCredits: 8 });
+await casDoc(KEY.show('v2-eight'), () => ({}), (show) => { show.voteDefaultsVersion = 2; return true; });
+eq('a version-2 room on eight keeps eight', (await getShow('v2-eight')).freeCredits, 8);
+await mutateShow('v2-three', (show) => { show.freeCredits = 3; return true; });
+eq('choosing three after migration stays three', (await getShow('v2-three')).freeCredits, 3);
 
 console.log('\nNON-DEFAULT ARTIST CHOICES SURVIVE');
 await seed('legacy-custom', {
