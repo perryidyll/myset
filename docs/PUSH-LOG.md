@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 09:33 — 3dcf8c0 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to today's main a fourth time (970ddfe: The last face-value money readers are net of refunds (0179);Deleting a gig never re-prices a night that was played (0198)); suite 6,703 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork): still NOT docs only, merge without [skip ci]. Main moves every few minutes; the push log is the one collision each time (every entry from both sides kept, newest first), the generated overview regenerated.
+
 ### 2026-10-09 16:16 — d3a59e4 — scale-p2-net@fix/net-of-lost-readers (12 files since origin/main)
 **tl;dr:** Nothing new for a person: the last three money readers net of refunds (#240) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto main 28ff11b (#239). Conflicts: imports in _lifecycle/stage/_warehouse (kept sameNightResume, readPaidAll); _warehouse packs = readPaidAll(...) filtered !tipGone; INVARIANT 0iq = the 0179 version (a superset of main's).
