@@ -332,9 +332,11 @@ new name is refused as a code (400) while a real code lands — 42 ✓, 0 ✗; w
 line put back, that one assertion is red (41 ✓ / 1 ✗). `lookups` 75 ✓, `cost` 33 ✓. The
 whole suite: 6,309 ✓ / 0 ✗ on `e996865` plus the change, then 6,441 ✓ / 0 ✗ with today's
 main merged in (`e52d6f5` — 0185, 0186/0187/0191, 0193 — as `4b8fe5e`), then 6,630 ✓ / 0 ✗
-with the next two merges in (`28ff11b` — 0177/0178, 0194/0195 — as `8974839`). The push
-log was the one collision each time, every entry from both sides kept; the second time
-the generated overview too, regenerated. It rides PR #257 with this
+with the next two merges in (`28ff11b` — 0177/0178, 0194/0195 — as `8974839`), then 6,682 ✓
+/ 0 ✗ with two more (`974353e` — 0189/0190, 0192 — as `bbe9f15`): main moved under the
+branch every few minutes this morning. The push log was the one collision each time,
+every entry from both sides kept; from the second time the generated overview too,
+regenerated. It rides PR #257 with this
 paperwork, so that merge needs a production build: no `[skip ci]`. Not checked: `setCode`
 on the preview, a write path on production data. Puzzle: nothing to update — no step, rule or number changed; the record
 0176, INVARIANT 0ip and SCL-013 now say the line is on the list.

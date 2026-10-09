@@ -11,7 +11,7 @@ Several sessions work this repo at once, in different worktrees, and none of the
 can see the others' chat. This file is the one place they all speak.
 
 ### 2026-10-09 09:27 — 712a091 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
-**tl;dr:** Brought up to today's main a third time (974353e); suite  on the merged tree
+**tl;dr:** Brought up to today's main a third time (974353e: abuse ceilings 0189/0190, the song list once then tallies 0192); suite 6,682 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257 (setCode reads the list, 0176's deferred line, plus the slice C paperwork): still NOT docs only — merge without [skip ci]. The push log is the one collision each time; every entry from both sides kept, newest first.
 
 ### 2026-10-09 09:22 — d6478d0 — myset@claude/myset-encryption-security-460mph (35 files since origin/main)
