@@ -216,7 +216,7 @@ On day one: the page, the voting screen and the community page go dark; billing 
 
 **The slug is held for the whole window.** MySet page names are printed on QR codes stuck to bar tables. Freeing it would let a stranger take it, and every one of those codes would land a room full of people on somebody else's setlist — and Undo would be a promise the system could not keep. There is a link in the banner to free it deliberately, which is a decision rather than a surprise.
 
-Thirty days later `autocron` purges one account per ring, on an hourly watermark, after the show sweep so it can never delay a gig starting. The queue entry (`delqueue`) is removed LAST, so a crash halfway simply retries — purge is re-runnable by construction. `deleteArtist` itself is unchanged: it stopped being what the button does and became what the calendar does.
+Thirty days later `autocron` purges one account per ring, on an hourly watermark. It runs before the show sweep, so the purge is time-boxed (`PURGE_BUDGET_MS`) and carries on next ring from the key it reached, which the queue keeps (`cur`). It deletes the key list from the end — what an index names before the index — so a run killed anywhere leaves nothing that cannot be found again (INVARIANT 0im, decision 0173). Once it has begun, Undo is refused: it would bring back half an account. The queue entry (`delqueue`) is removed LAST, so a crash halfway simply retries — purge is re-runnable by construction. `deleteArtist` itself is unchanged: it stopped being what the button does and became what the calendar does.
 
 Venues get all of this too, keyed `v_<vid>`, on a new `keysForVenue()` — until this pass a venue could sign up, put a page up, take money and pay for Pro, and had no way to take its data or to leave.
 

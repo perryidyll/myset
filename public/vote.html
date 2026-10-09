@@ -1038,8 +1038,11 @@ function openVote(id){
      the same song, and the server allows exactly that (want = mine + n). There is
      no other sheet any more: `openUnvote` and the take-it-back path went with the
      rule on 2026-09-07. */
-  VQ=1; VSTEP=0; if((s.cost||1)>1)sel.songVotes=5; buzz(8); drawVoteSheet(s);
+  VQ=1; VSTEP=0; if(isReplay(s))sel.songVotes=5; buzz(8); drawVoteSheet(s);
 }
+/* A replay is a song already played. Since decision 0172 an unplayed song can cost
+   more than one vote too, so `cost>1` no longer says which is which. */
+const isReplay=s=>(ST.played||[]).some(x=>x.id===s.id);
 function voteMax(s){
   const c=ST.credits||{}, cost=s.cost||1;
   if(c.unlimited) return 20;                       // no balance to spend; a sane cap
@@ -1065,7 +1068,7 @@ function stepBar(n){
 function drawVoteSheet(s){
   VSONG=s.id;
   const c=ST.credits||{}, cost=s.cost||1, max=voteMax(s), total=cost*VQ;
-  const replay=cost>1;
+  const replay=isReplay(s), multi=cost>1;
   const out=!c.unlimited&&(c.remaining||0)<cost;
   /* Approved wording, emphasis included. The finality line is the whole game:
      a vote stays on the song it was cast for until that song
@@ -1091,10 +1094,10 @@ function drawVoteSheet(s){
   openSheet(`
     <div class="kick">${replay?'Play it again':'Your vote'}</div>
     <h3 style="margin:2px 0 ${replay?'2px':'14px'}">${replay?'how badly do you want to hear this again?':'Review and continue'}</h3>
-    ${replay?`<p class="lede" style="margin-bottom:12px">Replays start at <b>${cost} votes</b>.</p>`:''}
+    ${replay?`<p class="lede" style="margin-bottom:12px">Replays start at <b>${cost} votes</b>.</p>`:multi?`<p class="lede" style="margin-bottom:12px">Each vote on a song costs <b>${cost} votes</b> tonight.</p>`:''}
     ${out?`
       ${stepBar(1)}${review}
-      <p class="lede" style="margin-top:4px">You’re out of votes for tonight.</p>
+      <p class="lede" style="margin-top:4px">${(c.remaining||0)>0?`This song takes ${cost} votes and you have ${c.remaining}.`:'You’re out of votes for tonight.'}</p>
       <div class="sticky-act">
         <button class="go" onclick="openBuy()">Buy more votes</button>
         <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
@@ -1102,7 +1105,7 @@ function drawVoteSheet(s){
       ${VSTEP?stepBar(VSTEP):''}${review}
       <div class="vqrow">
         <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
-        <div class="vqn"><b class="mono">${replay?total:VQ}</b><small>vote${(replay?total:VQ)===1?'':'s'}</small></div>
+        <div class="vqn"><b class="mono">${multi?total:VQ}</b><small>vote${(multi?total:VQ)===1?'':'s'}</small></div>
         <button class="vqb" onclick="vq(1)" ${VQ>=max?'disabled':''} aria-label="one more">+</button>
       </div>
       ${max>1?`<div class="vqmax">You can put up to ${max} on one song</div>`:'<div style="height:10px"></div>'}
@@ -1457,8 +1460,7 @@ function render(){
               opened a sheet to a fan with nothing left, who then got a 402 and a
               shrug — INVARIANT 0ad, never show the room a button that leads to one. */
            const qc=d.credits||{}, qcost=s.cost||1;
-           const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&
-             !(replay&&d.paymentsEnabled)&&!((qc.remaining||0)<=0&&d.paymentsEnabled);
+           const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&!d.paymentsEnabled;
            return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
       </div>`}).join('')
@@ -1573,7 +1575,8 @@ function row(s,c,open,replay,inQueue){
   /* Voting is never a dead end: a song they already hold votes on can still be
      added to, it just cannot be taken back. Affordability is the only reason to
      disable the button. */
-  const dis=!open||(!c.unlimited&&c.remaining<cost&&!(replay&&ST.paymentsEnabled)&&!(c.remaining<=0&&ST.paymentsEnabled));
+  /* Short of the song's price with payments on, the sheet opens on Buy more votes. */
+  const dis=!open||(!c.unlimited&&c.remaining<cost&&!ST.paymentsEnabled);
   return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''} ${inQueue?'inqueue':''}" data-id="${s.id}">
     <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:inQueue?`<div class="queuednote">already voted in queue</div>`:''}</div>
     <div class="cnt mono">${s.votes?`${s.votes} vote${s.votes===1?'':'s'}`:''}</div>

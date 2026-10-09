@@ -45,6 +45,7 @@ await A('addSong', { title: 'Bravo', artist: 'Test' });
 await A('status', { status: 'live' });
 await A('play', { song: 'alpha' });
 await A('play', { song: 'bravo' });
+await A('freeCredits', { n: 3 });   // requests below cost 3; a fresh phone holds 1 since decision 0172
 await A('askSet', { kind: 'song', on: true, cost: 3 });
 eq('birthday requests default to three votes', (await getShow(DEFAULT_ARTIST)).birthdays.cost, 3);
 

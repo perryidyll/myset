@@ -181,6 +181,10 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0169](0169-notes-for-the-generator-on-the-generate-form.md) | Notes for the generator sit on CRM's Generate form, and a setlist pasted into them goes first on the song list | 2026-10-04 | ui | decided | perry |
 | [0170](0170-suggested-songs-are-ten-world-bar-classics-and-ten.md) | suggested songs are ten world bar classics and ten of the act's country | 2026-10-07 | ui | decided | perry |
 | [0171](0171-a-sample-s-studio-replays-its-tip-decks-on-every-v.md) | A sample's Studio replays its tip decks on every visit | 2026-10-07 | ui | decided | founder |
+| [0172](0172-the-artist-sets-what-a-song-costs-a-fresh-phone-ho.md) | The artist sets what a song costs, a fresh phone holds one free vote, and a setlist row has one menu button | 2026-10-09 | voting | decided | perry |
+| [0173](0173-background-jobs-keep-up.md) | Background jobs keep up — a purge deletes leaves first and carries on, the nightly copy skips what cannot change and rings four times as often, the sheet sync starts where it stopped; the register's fold is left for its own decision | 2026-10-03 | storage | proposed | agent-recommended |
+| [0174](0174-the-city-index-carries-its-gigs.md) | The city index carries each owner's gigs in that city — the front door is one read, a feed reads only who is on, a venue page only the artists who name it; a daily bell heals a lost write | 2026-10-03 | storage | proposed | agent-recommended |
+| [0175](0175-dated-copies-on-r2-for-ninety-days.md) | The nightly copy keeps each changed document under the day it was copied, on R2, for ninety days — so a bad deploy's damage no longer overwrites the only good copy | 2026-10-03 | storage | proposed | agent-recommended |
 | [0199](0199-a-session-lasts-a-week-and-renews-itself-in-use.md) | A session lasts a week and renews itself in use | 2026-10-09 | auth | decided | perry-confirmed |
 | [0200](0200-the-activity-log-is-complete-append-only-in-parts.md) | The activity log is complete: append-only, in parts, never trimmed | 2026-10-09 | storage | decided | perry-confirmed |
 
@@ -218,7 +222,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
-**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0113](0113-the-records-that-hold-a-person-are-sealed-under-a-keyring-the-secret-wraps.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) · [0200](0200-the-activity-log-is-complete-append-only-in-parts.md)
+**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0113](0113-the-records-that-hold-a-person-are-sealed-under-a-keyring-the-secret-wraps.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) · [0173](0173-background-jobs-keep-up.md) · [0174](0174-the-city-index-carries-its-gigs.md) · [0175](0175-dated-copies-on-r2-for-ninety-days.md) · [0200](0200-the-activity-log-is-complete-append-only-in-parts.md)
 
 **studio, money** — [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md)
 
@@ -228,7 +232,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **venues** — [0127](0127-venue-plans-tips-for-the-staff-25-and-5-percent-fi.md) · [0128](0128-a-venue-approves-the-shows-artists-list-at-its-pla.md) · [0129](0129-a-venue-page-leads-with-its-photos-and-its-next-th.md) · [0131](0131-a-venue-page-s-header-a-cover-always-four-doors-be.md) · [0134](0134-a-venue-sample-carries-its-hours-menu-link-and-goo.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md) · [0172](0172-the-artist-sets-what-a-song-costs-a-fresh-phone-ho.md)
 
 ## What counts as a decision
 

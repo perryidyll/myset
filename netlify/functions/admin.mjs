@@ -474,7 +474,7 @@ const CAPABILITY = {
   diarySave: 'diary_edit', diaryRemove: 'diary_edit', diaryMove: 'diary_edit', diaryPhoto: 'diary_edit', diaryPhotoClear: 'diary_edit',
   /* What the room is charged and shown, and whether a gig starts itself: the Settings
      tab. Opening and pausing the vote, last call and naming tonight are the show's. */
-  freeCredits: 'settings_edit', unlimited: 'settings_edit', replayCost: 'settings_edit', packs: 'settings_edit',
+  freeCredits: 'settings_edit', unlimited: 'settings_edit', replayCost: 'settings_edit', songCost: 'settings_edit', packs: 'settings_edit',
   askSet: 'settings_edit', crowdSet: 'settings_edit', autoStart: 'settings_edit', unlimitedFan: 'settings_edit',
 };
 
@@ -2030,7 +2030,7 @@ const main = async (req) => {
      The founding artist predates the registry, so planForArtist returns free for
      him — the owner bypass is load-bearing, not a courtesy. */
   let canPrice = true;
-  if (['freeCredits', 'packs', 'replayCost', 'askSet'].includes(action)) {
+  if (['freeCredits', 'packs', 'replayCost', 'songCost', 'askSet'].includes(action)) {
     canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
   }
   const PRICE_LOCKED = ['Setting your own prices is a Bar Star feature — the defaults stay on for now.', 402];
@@ -2364,6 +2364,14 @@ const main = async (req) => {
         if (!canPrice) { err = PRICE_LOCKED; return false; }
         const want = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5));
         show.replayCost = want;
+        break;
+      }
+      /* What one vote on a song not yet played costs (decision 0172). Pricing, so
+         gated like replayCost; votes already cast keep the price they were cast at
+         (`va` rows carry it). */
+      case 'songCost': {
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
+        show.songCost = Math.max(1, Math.min(20, parseInt(body.n, 10) || 1));
         break;
       }
       case 'removeSong':

@@ -93,8 +93,8 @@ export const songSig = (title, artist = '') =>
 
 /* Deliberately blank. A second artist signing up must never inherit the first
    artist's name, venue or setlist — `getShow` fills the name in from the registry. */
-export const DEFAULT_FREE_CREDITS = 3;
-export const VOTE_DEFAULTS_VERSION = 2;
+export const DEFAULT_FREE_CREDITS = 1;          // the founder, 2026-10-09 (decision 0172); was 3
+export const VOTE_DEFAULTS_VERSION = 3;
 export function defaultShow() {
   return {
     artist: '',
@@ -111,6 +111,7 @@ export function defaultShow() {
     unlimited: false,        // everyone votes without limit
     unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
+    songCost: 1,             // votes one vote on an unplayed song costs (decision 0172)
     /* Asking for something that isn't on the list. Off by default — an artist
        who can't play requests should never be asked for them. */
     requests:  { on: false, cost: 3 },
@@ -411,6 +412,7 @@ function normShow(s) {
   if (!Array.isArray(show.played)) show.played = [];
   if (typeof show.freeCredits !== 'number') show.freeCredits = DEFAULT_FREE_CREDITS;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
+  show.songCost = Math.max(1, Math.min(20, parseInt(show.songCost, 10) || 1));
   if (!Array.isArray(show.log)) show.log = [];
   /* How many songs have been started, ever, and the count each song was started
      at tonight — what makes Play one write (decision 0147, `liveFans` below). */
@@ -435,7 +437,9 @@ function normShow(s) {
      never mistaken for legacy data. Existing fan.freeUsed stamps keep bought-vote
      balances from being re-priced when the allowance falls (INVARIANT 13b). */
   if (legacyVoteDefaults) {
-    if (s.freeCredits === 5) show.freeCredits = DEFAULT_FREE_CREDITS;
+    /* v1 → v2: 5 → 3. v2 → v3: 3 → 1 (decision 0172) — a room still on the old
+       default moves to the new one; a v1 room on 5 lands on 1 as well. */
+    if (s.freeCredits === 5 || s.freeCredits === 3) show.freeCredits = DEFAULT_FREE_CREDITS;
     const oldSmall = s.packs && s.packs.small;
     const oldBig = s.packs && s.packs.big;
     const next = DEFAULT_PACKS();
@@ -589,6 +593,17 @@ export function sameNightResume(sh, now = Date.now()) {
    instance (found 2026-09-28; cleanFanId refuses the three names now, and this is
    the belt to that brace — decision 0110). */
 export const own = (o, k) => (o != null && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
+
+/* Reads side by side, a few at a time, answered in the order asked (decision 0173).
+   For a walk over many documents off the live path: an account's key list, the
+   owners in a city. Never more than `width` in flight. */
+export async function inTurn(items, fn, width = 8) {
+  const out = new Array(items.length);
+  let i = 0;
+  const worker = async () => { while (i < items.length) { const j = i++; out[j] = await fn(items[j]); } };
+  await Promise.all(Array.from({ length: Math.min(width, items.length) }, worker));
+  return out;
+}
 
 /* Every write to a fan file also tidies the receipts of every record in it (decision
    0148): a receipt past RECEIPT_MS is dropped and one in the old long shape is
@@ -881,9 +896,10 @@ export function votable(show) {
 export const isUnlimited = (fanId, show) =>
   !!show.unlimited || (show.unlimitedFans || []).includes(fanId);
 
-/** A vote on an already-played song costs more (a "play it again" request). */
+/** A vote on an already-played song costs more (a "play it again" request); any
+ *  other song costs what the artist set, 1 by default (decision 0172). */
 export const costOf = (songId, show) =>
-  show.played.includes(songId) ? (show.replayCost || 5) : 1;
+  show.played.includes(songId) ? (show.replayCost || 5) : (show.songCost || 1);
 /** What `used` would have been under the old derive-from-`v` rule. Only ever
  *  reached by a fan record written before 2026-09-07 — a phone that was already
  *  holding votes when this deployed. Their spend is read out of `v` once, and from

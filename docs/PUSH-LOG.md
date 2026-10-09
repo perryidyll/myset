@@ -14,6 +14,18 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
 **Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
 
+### 2026-10-09 15:16 — 330fd08 — quizzical-haslett-6f8f8b@deps/probe-undici (1 files since origin/main)
+**tl;dr:** Nothing a person sees: the probe tool's wrangler/undici lockfile takes undici 7.29.1, closing all six Dependabot alerts
+**Other sessions:** cloudflare/probe is a by-hand measuring tool (0035), never built or deployed; the site's own lockfile has only undici-types. Merged [skip ci].
+
+### 2026-10-09 15:07 — c20aadc — song-cost@docs/0172-live (2 files since origin/main)
+**tl;dr:** Nothing a person sees: decision 0172 names its live commit (7c87dbe) and the checks.
+**Other sessions:** Docs only, [skip ci].
+
+### 2026-10-09 15:05 — 8cc30bb — song-cost@ux/song-cost-free-votes (27 files since origin/main)
+**tl;dr:** Artists can set how many votes a song costs (Settings → Votes per song, default 1); a fresh phone now gets 1 free vote, not 3; each setlist row has one '…' that opens the Edit/Hide/Delete sheet.
+**Other sessions:** Decision 0172. show.songCost (1–20) gated like replayCost; costOf() returns it for unplayed songs. DEFAULT_FREE_CREDITS=1, VOTE_DEFAULTS_VERSION=3 migrates stored 3 (and v1's 5) to 1. vote.html: isReplay() reads played[], never cost>1. Any test that casts more than one vote must set freeCredits itself. Setlist row: .songmore + hidden .rowacts; window.rowMenu(btn) opens holdSheet.
+
 ### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
 **tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record
 **Other sessions:** PENDING.md row for 8f9bde6 (_passgate.mjs); clear it with ./tools/decide.sh if anyone writes 0115-style record for the passcode door
@@ -59,6 +71,9 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 04:06 — 7c496a0 — scale-p2-life@fix/show-lifecycle (105 files since origin/main)
 **tl;dr:** A failed Decline + refund can no longer finish itself a moment later, after the artist has shown the song again (0155)
 **Other sessions:** refundSongVotes now awaits Promise.allSettled over the twelve fan files and rethrows the first failure; test/refundowed.mjs has a one-file-fails, one-file-slow section. Other Promise.all-over-shards writers (dropSongVotes, consumePlayedVotes) have the same shape — not changed tonight.
+### 2026-10-03 03:08 — f2c65c3 — scale-p2-jobs@fix/background-cursors (100 files since origin/main)
+**tl;dr:** Deleting an account can no longer leave files nobody can find; the nightly off-site copy keeps up with thousands of accounts; the sheet reaches past 400 artists; the front door is one read; dated off-site copies kept 90 days (the founder's answer pending) (0173-0175)
+**Other sessions:** STACKED on the lifecycle PR. dropClipKeys is gone: dropClipKey(k) throws when R2 refuses. keysFor/keysForVenue take optional namers Set; deletion leaves-first (delqueue.cur, purgeStarted; Undo refused once a purge began). inTurn in _lib. cityindex gains gigs/heal (use placeGigs/upcomingAt); new hourly citycron.mjs; mirrorcron bell 20 -> 5 min. New key mirrorsnap_<date> (FAMILIES skip); R2 prefix snap/<day>/<key>.
 
 ### 2026-10-03 03:08 — db2f143 — scale-p2-life@fix/show-lifecycle (83 files since origin/main)
 **tl;dr:** Tapping End stops the room at once and the night is priced after, on a clock; a count Stripe could not finish says so; Decline + refund can be finished if it fails; vibes stop blocking paid requests; an accidental End on the tenth free show can be undone (0153-0156)

@@ -510,8 +510,8 @@ Up to **12** merch items. Not built: `speakerVotes`.
 
 | | Value | Where it lives |
 |---|---|---|
-| Free votes per person, per NIGHT (default) | 3 | `show.freeCredits`, artist-settable in the Studio |
-| Cost of a vote on a song not yet played | 1 | `costOf()` in `_lib.mjs` |
+| Free votes per person, per NIGHT (default) | 1 | `show.freeCredits`, artist-settable in the Studio |
+| Cost of a vote on a song not yet played (default) | 1 | `show.songCost`, artist-settable 1–20 (decision 0172); `costOf()` in `_lib.mjs` |
 | Cost of a vote on an already-played song (default) | 5 | `show.replayCost`, artist-settable |
 | Vote packs (default) | 3 for $5 · 15 for $20 | `DEFAULT_PACKS()`, artist-settable, clamped $1–$500 and 1–100 votes |
 | Song request / birthday shout-out | 3 votes by default; song requests may add an optional $1-per-paid-vote offer | `show.requests`, `show.birthdays`, `request_hold`; off by default |
@@ -536,9 +536,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 |---|---|
 | Public pages | 20 — about.html, artist.html, artists.html, community.html, crm.html, dash.html, diary.html, factory.html, index.html, mediadash.html, privacy.html, report.html, shop.html, sign.html, stage.html, studio.html, terms.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 42 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `songs`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
-| Scheduled jobs | 7 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
+| Scheduled jobs | 8 — autocron, citycron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
 | Shared libraries | 76 |
-| Artist Studio actions | 136 |
+| Artist Studio actions | 137 |
 | Venue Studio actions | 57 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
@@ -561,10 +561,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
-| Invariants | 317 (last: 0jc) |
-| Test suites | 90 |
+| Invariants | 320 (last: 0jc) |
+| Test suites | 93 |
 | Assertions | **5,602**, 0 failing, last run 2026-10-09 |
-| Decision records | 173 |
+| Decision records | 177 |
 
 ### Feature flags in force
 
@@ -1195,12 +1195,7 @@ owner / manager / crew.
 
 **Sessions.** Every token carries a session id, so one phone can be signed out without
 signing out the band. Revocation lives on the registry row the verifier is already reading
-and is normally absent, so it costs nothing on any request. A session lasts a week and
-renews itself while the Studio is in use (§2.1 has the numbers; decision 0199): a token
-more than a day old comes back fresh on the reply, for the same device, so a copied
-token is worth a week at most and nobody who uses their Studio ever signs in for it.
-The activity log behind *Settings* is complete — append-only, in sealed parts, never
-trimmed (decision 0200).
+and is normally absent, so it costs nothing on any request.
 
 Only the owner sees and signs out every device on the account; any other seat reaches only its own (decision 0104).
 

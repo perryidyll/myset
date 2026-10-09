@@ -69,6 +69,7 @@ console.log('\nTHE APPEND-ONLY LOG  (chunk of 20 for the test)');
 
 console.log('\nA NIGHT, FILED AS IT HAPPENS');
 for (const t of ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']) await A('addSong', { title: t, artist: 'T' });
+await A('freeCredits', { n: 3 });   // the votes below need more than the one free vote a fresh phone holds since decision 0172
 await A('status', { status: 'live' });
 const showId = (await readDoc(KEY.show(AID), null)).data.showId;
 ok('a live show with an id', !!showId, showId);
@@ -235,7 +236,7 @@ console.log('\nTHE SECOND HOME');
   let rings = 1, last = r5;
   while (!last.done && rings < 60) { last = await runMirror({ ...two, budgetMs: 0 }); rings++; }
   ok('and ring after ring finishes the pass', last.done && last.cursor === 3 && rings > 2, { rings, last });
-  eq('with every key copied once across the rings', [...__r2.objects.keys()].length, r1.copied);
+  eq('with every key copied once across the rings', [...__r2.objects.keys()].filter((k) => k.startsWith(PREFIX)).length, r1.copied);
   /* R2 refusing every put — the real first ring: the pass finishes, says which
      key and why, and comes back in an hour rather than a day. */
   __r2.reset(); __r2.fail(true);
@@ -300,7 +301,7 @@ console.log('\nEVERY KIND OF DOCUMENT HAS A SECOND HOME  (decision 0146)');
   delete process.env.MYSET_MIRROR_BUDGET_MS;
   const st = (await readDoc(STATE, null)).data || {};
   ok('the real bell finished a pass with nothing refused', res.status === 200 && st.passDoneAt > 0 && st.failed === 0 && st.copied > 30, st);
-  const home = new Set([...__r2.objects.keys()]);
+  const home = new Set([...__r2.objects.keys()].filter((k) => k.startsWith(PREFIX)));   // the dated copies (0175) are test/snapshots.mjs's
   const want = {
     'a sample page that is not on the list yet': `profile_${live.owner}`,
     'its record': `sample_${live.owner}`,

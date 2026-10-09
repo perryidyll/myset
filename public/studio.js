@@ -2462,11 +2462,15 @@ function render(){
         ${(x.key||(x.tags||[]).length)?`<div class="songmeta">
           ${x.key?`<span class="k">${esc(x.key)}</span>`:''}
           ${(x.tags||[]).map(t=>`<span>${esc(tagLabel(t))}</span>`).join('')}</div>`:''}</div>
-      <div class="songactions"><button class="act ico" data-ed="setlist" data-act="edit" data-id="${x.id}" aria-label="Edit ${esc(x.title)}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 4.5H6.5A2.5 2.5 0 0 0 4 7v10.5A2.5 2.5 0 0 0 6.5 20H17a2.5 2.5 0 0 0 2.5-2.5V12"/><path d="M9 15.2l.9-3.4 8.1-8.1a1.6 1.6 0 0 1 2.3 2.3l-8.1 8.1z"/></svg></button>
-      <button class="act ico" onclick="act('toggleSong',{song:'${x.id}'})" aria-label="${x.active===false?'Show':'Hide'} ${esc(x.title)}" title="${x.active===false?'Show':'Hide'}">${x.active===false
+      ${/* ONE "…" INSTEAD OF THREE CIRCLES (the founder, 2026-10-09). It opens the hold
+            sheet; the three buttons stay in the row, out of sight, because that sheet
+            and the swipe tray are built from them (rowMenu, below). */''}
+      <button class="songmore" data-more onclick="rowMenu(this)" aria-label="Actions for ${esc(x.title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
+      <div class="songactions rowacts" aria-hidden="true"><button class="act ico" tabindex="-1" data-ed="setlist" data-act="edit" data-id="${x.id}" aria-label="Edit ${esc(x.title)}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 4.5H6.5A2.5 2.5 0 0 0 4 7v10.5A2.5 2.5 0 0 0 6.5 20H17a2.5 2.5 0 0 0 2.5-2.5V12"/><path d="M9 15.2l.9-3.4 8.1-8.1a1.6 1.6 0 0 1 2.3 2.3l-8.1 8.1z"/></svg></button>
+      <button class="act ico" tabindex="-1" onclick="act('toggleSong',{song:'${x.id}'})" aria-label="${x.active===false?'Show':'Hide'} ${esc(x.title)}" title="${x.active===false?'Show':'Hide'}">${x.active===false
         ?'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'
         :'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5c1.6 0 3 .4 4.3 1.1M21.5 12s-3.5 6.5-9.5 6.5c-1.6 0-3-.4-4.3-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M4 20 20 4"/></svg>'}</button>
-      <button class="act warn ico" data-ed="setlist" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}" title="Delete">✕</button></div>
+      <button class="act warn ico" tabindex="-1" data-ed="setlist" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}" title="Delete">✕</button></div>
     </div>`).join(''):`<div class="row muted">${SETQ?`Nothing matches “${esc(SETQ)}”`:'Your songs will show up here.'}</div>`}</div></div>
     ${learnSection()}
     ${SAMPLE?'':`<div class="wrap" style="padding-top:18px;padding-bottom:0">
@@ -2804,7 +2808,7 @@ function render(){
     <div class="sec" id="pricebox"><span class="kick">Free votes per person</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many free votes each person gets for the night.</p>
     ${/* THE UNLIMITED SWITCH IS NOT GATED, so it must not be greyed.
-          `canPrice` in admin.mjs covers freeCredits, packs, replayCost and askSet —
+          `canPrice` in admin.mjs covers freeCredits, packs, replayCost, songCost and askSet —
           `unlimited` has no gate at all, deliberately: "everyone votes as much as
           they like" is running your show, not pricing it. Wrapping the whole block
           in one lock quietly took a working control off every free artist. */''}
@@ -2821,6 +2825,19 @@ function render(){
     </div>
     ${s.unlimited?`<p class="muted" style="font-size:12px;margin:9px 0 0">Everyone in the room can vote as much as they like. Nobody can buy votes while this is on.</p>`:`<p class="muted" style="font-size:12px;margin:9px 0 0">Free on every plan — it is your show, not a price.</p>`}
     </div>
+
+    ${/* WHAT ONE VOTE ON A SONG COSTS (decision 0172). A replay keeps its own price
+          below; a vote already cast keeps the price it was cast at. */''}
+    <div class="sec"><span class="kick">Votes per song</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes it takes to put one vote on a song.</p>
+    ${lock('pricing',`<div class="wrap"><div class="chips">
+      ${[1,2,3,5].map(n=>`<button class="chip ${(s.songCost||1)===n?'on':''}" onclick="act('songCost',{n:${n}})">${n}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
+      <input class="inp" id="scCustom" type="number" inputmode="numeric" min="1" max="20" style="flex:1"
+        placeholder="Any other number" value="${![1,2,3,5].includes(s.songCost||1)?(s.songCost||''):''}">
+      <button class="act pri" style="min-width:64px" onclick="saveSongCost()">Set</button>
+    </div></div>`,'A song costs '+(s.songCost||1)+' vote'+((s.songCost||1)===1?'':'s')+' until then.')}
 
     <div class="sec"><span class="kick">Cost to replay a played song</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you've already played stay votable, but cost this many votes to bring back.</p>
@@ -3973,6 +3990,11 @@ async function saveAskCost(kind){
   if(!Number.isFinite(n)||n<1){toast('Pick a number of votes');return;}
   await act('askSet',{kind,cost:n});
   toast(`Now ${n} vote${n===1?'':'s'}`);
+}
+async function saveSongCost(){
+  const n=parseInt((($('#scCustom')||{}).value||''),10);
+  if(!Number.isFinite(n)||n<1||n>20){toast('Pick a number from 1 to 20');return;}
+  act('songCost',{n});
 }
 async function saveReplayCost(){
   const n=parseInt((($('#rcCustom')||{}).value||''),10);
@@ -6098,7 +6120,7 @@ function start(){clearInterval(timer);
   let T=null;                          // the touch in flight
   let holdT=0, holdRow=null, holdP=null, swallow=false;
   const rowOf=(t)=>{ const r=t&&t.closest&&t.closest('.row,.songcard,.gigcard'); if(!r||r.classList.contains('muted')||t.closest(skip))return null; return r; };
-  const actsOf=(r)=>[...r.querySelectorAll(ACTS)].filter(b=>!b.disabled&&b.offsetParent!==null&&!b.closest('.swtray'));
+  const actsOf=(r)=>[...r.querySelectorAll(ACTS)].filter(b=>!b.disabled&&b.offsetParent!==null&&!b.closest('.swtray')&&!b.hasAttribute('data-more'));
   const labelOf=(b)=>(b.getAttribute('title')||b.getAttribute('aria-label')||b.textContent||'').replace(/\s+/g,' ').trim().split(' ').slice(0,3).join(' ')||'…';
   const isWarn=(b)=>b.classList.contains('warn')||/^(delete|remove)/i.test(labelOf(b));   // red only where the page already says so
   function close(){ if(!open)return; const r=open; open=null; r.style.transform=''; r.classList.remove('swopen'); setTimeout(()=>{ const t=r.querySelector('.swtray'); if(t&&!r.classList.contains('swopen'))t.remove(); r.style.position=''; },260); }
@@ -6173,6 +6195,8 @@ function start(){clearInterval(timer);
     const sh=$('#sheet');
     sh.querySelectorAll('.swsheet').forEach(x=>x.addEventListener('click',()=>{ closeSheet(); const k=x.getAttribute('data-sw'); setTimeout(()=>{ if(k==='row'){ r.click(); } else { const b=acts[Number(k)]; if(b)b.click(); } },80); }));
   }
+  /* A row's "…" button opens the same sheet a hold does (decision 0172). */
+  window.rowMenu=(b)=>{ try{ const r=b.closest('.row,.songcard,.gigcard'); if(r){ if(open)close(); holdSheet(r); } }catch(e){} };
   /* Once: a quiet tip the first time a list with actions is on screen. */
   setTimeout(()=>{ try{ if(localStorage.getItem(HINT))return; if(!document.querySelector(ACTS))return; toast('Tip: swipe a row left for its actions, or press and hold'); localStorage.setItem(HINT,'1'); }catch(e){} },4000);
 })();

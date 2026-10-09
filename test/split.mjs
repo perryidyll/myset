@@ -75,6 +75,7 @@ const onPhone = (b, m, shown = {}, shownT = 0, floor = 3000) => phone(shown, sho
 console.log('\nSETUP  eight songs, a live show, a few voters');
 const titles = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel'];
 for (const t of titles) await A('addSong', { title: t, artist: 'T' });
+await A('freeCredits', { n: 3 });   // the votes below need more than the one free vote a fresh phone holds since decision 0172
 await A('status', { status: 'live' });
 eq('alpha gets two votes from two phones', [(await vote('fanA', 'alpha')).status, (await vote('fanB', 'alpha')).status], [200, 200]);
 eq('bravo gets one from fanA', (await vote('fanA', 'bravo')).status, 200);

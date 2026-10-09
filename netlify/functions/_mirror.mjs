@@ -1,5 +1,5 @@
-import { store, readDoc, casDoc } from './_lib.mjs';
-import { r2Enabled, r2Put } from './_r2.mjs';
+import { store, readDoc, casDoc, inTurn } from './_lib.mjs';
+import { r2Enabled, r2Put, r2Delete } from './_r2.mjs';
 
 /* THE SECOND HOME — every finished thing, on the other vendor. Decision 0069.
 
@@ -16,7 +16,8 @@ import { r2Enabled, r2Put } from './_r2.mjs';
    (`getMetadata`, no body); a key whose etag is in the owner's manifest
    (`mirror_<owner>`) is skipped. So a nightly pass is one metadata read per key
    and a copy only of what changed — write-once documents (a night, a version, a
-   log part) cross exactly once.
+   log part) cross exactly once, and since 0173 a version or a sealed log part
+   already across is not even asked for its etag (`sealed`).
 
    WHAT IS NOT COPIED, on purpose: sign-in secrets and codes, sessions and lockouts
    (ephemeral, and a second copy of a secret is a second place to lose it), the
@@ -42,6 +43,24 @@ import { r2Enabled, r2Put } from './_r2.mjs';
 export const STATE = 'mirror';
 export const MANIFEST = (owner) => `mirror_${owner}`;
 export const PREFIX = 'backup/';
+
+/* DATED COPIES — decision 0175, INVARIANT 0io. `backup/<key>` is overwritten by
+   every pass, so a bad deploy that damages a document has its damage copied over
+   the good copy within a day. So each time a pass copies a CHANGED document, it
+   also keeps that version under the day it was copied, `snap/<YYYY-MM-DD>/<key>`,
+   for SNAP_DAYS. The first pass keeps everything once; after that only what
+   changed, so a day costs what changed that day.
+   They leave without a listing (the functions never list live data; 0146 lists
+   R2 only from a laptop, on the day the store that names the keys is gone): each
+   day's keys are written down as they are copied (`mirrorsnap_<day>`), the state
+   remembers which days have any, and a ring with time to spare deletes the days
+   past the window from those lists. ONE NUMBER. The founder's desk offers 30, 90
+   or none; 90 is what it recommends, and nobody has chosen yet. */
+export const SNAP_DAYS = 90;
+export const SNAP_PREFIX = 'snap/';
+export const SNAPLIST = (day) => `mirrorsnap_${day}`;
+const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
+export const snapKey = (day, key) => `${SNAP_PREFIX}${day}/${key}`;
 export const PASS_GAP_MS = 20 * 3600e3;
 /* A pass that failed to copy anything is not a pass: try again in an hour, not a
    day. The first one in production (2026-09-13 18:00Z) was 0 copied / 69 failed —
@@ -133,6 +152,7 @@ export const FAMILIES = [
   [/^vid_/, 'skip', 'clip bytes already live on R2 under the same key (0dq)'],
   [/^(vidchunk_|vidup_)/, 'skip', 'an upload in pieces: gone once the clip is whole, or within the hour'],
   [/^(mirror|mirror_.+)$/, 'skip', "the mirror's own cursor and manifests: rebuilt by the next pass"],
+  [/^mirrorsnap_\d{4}-\d{2}-\d{2}$/, 'skip', "which documents a day's dated copies on R2 hold (0175): the mirror's own bookkeeping, kept only to delete them"],
   [/^watch$/, 'skip', 'what the watch has already told the founder (0157): rebuilt at its next ring'],
   /* an owner's */
   [/^(show|meta|profile|histidx|histids|histpend|hist|req|ev|lists|learn|push|connect|fb|fbarch|apitch|songstats|posts|postsarch|likes|billing|log|rec|pkeys|vidpend|ledger|ledidx|feats|rsvp|biz|wishes|diary|img|lyr|chart|evt|ver|vers|cred|inbox|inboxarch|msg|sample|bugs)_/, 'owner'],
@@ -145,27 +165,45 @@ export const familyOf = (k) => {
 };
 export const skipped = (k) => (familyOf(k) || {}).how === 'skip';
 
-const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0, err: null });
+const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0, err: null, snapDays: [] });
 const emptyManifest = () => ({ v: 1, at: 0, by: {} });
 
 async function etagOf(key) {
   try { const m = await store().getMetadata(key); return m ? (m.etag || null) : null; } catch { return null; }
 }
 
+/* WHAT CAN NEVER CHANGE IS NOT ASKED AGAIN — decision 0173. A version (`ver_`) and
+   a sealed part of an append-only log (`<head>_p<i>`) are written once, with
+   `onlyIfNew`, and never again (0066/0067). Once one is in the manifest, its etag
+   cannot have moved, so the pass skips it without the metadata read. For an
+   account with a few hundred nights those are most of its keys. A part counts
+   only when its head is on the same list and is one of the five logs, so a venue
+   called "P12" (`postsarch_v_p12`, a head that does change) is never mistaken
+   for one. */
+const LOG_HEAD = /^(evt|vers|postsarch|fbarch|inboxarch)_/;
+export const sealed = (k, listed) => {
+  if (String(k).startsWith('ver_')) return true;
+  const m = /^(.+)_p\d+$/.exec(String(k));
+  return !!(m && LOG_HEAD.test(m[1]) && listed.has(m[1]));
+};
+
 /** Copy one owner's keys that changed since the manifest, from index `start`,
  *  until `deadline`. Returns the counts, `partial` when the deadline stopped it
  *  short, and `next` — the index the next ring should start from. */
 export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infinity, start = 0) {
-  const out = { copied: 0, skipped: 0, failed: 0, missing: 0, partial: false, next: 0, err: null };
+  const out = { copied: 0, skipped: 0, failed: 0, missing: 0, partial: false, next: 0, err: null, day: dayOf(now) };
+  const snapped = [];
   const { data: man } = await readDoc(MANIFEST(owner), null);
   const by = { ...((man && man.by) || {}) };
   const todo = [...new Set(keys)].filter((k) => k && !skipped(k));
+  const listed = new Set(todo);
   const POOL = 6;
   let i = Math.min(Math.max(0, start | 0), todo.length);
   const worker = async () => {
     do {
       if (i >= todo.length) return;
       const k = todo[i++];
+      if (by[k] && sealed(k, listed)) { out.skipped++; continue; }   // written once, already across
       const etag = await etagOf(k);
       if (!etag) { out.missing++; continue; }
       if (by[k] === etag) { out.skipped++; continue; }
@@ -174,7 +212,9 @@ export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infi
         if (!r || !r.data) { out.missing++; continue; }
         const type = (r.metadata && r.metadata.type) || 'application/json';
         await r2Put(PREFIX + k, Buffer.from(r.data), type);
+        await r2Put(snapKey(out.day, k), Buffer.from(r.data), type);   // and this version, under today (0175)
         by[k] = r.etag || etag;
+        snapped.push(k);
         out.copied++;
       } catch (e) { out.failed++; out.err ||= `${k}: ${String((e && e.message) || e).slice(0, 80)}`; }
     } while (Date.now() < deadline);          // at least one key per worker, then the clock decides
@@ -182,8 +222,34 @@ export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infi
   await Promise.all(Array.from({ length: Math.min(POOL, Math.max(0, todo.length - i)) }, worker));
   out.partial = i < todo.length;
   out.next = out.partial ? i : 0;
+  /* The day's list first: a dated copy no list names could never be deleted. */
+  if (snapped.length) await casDoc(SNAPLIST(out.day), () => ({ v: 1, keys: [] }), (d) => { d.keys = [...new Set([...(d.keys || []), ...snapped])]; return true; }).catch(() => {});
   await casDoc(MANIFEST(owner), emptyManifest, (m) => { m.at = now; m.by = by; return true; }).catch(() => {});
+  out.snapped = snapped.length;
   return out;
+}
+
+/** Delete the dated copies of every day past SNAP_DAYS, from that day's own list,
+ *  until `deadline`; at least one batch a call. Returns the days it finished. */
+export async function expireSnaps(days, now = Date.now(), deadline = Infinity) {
+  const cutoff = dayOf(now - SNAP_DAYS * 86400e3);
+  const done = [];
+  let steps = 0;
+  for (const day of [...days].filter((d) => d < cutoff).sort()) {
+    for (;;) {
+      if (steps++ && Date.now() >= deadline) return done;
+      const { data } = await readDoc(SNAPLIST(day), null);
+      const batch = ((data && data.keys) || []).slice(0, 48);
+      if (!batch.length) break;
+      const res = await inTurn(batch, (k) => r2Delete(snapKey(day, k)).then(() => k, () => null), 6);
+      const gone = new Set(res.filter(Boolean));
+      if (!gone.size) return done;                        // R2 refused them all: try again next ring
+      await casDoc(SNAPLIST(day), () => ({ v: 1, keys: [] }), (d) => { d.keys = (d.keys || []).filter((k) => !gone.has(k)); return true; }).catch(() => {});
+    }
+    await store().delete(SNAPLIST(day)).catch(() => {});
+    done.push(day);
+  }
+  return done;
 }
 
 /** One ring: continue or start a pass, inside the budget. `keysOf(owner)` names
@@ -197,7 +263,16 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
   const inPass = st.order.length && st.cursor < st.order.length;
   if (!inPass) {
     const gap = st.failed ? RETRY_GAP_MS : PASS_GAP_MS;
-    if (st.passDoneAt && now - st.passDoneAt < gap) return { done: true, passDoneAt: st.passDoneAt, failed: st.failed, err: st.err || null };
+    if (st.passDoneAt && now - st.passDoneAt < gap) {
+      /* a ring with nothing to copy clears the dated copies past the window (0175) */
+      const cutoff = dayOf(now - SNAP_DAYS * 86400e3);
+      if ((st.snapDays || []).some((d) => d < cutoff)) {
+        const gone = await expireSnaps(st.snapDays, now, t0 + budgetMs);
+        if (gone.length) await casDoc(STATE, emptyState, (d) => { d.snapDays = (d.snapDays || []).filter((x) => !gone.includes(x)); return true; }).catch(() => {});
+        return { done: true, passDoneAt: st.passDoneAt, failed: st.failed, err: st.err || null, expired: gone };
+      }
+      return { done: true, passDoneAt: st.passDoneAt, failed: st.failed, err: st.err || null };
+    }
     st.order = ['global', ...(await owners())];
     st.cursor = 0; st.keyCursor = 0; st.passStartedAt = now; st.copied = 0; st.skipped = 0; st.failed = 0; st.err = null;
   }
@@ -208,6 +283,7 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
     const owner = st.order[st.cursor];
     const keys = owner === 'global' ? await globalKeys() : await keysOf(owner).catch(() => []);
     const r = await mirrorOwner(owner, keys, now, deadline, st.keyCursor);
+    if (r.snapped && !st.snapDays.includes(r.day)) st.snapDays = [...st.snapDays, r.day];
     st.copied += r.copied; st.skipped += r.skipped; st.failed += r.failed;
     st.err ||= r.err;
     did.push(owner);
