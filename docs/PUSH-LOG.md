@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 15:52 — ac8b93e — scale-p2-money@fix/refunds-and-stock (36 files since origin/main)
+**tl;dr:** Nothing new for a person: the refunds-and-merch-hold change (#238) now sits on today's main, ready to merge
+**Other sessions:** Restacked onto main e996865 (#227 b2dbfec + #150). money/02: refunds are w14, expired checkouts w15 (week one's w12/w13 kept); mhold in FAMILIES owner regex + keysFor/keysForVenue; moneyForShow keeps 0153's resume AND 0177's lostOf. Suite 6,466 ✓ exit 0.
+
 ### 2026-10-03 04:04 — 4499b59 — scale-paidarc@fix/paid-archive (60 files since origin/main)
 **tl;dr:** No change for people yet: old payment records now wait 130 days, not 90, before moving to the archive
 **Other sessions:** #236: PAID_KEEP_DAYS 130, PAID_ARC_MARGIN_MS 120 days — a dispute (Stripe: up to 120 days) must find its marker in meta, where #238's handlers write.
