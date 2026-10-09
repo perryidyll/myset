@@ -91,6 +91,9 @@ echo
 echo "── Play is one write: a vote that lands after its song started (0147) ──"
 node --import ./test/register.mjs test/playonewrite.mjs
 echo
+echo "── one tap, one song: a slow Play and its retry (0151) ──"
+node --import ./test/register.mjs test/onetap.mjs
+echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs
 echo
@@ -123,6 +126,12 @@ node --import ./test/register.mjs test/cost.mjs
 echo
 echo "── the shared-board split ──"
 node --import ./test/register.mjs test/split.mjs
+echo
+echo "── every song the room can vote for, and the poll with only the tallies (0150) ──"
+node --import ./test/register.mjs test/songlist.mjs
+echo
+echo "── the personal poll asks for the show on condition (0152) ──"
+node --import ./test/register.mjs test/showkept.mjs
 echo
 echo "── the one warm door ──"
 node --import ./test/register.mjs test/fandoor.mjs

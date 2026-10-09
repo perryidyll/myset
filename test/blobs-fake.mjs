@@ -79,8 +79,13 @@ export function getStore() {
       }
       if (readDelay && (!slowRe || slowRe.test(key))) await new Promise((r) => setTimeout(r, readDelay));
       let e = mem.get(key);
-      if (lat) { await pause(lat.r, lat.rPerMB, e ? e.body.length : 0); e = mem.get(key); stats.gets++; stats.bytesR += e ? e.body.length : 0; }
+      /* A CONDITIONAL READ (decision 0152): the caller names the etag it holds and, if it
+         is still the document's, the store answers 304 — `data: null`, no body crosses —
+         exactly as Netlify's client returns it. Noted as `304 <key>` beside the read. */
+      const same = (x) => !!(x && opts.etag && opts.etag === x.etag);
+      if (lat) { await pause(lat.r, lat.rPerMB, e && !same(e) ? e.body.length : 0); e = mem.get(key); stats.gets++; stats.bytesR += e && !same(e) ? e.body.length : 0; }
       if (!e) return null;
+      if (same(e)) { note('304', key); return { data: null, etag: e.etag, metadata: e.metadata || {} }; }
       let data = e.body;
       if (opts.type === 'json') { try { data = JSON.parse(e.body); } catch { return null; } }
       else if (opts.type === 'arrayBuffer') data = Buffer.from(e.body);
