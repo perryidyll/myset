@@ -300,15 +300,35 @@ export async function sweep({ now = Date.now(), limit = 40, deadline = Infinity,
    the filed row — the same row the Money tab shows — and the letter goes to the
    owner's address from the registry, which is the only thing that address is for
    here. A note whose night vanished, or whose account has no owner address, is
-   dropped, not retried: a missing letter beats a daily failure in the log. */
+   dropped, not retried: a missing letter beats a daily failure in the log.
+
+   CLAIMED BEFORE IT IS SENT (decision 0186). The note used to be moved to `noted`
+   AFTER the letters went, in a write whose failure was swallowed — so a lost write,
+   or two rings overlapping, sent the same letter twice. Now one write moves every
+   due note to `noted` first, and only the notes that write actually took are sent.
+   A second ring finds them gone and sends nothing; a claim that cannot be written
+   sends nothing and leaves the notes for the next ring; a send that fails after the
+   claim is a letter missed, never a letter doubled. */
 export async function sweepNotes({ now = Date.now(), limit = 20, log = () => {} } = {}) {
   const sched = await readSched();
-  const due = Object.entries(sched.notes || {}).filter(([, n]) => n && now >= Number(n.due)).slice(0, limit);
+  const ready = Object.entries(sched.notes || {}).filter(([, n]) => n && now >= Number(n.due)).slice(0, limit);
+  if (!ready.length) return { checked: 0, sent: 0 };
+  const due = [];
+  await casDoc(SCHED, emptySched, (d) => {
+    due.length = 0;
+    d.notes ||= {}; d.noted ||= {};
+    for (const [aid] of ready) {
+      const n = d.notes[aid];
+      if (!n || now < Number(n.due)) continue;   // another ring took it, or it moved
+      due.push([aid, n]);
+      delete d.notes[aid]; d.noted[aid] = now;
+    }
+    return due.length > 0;
+  });
   if (!due.length) return { checked: 0, sent: 0 };
   const [{ sendMail }, { readHistIndex }] = await Promise.all([import('./_auth.mjs'), import('./_history.mjs')]);
   const reg = await readArtists();
   let sent = 0;
-  const done = [];
   for (const [aid, n] of due) {
     try {
       const a = reg.byId[aid];
@@ -338,14 +358,8 @@ export async function sweepNotes({ now = Date.now(), limit = 20, log = () => {} 
         if (r.ok) { sent += 1; log(`autocron: first-night note sent for ${aid}`); }
         else log(`autocron: first-night note for ${aid} not sent (${r.why})`);
       } else log(`autocron: first-night note for ${aid} dropped (${!a ? 'no account' : leaving ? 'the account is being deleted' : !email ? 'no owner address' : 'night not on file'})`);
-      done.push(aid);
-    } catch (e) { console.error(`autocron note: ${aid} failed:`, String((e && e.message) || e)); done.push(aid); }
+    } catch (e) { console.error(`autocron note: ${aid} failed:`, String((e && e.message) || e)); }
   }
-  if (done.length) await casDoc(SCHED, emptySched, (d) => {
-    d.notes ||= {}; d.noted ||= {};
-    for (const aid of done) { delete d.notes[aid]; d.noted[aid] = now; }
-    return true;
-  }).catch(() => {});
   return { checked: due.length, sent };
 }
 

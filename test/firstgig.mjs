@@ -141,5 +141,40 @@ console.log('\nAN ACCOUNT ON ITS WAY OUT IS NOT WRITTEN TO  (0dh, decision 0098)
   ok('and the note is dropped, not retried every ring', !(sched.notes || {})[al.artistId] && !!(sched.noted || {})[al.artistId], sched.notes);
 }
 
+console.log('\nCLAIMED BEFORE IT IS SENT: NEVER TWO LETTERS  (decision 0186)');
+/* The note was moved to `noted` AFTER sending, in a write whose failure was
+   swallowed: a lost write, or two rings at once, sent the same letter twice. */
+{
+  const { __failWrites } = await import('./blobs-fake.mjs');
+  const firstNight = async (email, name, slug, fan) => {
+    const a = await createArtist({ email, name, slug });
+    const TK = await signToken(email, revOf(await readArtists(), a.artistId));
+    await AS(TK, 'addSong', { title: 'Song', artist: 'X' });
+    await AS(TK, 'newShow');
+    const sh = await getShow(a.artistId);
+    await hit(voteFn, `https://x/api/vote?a=${slug}`, { fan, song: sh.songs[0].id });
+    await AS(TK, 'status', { status: 'ended' });
+    return { aid: a.artistId, ...(((await readSched()).notes || {})[a.artistId] || {}) };
+  };
+  const letters = (email) => SENT.filter((m) => /first night/i.test(m.subject || '') && (m.to || []).includes(email)).length;
+
+  const n = await firstNight('two@example.com', 'Two Rings', 'two-rings', 'phoneD');
+  ok('a note is queued', n.due > 0, n);
+  const [a, b] = await Promise.all([sweepNotes({ now: n.due + 1000 }), sweepNotes({ now: n.due + 1000 })]);
+  eq('THE BUG: two rings at once send ONE letter', [a.sent + b.sent, letters('two@example.com')], [1, 1]);
+
+  const m = await firstNight('lost@example.com', 'Lost Write', 'lost-write', 'phoneE');
+  ok('another note is queued', m.due > 0, m);
+  __failWrites(/^gigsched$/);
+  let threw = false;
+  try { await sweepNotes({ now: m.due + 1000 }); } catch { threw = true; }
+  __failWrites(null);
+  ok('a claim that cannot be written fails loudly', threw);
+  eq('and sends nothing', letters('lost@example.com'), 0);
+  ok('the note is still waiting for the next ring', !!((await readSched()).notes || {})[m.aid], (await readSched()).notes);
+  const r = await sweepNotes({ now: m.due + 2000 });
+  eq('which sends it, once', [r.sent, letters('lost@example.com')], [1, 1]);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

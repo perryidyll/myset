@@ -48,7 +48,11 @@ const registry = get('artists') || { byId: {} };
 const venues = get('venues') || { byId: {} };
 const parts = {};
 for (const aid of Object.keys(registry.byId || {})) {
-  parts[aid] = { idx: get(`histidx_${aid}`), meta: get(`meta_${aid}`), posts: get(`posts_${aid}`), rsvp: get(`rsvp_${aid}`), ev: get(`ev_${aid}`) };
+  /* the payment archives, one per year since MySet's first (2026) — the same years
+     _pay.mjs paidArcYears names; decision 0193 */
+  const arc = [];
+  for (let y = 2026; y <= new Date().getUTCFullYear(); y++) arc.push(get(`paidarc_${aid}_${y}`));
+  parts[aid] = { idx: get(`histidx_${aid}`), meta: get(`meta_${aid}`), arc, posts: get(`posts_${aid}`), rsvp: get(`rsvp_${aid}`), ev: get(`ev_${aid}`) };
 }
 const snap = buildSnapshot({ registry, venues, parts });
 const json = JSON.stringify(snap);

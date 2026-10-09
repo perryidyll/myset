@@ -19,6 +19,7 @@ import { credKey } from './_cred.mjs';
 import { messageKeys, exportMessages } from './_messages.mjs';
 import { readDiary } from './_diary.mjs';
 import { lookupKeys } from './_lookup.mjs';
+import { PAIDARC, paidArcYears } from './_pay.mjs';
 
 /* THE ACCOUNT — what an artist can take with them, and how they leave.
 
@@ -106,6 +107,8 @@ export async function keysFor(aid, namers = null) {
     `bugs_${aid}`];     // what fans reported from this room (0146: it had no second home, and outlived the account)
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
+  // the payment markers that left meta for their year (0193) — every year since MySet's first, computed, never list()
+  for (const y of paidArcYears()) keys.push(PAIDARC(aid, y));
   const [hist, show, profile, posts, ids, pend, diary] = await Promise.all([
     readHistIndex(aid), readDoc(KEY.show(aid), null), getProfile(aid), readPosts(aid),
     readDoc(`histids_${aid}`, null), readPending(aid), readDiary(aid).catch(() => ({ pages: [] }))]);

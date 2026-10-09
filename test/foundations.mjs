@@ -324,7 +324,7 @@ console.log('\nEVERY KIND OF DOCUMENT HAS A SECOND HOME  (decision 0146)');
     'the media dashboard': 'mediadash/data',
     'its boosts': 'mediadash/boosts',
     'a thumbnail, named by its post': 'mediadash/thumb/2026-10-01_A_POST',
-    'this hour of errors': hourKey(),
+    'this hour of errors': [...__dump().keys()].find((k) => k.startsWith(hourKey())) || hourKey(),   // one of ERR_SHARDS documents an hour (0187): whichever shard the error above landed in
     'what fans reported from a room': `bugs_${AID}`,
     'a city\'s featured slots, named by the artist who bought one': 'feat_thailand-chaweng-0a1b2c3d',
     'the pitches a venue was sent': `vpitch_${vid}`,

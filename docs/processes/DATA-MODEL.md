@@ -63,12 +63,23 @@ Linked steps: 369787, 369793, 369794, 369791
 | attribute | type | what it holds |
 | --- | --- | --- |
 | `tips` (46043) | Multi-line text | each tip: amount, at, the Checkout session — never the buyer's identity |
-| `paid` (46044) | Multi-line text | Checkout session id → what was granted; the replay-safe record all three delivery paths check before granting (INVARIANT 5c/7) |
+| `paid` (46044) | Multi-line text | Checkout session id → what was granted; the replay-safe record all three delivery paths check before granting (INVARIANT 5c/7). A delivered marker older than `PAID_KEEP_DAYS` moves to `paidarc_` (decision 0193) |
 | `gifts` (46045) | Multi-line text | credits a fan chose to gift to the artist instead of carrying at show end |
 | `orders` (46046) | Multi-line text | merch orders: item, quantity, pickup or shipped, the session |
 | `fees` (46047) | Multi-line text | the exact fee split settled per charge (charge.updated), so the artist's statement and the platform's agree |
 
 Linked steps: 369823, 369824, 369825, 369827, 369829
+
+### Payment markers by year (paidarc_) — entity not yet in Puzzle
+
+`paidarc_<aid>_<YYYY>` · The delivered payment markers that left `meta_<aid>.paid` after `PAID_KEEP_DAYS`, one document per UTC year of the marker's `at` (the session's creation). Real money history: mirrored off-site, exported with nothing, deleted with the account. Written by the bell's daily pass (`archiveDue` → `archivePaid`), merged and read back before the marker leaves meta (INVARIANT 0ih); read by every claim check for a session older than `PAID_ARC_MARGIN_MS`, by the Money tab, and by the lifetime readers (`readPaidAll`). Keys run from `PAID_FIRST_YEAR` to now — computed, never listed (INVARIANT 1). `src: _pay.mjs PAIDARC, archivePaid, archivedMarker, readPaidAll`
+
+| attribute | type | what it holds |
+| --- | --- | --- |
+| `v` | Number | the shape's version, 1 |
+| `paid` | Multi-line text | Checkout session id → the marker exactly as it stood in meta (kind, amount, granted, fan, at, song, show, delivered, deliveredAt) — only ever delivered ones |
+
+Linked steps: none yet (the Puzzle pass is owed)
 
 ### Past show — the detail (hist_) — entity 4846
 
@@ -382,7 +393,7 @@ Linked steps: 369913, 369914, 369916, 369917, 369918
 
 ### Fan reports and the error log (bugs_ / err_) — entity 4871
 
-`bugs_<aid> · err_<hour>` · 'Something wrong?' reports from the room, per artist, and the server's own errors in one document per hour with a computable key — kept in the blob store, not a vendor (decision 0029), read in the Studio (Reliability i06). `src: _errlog.mjs bugsKey, hourKey`
+`bugs_<aid> · err_<hour>` · 'Something wrong?' reports from the room, per artist, and the server's own errors in four documents per hour with computable keys (decision 0187) — kept in the blob store, not a vendor (decision 0029), read in the Studio (Reliability i06). `src: _errlog.mjs bugsKey, hourKey, shardKeys`
 
 | attribute | type | what it holds |
 | --- | --- | --- |

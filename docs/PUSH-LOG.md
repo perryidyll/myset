@@ -18,6 +18,30 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Security slice C is LIVE as e996865 (#150, 08:41 UTC): MYSET_SECRET signs everything, the records that hold a person are sealed at rest from the first write on, a session lasts a week and renews itself (0199), the activity log is complete (0200); docs only on this branch — the records carry the commit
 **Other sessions:** Verified by content on myset.vip: /api/health seal.secret true, ring absent until the first protected write (then ours). Decisions 0199/0200 and INVARIANTS 0jb/0jc are on main. A new kind of document needs a FAMILIES line (sealkeys global, fmgate skip are in). Follow-up for whoever has the suite open: 0176's deferred line — setCode in admin.mjs should read the page's name through readArtists() now that #150 is in.
 
+### 2026-10-03 04:04 — 4499b59 — scale-paidarc@fix/paid-archive (60 files since origin/main)
+**tl;dr:** No change for people yet: old payment records now wait 130 days, not 90, before moving to the archive
+**Other sessions:** #236: PAID_KEEP_DAYS 130, PAID_ARC_MARGIN_MS 120 days — a dispute (Stripe: up to 120 days) must find its marker in meta, where #238's handlers write.
+
+### 2026-10-03 03:36 — b1b3bba — scale-paidarc@fix/paid-archive (60 files since origin/main)
+**tl;dr:** The payments file stops growing forever: payment records older than 90 days move to a yearly archive, and every check that stops a pack being granted twice still finds them (0193)
+**Other sessions:** NOT MERGED, stacked on #227. New key family paidarc_<owner>_<YYYY> (MIRRORED; in keysFor/keysForVenue). readPaidAll()/archivedMarker()/archivePaid() in _pay.mjs; autocron step after heal (PAIDARC_BUDGET_MS 1.5 s, paidarcCursor). Any reader that needs lifetime payments must use readPaidAll, not meta.paid (INVARIANT 0ih). Touches _warehouse.mjs line 524, _metrics.mjs, _register.mjs (old nights), tools/metrics.mjs.
+
+### 2026-10-03 03:10 — 626fdbf — scale-ops@ops/small-leaks (25 files since origin/main)
+**tl;dr:** No change for people: the ledger now records that strangers' pull requests already need approval before they build
+**Other sessions:** PER-020 done: Netlify untrusted_flow=review (API, 2026-10-02/03). Deploy retention is still 90 days (desk card).
+
+### 2026-10-03 03:08 — 28e64a8 — scale-ops@ops/small-leaks (25 files since origin/main)
+**tl;dr:** The page a fan returns to after paying can no longer be hammered by one machine: 1,000 a minute per address, far above a real room (0191)
+**Other sessions:** netlify.toml now has THREE rate rules: /api/confirm 1000/min and /api/auth 300/min above /api/* 60000/min (Pro allows five). Specific rules must stay above /api/*.
+
+### 2026-10-03 03:03 — 03adb2e — scale-ops@ops/small-leaks (22 files since origin/main)
+**tl;dr:** Small fixes: shared page scripts stay fresh for ten minutes instead of one, 'near me' can ask for location, myset.vip/robots.txt is a real file, the home page has a share picture, a first-night letter can never go out twice, and the error log keeps counting during an incident (0186, 0187)
+**Other sessions:** NOT MERGED — waits on the founder's word. netlify.toml: /*.css and /*.js rules moved BELOW /:slug (later rule wins per header); Permissions-Policy geolocation=(self), artistpage.mjs SITE_HEADERS kept equal. _errlog: 4 shards/hour (shard 0 = old key), per-shard count n, readErrs(); _watch look() adds overflow. _auto sweepNotes claims before sending. README/GIG-NIGHT/SECURITY/PER-019 corrected.
+
+### 2026-10-03 03:03 — 1377ee2 — scale-vote@fix/vote-page-cadence (17 files since origin/main)
+**tl;dr:** The vote page asks the server less: it shows the board first, asks for the fan's own votes only after they act, on wake or once a minute, waits a random moment when a phone wakes in a big room, keeps the keyboard in search, warns inside Instagram's/TikTok's browser before a purchase, and says 'lots of people are buying' instead of 'payments broken' (0185)
+**Other sessions:** NOT MERGED — waits on the founder's word. vote.html: ME_DUE/ME_EVERY (60 s) cadence; <head> starts only the board; wake() jitter 0–1.5 s with a 'Catching up…' dim; WV moved from shop.html into fan.js (all fan pages re-stamped). _lib.mjs: mutateFan gains optional 5th arg tries; markPresence uses PRESENCE_TRIES=3 (INVARIANT 0if). Reads confirm's asCredits.
+
 ### 2026-10-09 08:35 — 92ad67a — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
 **tl;dr:** PR #150 (security slice C) is on main b2dbfec with five merges in and the founder's word to merge: the week-long session is decision 0199 (0jb) and the complete activity log 0200 (0jc) — 0172/0173 and 0hs/0ht were taken; fmgate joins the mirror's skip list; the rebuilt preview says MYSET_SECRET is already set (seal.secret true), so nothing is left for the founder to run
 **Other sessions:** Decisions 0199/0200 and INVARIANTS 0jb/0jc are taken on this branch, merging today. keysFor/keysForVenue: the activity log's head is read for its parts (logKeys) and is a namer, parts before head (0im). FAMILIES: sealkeys global, fmgate skip. After the merge every protected family is sealed on first write and the keyring sealkeys appears; readDoc/casDoc fail closed on a record that cannot be opened. x-myset-token rides back on no-store replies from guard(); both Studios' api() keep it.

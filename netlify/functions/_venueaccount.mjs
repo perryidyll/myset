@@ -7,6 +7,7 @@ import { merchSlots } from './_profile.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
 import { readPending, vidKey } from './_video.mjs';
 import { logKeys } from './_append.mjs';
+import { PAIDARC, paidArcYears } from './_pay.mjs';
 
 /* A VENUE'S ACCOUNT — take it with you, or leave.
 
@@ -59,6 +60,8 @@ export async function keysForVenue(vid, namers = null) {
        each outlived the venue (0146): the pitches it was sent (0123), its alert
        devices (0124), and its answers to shows listed at its place (0128). */
     `vpitch_${vid}`, `push_${o}`, `gigok_${vid}`];
+  // the payment markers that left meta for their year (0193) — every year since MySet's first, computed
+  for (const y of paidArcYears()) keys.push(PAIDARC(o, y));
   const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);
   named(`vprofile_${vid}`, `posts_${o}`, `vidpend_${o}`);
   for (const slot of ['cover', 'avatar', 'idcheck', ...Array.from({ length: 12 }, (_, i) => 'p' + i)])

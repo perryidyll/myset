@@ -38,9 +38,9 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;'
 
 /* THE DEVICE ID. One per phone, minted once and kept in localStorage; a phone that
    blocks storage would be a new fan on every call, which is why each page reads it
-   ONCE into its own FAN constant. The head-start scripts in vote.html and
-   community.html mint it the same way, inline, before this file has arrived — keep
-   the three the same. */
+   ONCE into its own FAN constant. The head-start script in community.html mints it
+   the same way, inline, before this file has arrived — keep the two the same. (The
+   vote page's head starts only the board since decision 0185, so it mints nothing.) */
 function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
   if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
   return v;}
@@ -58,6 +58,12 @@ function shareLink(url,title,copied){
   if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
   try{ navigator.clipboard.writeText(url).then(()=>toast(copied||'Link copied'),()=>toast(url)); }catch(e){ toast(url); }
 }
+
+/* AN APP'S OWN BROWSER — Instagram, Facebook or TikTok — by name, or '' for a real one.
+   Both pages that sell ask it: the shop (its hint) and the vote page (a pack of votes
+   lives in the browser that bought it, and checkout can come back in another one —
+   decision 0185). There is no reliable way out of one, so a page only says so. */
+const WV=(()=>{const m=/Instagram|FBAN|FBAV|FB_IAB|BytedanceWebview|musical_ly/i.exec(navigator.userAgent||''); if(!m) return ''; const s=m[0].toLowerCase(); return /instagram/.test(s)?'Instagram':/bytedance|musical/.test(s)?'TikTok':'Facebook';})();
 
 /* ── dates and words ── a gig sits on ITS date string, YYYY-MM-DD in the artist's own
    day. Nothing here goes through new Date(date) at local midnight, which shifts a
