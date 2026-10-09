@@ -1676,7 +1676,7 @@ export const weakCode = (code, slug) => {
     || (slug && c === String(slug).toLowerCase());
 };
 
-/* A token that renewed itself while a request was being answered (decision 0172,
+/* A token that renewed itself while a request was being answered (decision 0199,
    renewToken in _auth.mjs) waits here for guard() to put it on the reply — one
    header, `x-myset-token`, read by the Studios' api(). Keyed by the Request itself,
    so nothing about one request can reach another on a warm instance. */

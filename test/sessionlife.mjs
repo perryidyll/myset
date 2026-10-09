@@ -1,4 +1,4 @@
-/* A SESSION LASTS A WEEK AND RENEWS ITSELF IN USE (decision 0172).
+/* A SESSION LASTS A WEEK AND RENEWS ITSELF IN USE (decision 0199).
 
    A token was good for thirty days from the moment it was minted, whatever happened
    in between: a copy off a borrowed phone, a browser profile, a backup kept working

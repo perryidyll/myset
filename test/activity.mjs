@@ -1,4 +1,4 @@
-/* THE ACTIVITY LOG IS COMPLETE (decision 0173).
+/* THE ACTIVITY LOG IS COMPLETE (decision 0200).
 
    `log_<owner>` held a hundred entries, newest first, and the hundred-and-first fell
    off: a record of who got into an account that forgot its own beginning. It is now

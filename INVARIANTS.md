@@ -2870,9 +2870,9 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     never a key): `other` — a secret that did not wrap the ring — is a problem somebody
     is told about, because new sign-ins fail until it is fixed. `test/seal.mjs`.
 
-## The security pass, slice C, continued — a week, and a whole record (2026-10-09, decisions `0172`, `0173`)
+## The security pass, slice C, continued — a week, and a whole record (2026-10-09, decisions `0199`, `0200`)
 
-0hs. **A session lasts a week and renews itself in use; a renewal is never a way back
+0jb. **A session lasts a week and renews itself in use; a renewal is never a way back
     in, and never shared.** `TOKEN_LIFE` is seven days (`_auth.mjs`; the venue token
     reads the same constant). On an authenticated request whose token is more than
     `RENEW_AFTER_MS` old, `requireArtist` / `requireVenue` mint a fresh token for the
@@ -2884,7 +2884,7 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     dead entry outlives every token, old or new). A token minted before this keeps its
     own expiry and renews on first use. `test/sessionlife.mjs`.
 
-0ht. **The activity log is complete.** `log_<owner>` is an append-only log in parts
+0jc. **The activity log is complete.** `log_<owner>` is an append-only log in parts
     (`_append.mjs`, 0068's shape): a head of at most `LOG_CHUNK` entries, oldest
     first, spilled into write-once `log_<owner>_p<n>` that are never rewritten and
     never trimmed. The screen reads the newest twenty-five newest first — from the

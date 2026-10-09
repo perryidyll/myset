@@ -180,7 +180,7 @@ export async function readSessions(owner, mySid, onlyEmail = null) {
 }
 
 /* ---------- the activity log ----------
-   COMPLETE BY CONSTRUCTION (decision 0173). Until then this was a hundred entries,
+   COMPLETE BY CONSTRUCTION (decision 0200). Until then this was a hundred entries,
    newest first, and the hundred-and-first fell off — a record of who got into an
    account that forgot the beginning. It is now an append-only log (_append.mjs,
    decision 0068's shape): a head of at most LOG_CHUNK entries, oldest first, spilled
@@ -202,7 +202,7 @@ export function note(owner, e, by, meta) {
 }
 /** The newest `n`, newest first: the head, then the last part when the head is short
  *  (one more read, only on the screen that asks and only just after a spill). A log
- *  nobody has written to since before 0173 is still newest-first on disk and reads
+ *  nobody has written to since before 0200 is still newest-first on disk and reads
  *  the same as it did. */
 export async function readLog(owner, n = 25) {
   const key = LOG(owner);

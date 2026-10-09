@@ -146,7 +146,7 @@ async function facts() {
     /* The security dials (decision 0110 onward) — every limit a door keeps, read from the
        code so SECURITY.md and the ledger never type one. */
     security: { mailDeadlineMs: auth.MAIL_MS, lyricsDeadlineMs: lyr.LRCLIB_TIMEOUT_MS,
-                sessionDays: auth.TOKEN_LIFE / 86400e3, renewAfterHours: auth.RENEW_AFTER_MS / 3600e3,   // a week, renewed in use (decision 0172)
+                sessionDays: auth.TOKEN_LIFE / 86400e3, renewAfterHours: auth.RENEW_AFTER_MS / 3600e3,   // a week, renewed in use (decision 0199)
                 netCodesPerHour: auth.NET_CODES_PER_HOUR,
                 payBurst: payLim.PAY_BURST, payPerMin: payLim.PAY_PER_MIN, payNetBurst: payLim.PAY_NET_BURST, payNetPerMin: payLim.PAY_NET_PER_MIN,
                 rsvpPerNetwork: rsvpLim.RSVP_PER_NETWORK, feedbackPerNetworkPerDay: fbLim.FEEDBACK_PER_NETWORK_PER_DAY,
@@ -401,7 +401,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | New phones one network brings into a show with free votes — the founder's number, the count each fan file allows, and the most a script on one network can get (\`NEW_DEVICES_PER_NETWORK\`, \`NET_QUOTA\`, decision 0149) | ${f.constants.newDevicesPerNetwork} / ${f.constants.netQuota} a file / ${f.constants.netMax} |
 | The room's head count, for the polling rung and the board's length: phones seen in the last (\`PRESENCE_WINDOW_MS\`) | ${f.constants.presenceMinutes} minutes |
 | A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
-| A sign-in session lasts / renews itself on a reply once it is older than (\`TOKEN_LIFE\`, \`RENEW_AFTER_MS\`, decision 0172) | ${f.security.sessionDays} days / ${f.security.renewAfterHours} hours |
+| A sign-in session lasts / renews itself on a reply once it is older than (\`TOKEN_LIFE\`, \`RENEW_AFTER_MS\`, decision 0199) | ${f.security.sessionDays} days / ${f.security.renewAfterHours} hours |
 | Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |
 | …and a whole network — sized so a packed bar on one wifi never meets it (\`PAY_NET_BURST\`, \`PAY_NET_PER_MIN\`) | ${f.security.payNetBurst} / ${f.security.payNetPerMin} |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (\`NET_CODES_PER_HOUR\`) | ${f.security.netCodesPerHour} |

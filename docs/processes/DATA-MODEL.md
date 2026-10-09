@@ -347,7 +347,7 @@ Linked steps: 370136, 370137, 370138, 370145
 
 ### Sessions, activity log, recovery codes (sess_ / log_ / rec_) — entity 4868
 
-`sess_<owner> · log_<owner> · rec_<owner>` · Where you are signed in (so one device can be signed out), what happened on the account (the activity log), and the hashed recovery codes — the three things a paid product owes an account (Artist lifecycle 02, 03). `src: _session.mjs SESS, LOG, REC` Since decision 0173 the activity log is append-only in parts: the head `log_<owner>` names write-once `log_<owner>_p<n>`, never trimmed, sealed with the rest of the family (0113).
+`sess_<owner> · log_<owner> · rec_<owner>` · Where you are signed in (so one device can be signed out), what happened on the account (the activity log), and the hashed recovery codes — the three things a paid product owes an account (Artist lifecycle 02, 03). `src: _session.mjs SESS, LOG, REC` Since decision 0200 the activity log is append-only in parts: the head `log_<owner>` names write-once `log_<owner>_p<n>`, never trimmed, sealed with the rest of the family (0113).
 
 | attribute | type | what it holds |
 | --- | --- | --- |

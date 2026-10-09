@@ -77,7 +77,7 @@ export async function recentErrs(hours = BUG_HOURS, now = Date.now()) {
   return docs.flatMap((d) => (d && Array.isArray(d.list) ? d.list : [])).sort((a, b) => a.at - b.at);
 }
 
-/* A SESSION THAT RENEWED ITSELF rides back on the reply (decision 0172): the token
+/* A SESSION THAT RENEWED ITSELF rides back on the reply (decision 0199): the token
    requireArtist / requireVenue minted for a device whose token was more than a day
    old goes out as `x-myset-token`, exposed so a Studio served from another origin
    can read it too. ONLY on a reply that is nobody else's: `json()` says `no-store`

@@ -39,7 +39,7 @@ export async function appendLog(key, items = [], extra = null, opts = {}) {
   const list = Array.isArray(items) ? items : [];
   if (!list.length && !extra) return null;
   /* `size`: a smaller part for a log whose head is read on a hot-ish path (the activity
-     log, 0173: two hundred). `upgrade(d)`: a document kept the OLD way — a capped list
+     log, 0200: two hundred). `upgrade(d)`: a document kept the OLD way — a capped list
      and nothing else — is taken over once, so the caller can put its entries in this
      log's order (oldest first) before the first append lands behind them. */
   const size = Math.max(20, parseInt(opts.size, 10) || 0) || CHUNK();

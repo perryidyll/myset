@@ -1,5 +1,5 @@
 ---
-id: 0172
+id: 0199
 title: A session lasts a week and renews itself in use
 date: 2026-10-09
 status: decided
@@ -7,7 +7,7 @@ decided_by: perry-confirmed
 area: auth
 reverses:
 superseded_by:
-invariants: [0hs, 0dd]
+invariants: [0jb, 0dd]
 commits: []
 tests: [test/sessionlife.mjs, test/accounts.mjs]
 files: [netlify/functions/_auth.mjs, netlify/functions/_venues.mjs, netlify/functions/_lib.mjs, netlify/functions/_errlog.mjs, public/studio.js, public/venue-studio.js]

@@ -10,7 +10,7 @@ import { keysFor } from './_secret.mjs';
    don't have a Google account. */
 
 const CODE_TTL = 10 * 60e3;          // a code is good for ten minutes
-const TOKEN_TTL = 7 * 24 * 3600e3;   // a session lasts a week, renewed in use (decision 0172)
+const TOKEN_TTL = 7 * 24 * 3600e3;   // a session lasts a week, renewed in use (decision 0199)
 const RENEW_AFTER = 24 * 3600e3;    // a token more than a day old is renewed on its next use
 const MAX_TRIES = 5;                 // wrong guesses before the code is burned
 const MAX_SENDS = 5;                 // codes per email per hour
@@ -296,7 +296,7 @@ export async function signToken(email, rev, sid, now = Date.now()) {
 }
 export const TOKEN_LIFE = TOKEN_TTL;
 export const RENEW_AFTER_MS = RENEW_AFTER;
-/* A SESSION RENEWS ITSELF IN USE (decision 0172). A week is as long as a copied token
+/* A SESSION RENEWS ITSELF IN USE (decision 0199). A week is as long as a copied token
    is worth anything, and a device that opens the Studio inside the week never notices:
    a token more than a day old is answered with a fresh one for the SAME device — the
    same address, the same rev, the same sid, so the session list and every sign-out

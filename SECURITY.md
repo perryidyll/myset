@@ -94,7 +94,7 @@ already hidden.
 | **Tenant isolation** | `test/tenancy.mjs` — 46 assertions whose only job is to prove one artist cannot read, write or bill another. It runs on every `npm test`. Most startups do not have this. |
 | **Money is never re-derived** | Stripe is the source of truth (`INVARIANT 5d`). Prices come from the stored record, never the request — a hand-made checkout cannot set its own price. |
 | **Direct charges are scoped** | Every Stripe call carries the connected account explicitly, and the test double *fails* a call made in the wrong scope. That is the bug class that leaks one artist's money into another's dashboard. |
-| **Tokens are revocable, and short** | HMAC-signed, carrying a session id; since `0172` a token lives a week and renews itself on a reply once it is a day old, so a device in use never notices and a copied token is worth a week at most. A per-account `rev` counter and a per-session kill list mean "sign out everywhere" is real, costs no extra read, and holds across a renewal. |
+| **Tokens are revocable, and short** | HMAC-signed, carrying a session id; since `0199` a token lives a week and renews itself on a reply once it is a day old, so a device in use never notices and a copied token is worth a week at most. A per-account `rev` counter and a per-session kill list mean "sign out everywhere" is real, costs no extra read, and holds across a renewal. |
 | **Roles are default-deny** | `CAN` in `_session.mjs`, and both admin surfaces gate on an allow-list — anything not named is owner-only, so a new action is locked until somebody decides it should not be. |
 | **Fans are counted, never named** | `INVARIANT 0bu`. The audience never signs in, a device id never leaves the server, and no export or payload contains one. There is no fan database to breach. |
 | **ID photos are unservable** | The `idcheck` slot is deliberately excluded from every pattern `/api/img` will serve (`0bk`), so a verification photo cannot be fetched by anyone, including us, through the web. |
@@ -198,7 +198,7 @@ company buys with headcount. Almost everything below is paperwork and habits.
 | **A written incident-response plan** | Who is told, in what order, within what time. Half a day to write, and it is what turns an incident into a story with an ending. |
 | **A real staging environment** | `main` is production. Preview deploys exist but nothing runs against a production-shaped dataset. |
 | **One external penetration test** | A few thousand dollars. Finds the things you cannot find by reading your own code. |
-| **Structured logging with retention** | ~~Today's audit log is 100 entries per account. A real one is append-only, off-platform, and survives a deleted account.~~ Done 2026-10-09 (`0173`): the activity log is append-only in write-once parts, never trimmed, sealed at rest, copied to R2 nightly by the mirror, which never deletes a copy. Still to come: the platform's own log (errors are hourly buckets, 0157 watches them). |
+| **Structured logging with retention** | ~~Today's audit log is 100 entries per account. A real one is append-only, off-platform, and survives a deleted account.~~ Done 2026-10-09 (`0200`): the activity log is append-only in write-once parts, never trimmed, sealed at rest, copied to R2 nightly by the mirror, which never deletes a copy. Still to come: the platform's own log (errors are hourly buckets, 0157 watches them). |
 | **A moderation queue** | A platform-level view of reported posts, so removal is not "Perry, by hand". |
 | **A DPA and sub-processor list** | Netlify, Stripe, Resend, Google. Enterprise customers ask for this by name. |
 
@@ -218,7 +218,7 @@ does not have 2FA is a document about nothing.
 | Data | Today | Verdict |
 |---|---|---|
 | Everything in Blobs | Encrypted at rest by Netlify; in transit over TLS | Fine. |
-| Session tokens | HMAC-signed, revocable; with `0172`, seven days, renewed in use | Fine — ~~Shortening to 7 days with silent renewal is a small win.~~ Done 2026-10-09 (`0172`): a week, renewed once a day on the reply, never on a shared one. |
+| Session tokens | HMAC-signed, revocable; with `0199`, seven days, renewed in use | Fine — ~~Shortening to 7 days with silent renewal is a small win.~~ Done 2026-10-09 (`0199`): a week, renewed once a day on the reply, never on a shared one. |
 | Recovery codes | HMAC-hashed, single use; with `0112`, a salted scrypt that depends on no key, in a sealed document | Fine — forty bits under a fast hash was one leaked key away from a graphics card. |
 | Studio codes | A bare SHA-256; with `0112`, a salted scrypt | A bare SHA-256 of an eight-character code is an afternoon's work for whoever holds a copy of the show record. Fixed by `0112`. |
 | The booker inbox, passwords, sessions, the logs, HQ's contacts and Gmail | Plain JSON in Blobs; with `0113`, sealed under a keyring `MYSET_SECRET` wraps | **Seal these.** `0113` does it; nothing the room reads is touched. |

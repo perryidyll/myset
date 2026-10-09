@@ -115,7 +115,7 @@ const eq = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   try { return timingSafeEqual(Buffer.from(a), Buffer.from(b)); } catch { return false; }
 };
-const TOKEN_TTL = TOKEN_LIFE;   // a week, renewed in use — the artist token's, in one place (0172)
+const TOKEN_TTL = TOKEN_LIFE;   // a week, renewed in use — the artist token's, in one place (0199)
 
 /** This venue's own rev, falling back to the registry-wide one for records that
  *  predate per-venue revs. See revOf() in _auth.mjs for why the fallback matters. */
@@ -162,7 +162,7 @@ export async function signVenueToken(email, rev, sid, now = Date.now()) {
   const mac = createHmac('sha256', (await signingKeys()).sign).update(body).digest('base64url');
   return `${Buffer.from(body).toString('base64url')}.${mac}`;
 }
-/** The venue side of renewToken (_auth.mjs, decision 0172): a fresh token for the same
+/** The venue side of renewToken (_auth.mjs, decision 0199): a fresh token for the same
  *  device once this one is more than a day old, else nothing. */
 export async function renewVenueToken(me, now = Date.now()) {
   if (!me || !me.email || !Number(me.exp) || Number(me.exp) - now > TOKEN_TTL - RENEW_AFTER_MS) return null;

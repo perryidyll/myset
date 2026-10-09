@@ -176,7 +176,7 @@ and `casDoc` still refuses to write over it. `ring()` in `_seal.mjs` now lets a
 store not answering is 503 "busy", never a round of sealed records reading as missing.
 `sh test/run.sh` exit 0 on the merged tree.
 
-**Decision 0172 — a session lasts a week and renews itself in use.** `TOKEN_TTL` seven
+**Decision 0199 — a session lasts a week and renews itself in use.** `TOKEN_TTL` seven
 days (the venue token reads the same constant). A token more than a day old is answered
 with a fresh one for the same address, `rev` and `sid`: `renewToken` in `_auth.mjs`,
 offered against the request in `requireArtist` (`offerRenewal`, a `WeakMap`), sent by
@@ -186,7 +186,7 @@ keep it (three lines each; stamps rewritten). Nobody is signed out by the change
 device signed out stays signed out across a renewal. `test/sessionlife.mjs`, 34 checks;
 with the `no-store` rule removed two fail, with a month again five fail.
 
-**Decision 0173 — the activity log is complete.** `note()` appends to an `_append.mjs`
+**Decision 0200 — the activity log is complete.** `note()` appends to an `_append.mjs`
 log in parts of two hundred (`appendLog` grew `size` and `upgrade` options; the default
 spill is untouched), never trimmed; `readLog` reads the newest twenty-five newest first,
 from the last part just after a spill; the parts are on both account key lists, so the
@@ -225,6 +225,41 @@ whole run below. **Not checked:** a phone's Studio reading the renewal header (t
 lines, `node --check` clean); the mirror carrying a log part to R2 on production; the
 tool against the real Netlify CLI and Keychain — the founder's run.
 
-**Still the founder's:** `MYSET_SECRET` (one command), then "merge #150"; `ADMIN_CODE`;
-2FA; the Site-policies glance. Decision numbers 0172 and 0173 were taken on this branch
-without the sessions board (a cloud session cannot read it).
+**Still the founder's:** `ADMIN_CODE`; 2FA; the Site-policies glance. Decision numbers
+were taken on this branch without the sessions board (a cloud session cannot read it) —
+0172 and 0173 at first, which turned out to be taken; renumbered below.
+
+### Later the same day — the preview answers, main moves, the founder says merge
+
+**The secret was already there.** The rebuilt preview of #150 answered `/api/health`
+with `seal: { secret: true, ring: 'absent' }`: the deploy-preview context holds a value
+long enough to cut keys from, and nothing has been sealed yet (`ringState` is read-only,
+so the preview wrote nothing). That is the 2026-09-28 Notion record confirmed by
+content, and PER-017 closes on it; production answers for itself the moment the merge
+lands. The founder's word followed: *merge it once the checks are green*.
+
+**Main had moved under the branch.** Six merges landed while the branch was being
+brought up to `e995d43` — the scale audit's second week, decisions 0145–0156 — and
+GitHub runs a `pull_request` workflow only on a pull request it can build a merge
+commit for, so the `suite` check never ran on the conflicting head; the push that
+carries the merge is what makes it run. `origin/main` `3111e4c` merged a third time
+(`f7a4ce2`): seven files in conflict, none on a line both sides changed for the same
+reason. `_mirror.mjs` keeps main's dozen new global homes and the keyring, and
+`FAMILIES` (0146) gets one line for `sealkeys` — a global, wrapped by `MYSET_SECRET`,
+safe to copy — so `test/keyfamilies.mjs` knows the one new kind of document slice C
+writes (the log parts already match the owner line for `log_`). `_venueaccount.mjs`
+drops `log_<o>` from the static list, as this branch did, and takes main's
+`vpitch_`/`push_`/`gigok_`. `tools/prod.py` prints main's off-site-copy line and then
+the sealed-at-rest lines; the Studio stamps, the overview's numbers and the decisions
+index are regenerated; the push log keeps both entries. Main's `_lib.mjs` (380 lines:
+`liveFans`, `getShowKept`, the receipts, the network cap) touches nothing in `readDoc`,
+`casDoc` or the renewal; `getShowKept` reads the show record directly, and the show is
+not a sealed family. The mirror copies bytes (`arrayBuffer`), so a sealed record goes
+to R2 as the ciphertext it is.
+
+**New numbers.** Main carries INVARIANTS 0hs and 0ht for 0146 and 0145, and the open
+pull requests carry decisions 0172 (#250) and 0173–0175 (#233) and invariants up to
+0ja (#251). So the week-long session is decision `0199`, INVARIANT 0jb, and the
+complete activity log is decision `0200`, INVARIANT 0jc — forty-seven mentions in the
+files this branch wrote, by word boundary; the push log's earlier entry is left as the
+record it is.

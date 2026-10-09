@@ -382,7 +382,7 @@ async function api(p,o={}){
   if(!o.quiet) busy(true);
   try{
     const r=await (early||fetch(API+p,{...o,headers:h}));
-    /* A SESSION RENEWS ITSELF (decision 0172): a token more than a day old comes back
+    /* A SESSION RENEWS ITSELF (decision 0199): a token more than a day old comes back
        fresh on the reply, for this same device, and this is the one place it is kept. */
     try{ const nt=r.headers&&r.headers.get('x-myset-token'); if(nt&&!SAMPLE){ TOKEN=nt; localStorage.setItem('myset.token',nt); } }catch(e){}
     const j=await r.json();

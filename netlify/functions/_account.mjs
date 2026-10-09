@@ -120,7 +120,7 @@ export async function keysFor(aid) {
     for (const k of await versionKeys(base).catch(() => [])) keys.push(k);
   for (const k of await postArchiveKeys(aid).catch(() => [])) keys.push(k);
   for (const k of await fbArchiveKeys(aid).catch(() => [])) keys.push(k);
-  // the activity log and its parts (0173): the head names them, one read
+  // the activity log and its parts (0200): the head names them, one read
   for (const k of await logKeys(LOG(aid)).catch(() => [LOG(aid)])) keys.push(k);
   // one password record per sign-in address (decision 0070) — deleted, never exported
   const reg = await readArtists().catch(() => ({ byEmail: {} }));

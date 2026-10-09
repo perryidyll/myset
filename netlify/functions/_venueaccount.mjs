@@ -70,7 +70,7 @@ export async function keysForVenue(vid) {
   for (const [e, v] of Object.entries(reg.byEmail || {})) if (v && v.venueId === vid) keys.push(credKey(o, e));
   // posts that left the feed still own their photos and clips (decision 0068)
   for (const k of await postArchiveKeys(o).catch(() => [])) keys.push(k);
-  // the activity log and its parts (0173): the head names them, one read
+  // the activity log and its parts (0200): the head names them, one read
   for (const k of await logKeys(`log_${o}`).catch(() => [`log_${o}`])) keys.push(k);
   const oldPosts = await readArchivedPosts(o).catch(() => []);
   for (const p of oldPosts) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(vid, `${p.id}_${i}`));

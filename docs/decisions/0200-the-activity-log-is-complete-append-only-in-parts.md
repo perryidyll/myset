@@ -1,5 +1,5 @@
 ---
-id: 0173
+id: 0200
 title: The activity log is complete: append-only, in parts, never trimmed
 date: 2026-10-09
 status: decided
@@ -7,7 +7,7 @@ decided_by: perry-confirmed
 area: storage
 reverses:
 superseded_by:
-invariants: [0ht, 0hb]
+invariants: [0jc, 0hb]
 commits: []
 tests: [test/activity.mjs, test/foundations.mjs, test/seal.mjs]
 files: [netlify/functions/_session.mjs, netlify/functions/_append.mjs, netlify/functions/_account.mjs, netlify/functions/_venueaccount.mjs]
