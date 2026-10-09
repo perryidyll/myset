@@ -10,6 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 16:24 — b8309ef — hold-deploys@ops/hold-deploys (20 files since origin/main)
+**tl;dr:** A code merge while a show is live is no longer built on top of the room: Netlify holds it and the outside watch starts it once the last show ends; myset.vip/version.json says which commit is live; the Studio's Invite card says the referral month is for Hobbyists (0196, 0197, 0207)
+**Other sessions:** New: netlify/functions/live.mjs (/api/live, counts only), tools/hold.sh ([build] ignore), tools/version.sh ([build] command writes public/version.json — verify 'is it live' by that file), watch.yml release step + release=yes input (secret NETLIFY_BUILD_HOOK, variable LAST_RELEASE_AT), test/live.mjs before keyfamilies in run.sh. The suite check becomes REQUIRED on main after this merges (0197): a PR with a red or missing suite cannot merge; [skip ci] only ever in the squash subject.
 ### 2026-10-09 16:16 — d3a59e4 — scale-p2-net@fix/net-of-lost-readers (12 files since origin/main)
 **tl;dr:** Nothing new for a person: the last three money readers net of refunds (#240) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto main 28ff11b (#239). Conflicts: imports in _lifecycle/stage/_warehouse (kept sameNightResume, readPaidAll); _warehouse packs = readPaidAll(...) filtered !tipGone; INVARIANT 0iq = the 0179 version (a superset of main's).
