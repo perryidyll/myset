@@ -104,7 +104,8 @@ export async function keysFor(aid, namers = null) {
     `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`,
     `paylim_${aid}`,    // the checkout limiter (0111)
     KEY.diary(aid),     // the artist diary (0085)
-    `bugs_${aid}`];     // what fans reported from this room (0146: it had no second home, and outlived the account)
+    `bugs_${aid}`,      // what fans reported from this room (0146: it had no second home, and outlived the account)
+    `mhold_${aid}`];    // merch held while a buyer is on Stripe's page (0178)
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
   // the payment markers that left meta for their year (0193) — every year since MySet's first, computed, never list()
