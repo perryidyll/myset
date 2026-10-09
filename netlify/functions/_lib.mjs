@@ -1077,7 +1077,11 @@ export function paidVoteCounts(fans, tippers = new Set()) {
 /* `lost` (cents) is what a refund or a chargeback took back off a tip (decision 0177):
    a tip that went back in full is no tip, and one that went back in part counts what
    stayed. */
-const tipGone = (t) => (Number(t.lost) || 0) > 0 && (Number(t.lost) || 0) >= Math.round((Number(t.amount) || 0) * 100);
+export const tipGone = (t) => (Number(t.lost) || 0) > 0 && (Number(t.lost) || 0) >= Math.round((Number(t.amount) || 0) * 100);
+/** What a money row (a tip, or a paid marker) is worth after its refunds: `amount` is
+ *  in dollars, `lost` in cents (decision 0177). Every reader that sums money uses this
+ *  (INVARIANT 0iq), so a refunded payment never counts at face value. */
+export const netOf = (r) => Math.max(0, (Number(r && r.amount) || 0) - (Number(r && r.lost) || 0) / 100);
 /** Who tipped since the show started. `meta.tips` is the account's whole history,
  *  so the night boundary is the show's `startedAt`; a tip with no fan id (an old
  *  row, a session the return page could not attribute) belongs to nobody. */
