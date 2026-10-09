@@ -3010,7 +3010,7 @@ function render(){
     </div>`:`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading your codes…</div></div>`}
 
     <div class="sec"><span class="kick">Invite another musician</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Share this and they land on a signup that knows you sent them.${TEAM&&TEAM.invited?` <b>${TEAM.invited} so far.</b>`:''}</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Share this and they land on a signup that knows you sent them. When someone you invited goes paid, you get a month of Bar Star on us — while you're on Hobbyist.${TEAM&&TEAM.invited?` <b>${TEAM.invited} so far.</b>`:''}</p>
     <div class="field"><div style="display:flex;gap:8px">
       <input class="inp" id="refLink" readonly value="myset.vip/signup?ref=${esc((TEAM&&TEAM.slug)||'')}" style="flex:1">
       <button class="act pri" style="min-width:64px" onclick="copyRef()">Copy</button></div></div>
