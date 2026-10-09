@@ -329,7 +329,10 @@ now reads the list — `own((await readArtists()).byId, aid)` — and `artistByI
 is a section in `test/studiocode.mjs`: a fourth artist is renamed on the list with the
 copies' writes made to fail, her row copy is shown still carrying the old name, and the
 new name is refused as a code (400) while a real code lands — 42 ✓, 0 ✗; with HEAD's
-line put back, that one assertion is red (41 ✓ / 1 ✗). `lookups` 75 ✓, `cost` 33 ✓.
-It rides PR #257 with this paperwork, so that merge needs a production build: no
-`[skip ci]`. Puzzle: nothing to update — no step, rule or number changed; the record
+line put back, that one assertion is red (41 ✓ / 1 ✗). `lookups` 75 ✓, `cost` 33 ✓. The
+whole suite: 6,309 ✓ / 0 ✗ on `e996865` plus the change, then 6,441 ✓ / 0 ✗ with today's
+main merged in (`e52d6f5` — 0185, 0186/0187/0191, 0193 — as `4b8fe5e`; the push log was
+the one collision, every entry from both sides kept). It rides PR #257 with this
+paperwork, so that merge needs a production build: no `[skip ci]`. Not checked: `setCode`
+on the preview, a write path on production data. Puzzle: nothing to update — no step, rule or number changed; the record
 0176, INVARIANT 0ip and SCL-013 now say the line is on the list.
