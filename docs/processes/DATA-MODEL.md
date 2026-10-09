@@ -382,7 +382,7 @@ Linked steps: 369913, 369914, 369916, 369917, 369918
 
 ### Fan reports and the error log (bugs_ / err_) — entity 4871
 
-`bugs_<aid> · err_<hour>` · 'Something wrong?' reports from the room, per artist, and the server's own errors in one document per hour with a computable key — kept in the blob store, not a vendor (decision 0029), read in the Studio (Reliability i06). `src: _errlog.mjs bugsKey, hourKey`
+`bugs_<aid> · err_<hour>` · 'Something wrong?' reports from the room, per artist, and the server's own errors in four documents per hour with computable keys (decision 0187) — kept in the blob store, not a vendor (decision 0029), read in the Studio (Reliability i06). `src: _errlog.mjs bugsKey, hourKey, shardKeys`
 
 | attribute | type | what it holds |
 | --- | --- | --- |

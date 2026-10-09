@@ -216,6 +216,23 @@ check('public/venue-studio.html', [
   if (missing.length) { fail++; console.log('  ✗ routed but not reserved:', missing.join(', ')); } else console.log('  ✓ every routed first segment is a reserved slug (' + [...new Set(froms)].join(', ') + ')');
 }
 
+/* THE CACHE HEADER EACH FILE ENDS UP WITH (scale audit CLI-12). Netlify applies every
+   matching [[headers]] rule and the later one wins for the same header, so /:slug —
+   which matches any one-segment path, /theme.js included — gave the shared scripts a
+   minute instead of ten. Read the rules in order, as Netlify does, and pin the winner. */
+{
+  const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  const rules = [...toml.matchAll(/\[\[headers\]\]\n\s*for = "([^"]+)"\n\s*\[headers\.values\]\n([\s\S]*?)(?=\n\[\[|\n#|$)/g)]
+    .map((m) => ({ re: new RegExp('^' + m[1].replace(/[.]/g, '\\.').replace(/\*/g, '.*').replace(/:[a-z]+/g, '[^/]+') + '$'), cc: (m[2].match(/Cache-Control = "([^"]+)"/) || [])[1] }))
+    .filter((r) => r.cc);
+  const cc = (path) => rules.filter((r) => r.re.test(path)).map((r) => r.cc).pop();
+  const want = { '/theme.js': 'max-age=600,', '/pull.js': 'max-age=600,', '/leave.js': 'max-age=600,', '/lock.css': 'max-age=600,',
+                 '/fan.js': 'immutable', '/studio.js': 'immutable', '/ana-reyes': 'max-age=60,', '/studio': 'max-age=600,' };
+  const wrong = Object.entries(want).filter(([p, w]) => !String(cc(p)).includes(w)).map(([p]) => `${p} → ${cc(p)}`);
+  console.log(`  ${wrong.length ? '✗' : '✓'} each file's cache header is the rule meant for it${wrong.length ? ' — ' + wrong.join('; ') : ''}`);
+  if (wrong.length) fail++;
+}
+
 /* EVERY NAME IN THE ROLE TABLES IS AN ACTION A HANDLER TAKES (decision 0099). Both
    tables in admin.mjs are deny-lists: an action missing from CAPABILITY needs nothing
    beyond being signed in, and one missing from OWNER_ONLY is open to members. So a

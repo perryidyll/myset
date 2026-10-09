@@ -23,8 +23,9 @@ Three tabs: **Live** (run the show) · **Setlist** (add/hide/remove songs) · **
 > under the `ADMIN_CODE` environment variable. To see or change it:
 > Netlify → project **mysetvip** → Site configuration → Environment variables → `ADMIN_CODE`.
 
-- **▶ Start top voted** — the big button. Plays whatever is winning, moves the
-  current song to "Played", and **refreshes everyone's votes** for the next round.
+- **▶ Start top voted** — the big button. Plays whatever is winning and moves the
+  current song to "Played". Votes on the songs that were not picked **stay with
+  them** for the next pick.
 - **▶ Start** on any row — override and start that specific song instead.
 - **OPEN / PAUSE** — pause voting during a song, open it between songs. (Leaving it
   open the whole time is fine too.)
@@ -78,7 +79,8 @@ are granted, and each checkout can only be redeemed once.
 
 - **Nobody's votes are showing** — check OPEN is selected on stage control.
 - **A phone looks stuck** — pull to refresh. The page re-polls every 3s on its own.
-- **Someone used all their votes** — they refresh when you start the next song.
+- **Someone used all their votes** — they do not come back with the next song. They can
+  buy more, or you can raise free votes per person in Settings mid-show.
 - **Total meltdown** — the show still works as a normal setlist; just play on. Nothing
   in the app can break your gig.
 

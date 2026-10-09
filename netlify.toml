@@ -18,7 +18,7 @@
 [functions.artistpage]
   included_files = ["public/artist.html"]
 
-# TWO RATE RULES (decision 0160) — the two the plan allows. Netlify counts requests
+# THREE RATE RULES (decisions 0160, 0191). The Pro plan allows five. Netlify counts requests
 # per address per window at its edge and answers 429 for a minute once a window is
 # over. Both are sized so that a real room can never meet them:
 #
@@ -32,8 +32,24 @@
 #               _lib.mjs). So this never sees a room; it caps what one machine can
 #               spend. Widen it before lowering a poll floor — never the reverse.
 #
-# The specific rule has to sit ABOVE the general one: the first redirect that
+#   /api/confirm 1,000 a minute per address (decision 0191). The return trip from
+#               Checkout needs no sign-in and asks Stripe up to three times a call,
+#               so it was the cheapest way to spend someone else's Stripe quota. A
+#               room's busiest buying minute on one wifi — 5,000 phones, a tenth of
+#               them paying, each page confirming twice — is 1,000; a script is held
+#               to about 17 a second.
+#
+# The specific rules have to sit ABOVE the general one: the first redirect that
 # matches is the one that serves, and its limit is the one that counts.
+[[redirects]]
+  from = "/api/confirm"
+  to = "/.netlify/functions/confirm"
+  status = 200
+  [redirects.rate_limit]
+    window_limit = 1000
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
 [[redirects]]
   from = "/api/auth"
   to = "/.netlify/functions/auth"
@@ -226,9 +242,11 @@
     # visited before still refuses to talk to myset.vip over plain HTTP. Bar wifi is
     # exactly the network where that matters.
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    # Nothing here needs a camera, a microphone or a location, so nothing here may
-    # ask. This is what makes a compromised third-party embed unable to escalate.
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    # Nothing here needs a camera or a microphone, so nothing here may ask. This is
+    # what makes a compromised third-party embed unable to escalate. Location is
+    # allowed for our own pages only — the home page's "near me" and the map's
+    # "My location" ask for it — and still never for an embed (scale audit CLI-13).
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()"
     # A page opened from ours cannot reach back through window.opener.
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
     #
@@ -288,14 +306,7 @@
 # updates straight from the network regardless of these headers.
 # (app.css itself rides inside every fan page since decision 0094 — no page asks for it
 # any more; this rule still covers theme.js, pull.js, leave.js and the Studios' lock.css.)
-[[headers]]
-  for = "/*.css"
-  [headers.values]
-    Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
-[[headers]]
-  for = "/*.js"
-  [headers.values]
-    Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
+# (The two rules themselves sit below /:slug — see there.)
 # Pictures and icons change by being replaced with a new file, so a day is safe.
 [[headers]]
   for = "/img/*"
@@ -333,6 +344,19 @@
   for = "/:slug"
   [headers.values]
     Cache-Control = "public, max-age=60, stale-while-revalidate=600"
+# The shared files' ten minutes (above). Listed after /:slug, which also matches
+# /theme.js, /pull.js, /leave.js and /lock.css: the later rule wins for the same
+# header, and above them it lost — those files were a minute fresh (scale audit
+# CLI-12, measured on production). Before the stamped scripts below, whose year
+# must win over this in turn.
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
 # The Studio is opened by one person a few times a day, so a 60 s edge life never
 # hit — every open forwarded to origin (0.7–0.9 s for 312 KB). Ten minutes fresh,
 # an hour stale-while-revalidate: the shell comes from the edge and a deploy still

@@ -40,12 +40,22 @@ python3 -m http.server 8940
 
 ## Deploy
 
-The Netlify project **mysetvip** builds `main` automatically, so **pushing is
-deploying**:
+The Netlify project **mysetvip** builds `main` automatically, and `main` is protected
+(decision 0045): a direct push is refused, and the only way in is a pull request. Every
+PR gets a deploy preview to look at first; **merging is deploying**:
 
 ```bash
-cd ~/Docs/MySet && sh test/run.sh && git push
+sh test/run.sh
+git switch -c <area>/<what-changed>
+git add <files> && git commit
+./tools/pushlog.sh "what changed" "note"    # the push log entry rides on the branch
+git push -u origin HEAD
+gh pr create --fill                         # Netlify posts a deploy preview on the PR
+gh pr merge --squash --delete-branch        # this is the deploy
 ```
+
+A deploy preview reads and writes production data: look at pages on it, never exercise
+a write path. AGENTS.md § Deploying is the full version.
 
 Run `./tools/hooks/install.sh` once per clone. It installs a pre-commit hook that
 refreshes the generated numbers in `MYSET-MASTER-OVERVIEW.md`, and a post-commit hook
