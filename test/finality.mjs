@@ -65,12 +65,13 @@ ok('a second, distinct cast is accepted', more.ok && more.voted === true, more);
 eq('five votes now', await votesOn('ann', 'alpha'), 5);
 eq('five credits used', (await pub('ann')).credits.used, 5);
 
-console.log('\nA CAST ID IS GOOD FOR THE WHOLE NIGHT NOW');
+console.log('\nA CAST ID OUTLIVES ANOTHER SONG STARTING');
 /* It used to be cleared with the round, because a replayed id after a wipe referred
    to votes that no longer existed and swallowing it would have eaten the fan's first
-   vote of the new round. There are no rounds. The ring (last 20) now lives as long
-   as the fan record does, and a retry of the same press of Confirm is answered from
-   memory however long ago it was — which is what a retry should get. */
+   vote of the new round. There are no rounds. The ring (last 20) lives on the fan
+   record, and a retry of the same press of Confirm is answered from memory whatever
+   has happened on stage since. Since decision 0148 a receipt is kept for thirty
+   minutes, far past the moment any retry arrives (test/receipts.mjs). */
 await A('play', { song: 'echo' });                    // a DIFFERENT song starts
 eq('THE CHANGE: another song starting does not touch her votes', await votesOn('ann', 'alpha'), 5);
 eq('nor give her any credits back', (await pub('ann')).credits.used, 5);

@@ -1,6 +1,6 @@
 import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, tipsTonight, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME, liveFans, sameNightResume } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
@@ -46,6 +46,7 @@ export async function stagePayload(aid, seat) {
      refund affordances in the inactive Studio payload. A fresh show performs the
      durable carry/reset at the true night boundary. */
   const live = show.status === 'live';
+  liveFans(fans, show);            // the Studio's queue is the room's board: nothing a song already collected (0147)
   const counts = live ? voteCounts(fans) : {};
   // a tipper's votes are paid votes too (decision 0079) — the pill on every song card
   const paidCounts = live ? paidVoteCounts(fans, tippersTonight(meta.tips, show.startedAt)) : {};
@@ -81,6 +82,8 @@ export async function stagePayload(aid, seat) {
     show: {
       artist: show.artist, artistFirst: show.artistFirst || '', venue: show.venue, city: show.city, status: show.status,
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
+      // the ids of the last Play taps that started a song, so a retry can look first (0151)
+      taps: show.taps.map((t) => t.id),
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
       artistId: aid, slug: (who && who.slug) || slugHint || '',
@@ -88,6 +91,8 @@ export async function stagePayload(aid, seat) {
       requests: show.requests, birthdays: show.birthdays,
       listId: show.listId, listName: show.listName,
       gigCount: show.gigCount,
+      // "Resume it instead" is the same night, so the free cap does not apply to it (0156)
+      resumeSameNight: sameNightResume(show),
       // who flipped it — 'artist' or 'schedule' — so the Live tab can say so
       startedBy: show.startedBy || null, endedBy: show.endedBy || null,
       sched, autoStart: show.autoStart !== false,
@@ -106,6 +111,11 @@ export async function stagePayload(aid, seat) {
     room: live ? room.phones : 0,
     nets: live ? room.nets : 0,
     asks: shapeRequests(reqs, show),
+    /* Declined songs whose votes have not all gone back yet (0155) — tonight's only, and
+       only while the room is live, like every other refund affordance. The Live tab
+       offers "Finish the refund" for each. */
+    owed: live ? Object.entries(show.refundsOwed || {}).filter(([, m]) => m && m.show === show.showId)
+      .map(([id, m]) => ({ id, title: m.title || ((show.songs || []).find((x) => x.id === id) || {}).title || '' })) : [],
     songs: (() => {
       const on = new Set(playable(show).songs.map((x) => x.id));
       /* `votable` is the server's own answer to "could the room choose this right

@@ -53,12 +53,29 @@ RESTORE (decision 0069 — rehearsed 2026-09-14, see docs/sessions/2026-09-14-da
 
   python3 tools/backup.py --restore DIR --store rehearsal-YYYYMMDD
   python3 tools/backup.py --wipe rehearsal-YYYYMMDD --from DIR
+
+THE OFF-SITE COPY (decision 0146)
+  `--from-r2` reads the nightly R2 copy (`backup/<key>`, written by mirrorcron) into
+  the same folder shape under <backups>/r2/ and checks it, so `--restore` works from
+  it exactly as from a laptop copy. Until 2026-10-02 nothing had ever read that copy
+  back. The four R2_ variables come from Netlify through the CLI and are handed to
+  tools/r2pull.mjs in its environment — never printed, never written to disk.
+
+  `--coverage [DIR]` asks the question the audit asked: is every document in the
+  store also in the off-site copy? It takes a laptop copy (the newest by default —
+  that one is listed from the store itself, so it holds every key), reads the
+  mirror's own manifests out of it, and names every key no manifest has ever
+  copied and no line of _mirror.mjs FAMILIES excuses. Exit 1 when there is one.
+
+  python3 tools/backup.py --from-r2
+  python3 tools/backup.py --coverage
 """
 import concurrent.futures
 import datetime
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -69,6 +86,12 @@ ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.envir
 # building elsewhere points this at the shared checkout
 SITE_DIR = os.environ.get('MYSET_SITE_DIR') or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.environ.get('MYSET_BACKUP_DIR') or os.path.expanduser('~/Docs/Project Handoffs/myset-backups')
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# bytes, not JSON: pictures, clips, and the media dashboard's thumbnails
+BINARY = ('img_', 'vid_', 'mediadash/thumb/')
+# Left in the production store by code from before artists had ids, and by probes
+# (2026-09-14): never the app's documents, harmless, and not the mirror's to copy.
+STRAY = re.compile(r'^(f\d+|show|meta|state|cas2?|cas/.*|debug/.*|v/.*|vote~.*)$')
 STALE_DAYS = 7
 WORKERS = 8
 KEEP_DAYS = 90
@@ -179,7 +202,7 @@ def verify(out):
     #    something a restore needs, but a person should know it is there)
     docs, stray, sealed = {}, [], 0
     for k in rows:
-        if k.startswith(('img_', 'vid_')):
+        if k.startswith(BINARY):
             continue
         p = os.path.join(out, 'keys', fname(k))
         try:
@@ -203,9 +226,12 @@ def verify(out):
         print('  the registry `artists` is missing or malformed'); ok = False
     else:
         by_id = reg.get('byId') or {}
-        for aid in by_id:
-            if f'show_{aid}' not in docs:
-                print(f'  artist {aid} has no show_ document'); ok = False
+        # An account that has never opened its Studio has no show_ document yet: the
+        # code reads a missing one as an empty library. Worth a line, not a failed
+        # copy — on 2026-10-02 one such account made every copy read "not whole".
+        fresh = [aid for aid in by_id if f'show_{aid}' not in docs]
+        if fresh:
+            print(f'  note: {len(fresh)} artist(s) with no show_ document yet (never set up): ' + ', '.join(fresh))
         for slug, aid in (reg.get('bySlug') or {}).items():
             if aid not in by_id:
                 print(f'  slug {slug} points at unknown artist {aid}'); ok = False
@@ -316,6 +342,115 @@ def wipe(store, src):
     return not failed
 
 
+def r2_env():
+    """The four R2_ variables, from Netlify, in memory only."""
+    r = subprocess.run(['netlify', 'env:list', '--json'], capture_output=True, text=True, env=ENV, cwd=SITE_DIR)
+    try:
+        allv = json.loads(r.stdout)
+    except ValueError:
+        sys.exit('could not read the site variables — is the Netlify CLI signed in and the folder linked?')
+    names = ('R2_ACCOUNT_ID', 'R2_BUCKET', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY')
+    got = {n: str(allv.get(n) or '') for n in names}
+    hidden = [n for n, v in got.items() if not v or set(v) <= set('*')]
+    if hidden:
+        sys.exit('Netlify would not hand over: ' + ', '.join(hidden) + ' (unset, or marked secret — a secret reads back as a placeholder)')
+    return got
+
+
+def from_r2():
+    """Read the off-site copy into <backups>/r2/<stamp>/ in the shape verify() and restore() read."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    out = os.path.join(ROOT, 'r2', now.strftime('%Y%m%dT%H%M%SZ'))
+    os.makedirs(os.path.join(ROOT, 'r2'), mode=0o700, exist_ok=True)
+    os.chmod(ROOT, 0o700)
+    r = subprocess.run(['node', os.path.join(REPO, 'tools', 'r2pull.mjs'), out], env={**ENV, **r2_env()}, cwd=REPO)
+    return out, r.returncode == 0
+
+
+def kinds(ks):
+    """What _mirror.mjs FAMILIES says of each key: owner, global, skip, or unknown."""
+    code = ("import('./netlify/functions/_mirror.mjs').then(async (m) => { let s = ''; for await (const c of process.stdin) s += c;"
+            " const o = {}; for (const k of JSON.parse(s)) { const f = m.familyOf(k); o[k] = f ? f.how : 'unknown'; }"
+            " console.log(JSON.stringify(o)); })")
+    r = subprocess.run(['node', '--no-deprecation', '-e', code], input=json.dumps(ks), capture_output=True, text=True, env=ENV, cwd=REPO)
+    if r.returncode != 0:
+        sys.exit('could not read the mirror\'s table of kinds:\n' + r.stderr.strip()[-400:])
+    return json.loads(r.stdout.strip().splitlines()[-1])
+
+
+def coverage(src):
+    """Every key in a laptop copy against what the mirror has copied. True when nothing is left out."""
+    with open(os.path.join(src, 'manifest.json')) as f:
+        m = json.load(f)
+    if str(m.get('store', '')).startswith('r2:'):
+        sys.exit('that is a copy OF the off-site copy; --coverage needs a laptop copy, which lists the store itself')
+    ks = [r['key'] for r in m['rows']]
+    copied, state = set(), {}
+    for k in ks:
+        if k == 'mirror' or k.startswith('mirror_'):
+            try:
+                with open(os.path.join(src, 'keys', fname(k)), 'rb') as f:
+                    d = json.load(f)
+            except (ValueError, OSError):
+                continue
+            if k == 'mirror':
+                state = d
+            else:
+                copied.update((d.get('by') or {}).keys())
+    kind = kinds(ks)
+    stray = [k for k in ks if kind[k] == 'unknown' and STRAY.match(k)]
+    unknown = [k for k in ks if kind[k] == 'unknown' and not STRAY.match(k)]
+    skipped = [k for k in ks if kind[k] == 'skip']
+    missing = [k for k in ks if kind[k] in ('owner', 'global') and k not in copied]
+
+    # An owner's document whose owner is on no register: an account that was removed
+    # by hand, or a key from before artists had ids. The walk starts from the
+    # registers, so it can never reach these — and nothing reads them either.
+    def doc(k):
+        try:
+            with open(os.path.join(src, 'keys', fname(k)), 'rb') as f:
+                return json.load(f)
+        except (ValueError, OSError):
+            return {}
+    ids = set((doc('artists').get('byId') or {}).keys()) | set((doc('venues').get('byId') or {}).keys())
+    for o in (doc('samplereg').get('byId') or {}):
+        ids.add(o[2:] if o.startswith('v_') else o)
+    def owned(k):
+        rest = k.split('_', 1)[1] if '_' in k else ''
+        return any(rest == i or rest.startswith(i + '_') or rest == 'v_' + i or rest.startswith('v_' + i + '_') for i in ids)
+    orphans = [k for k in missing if kind[k] == 'owner' and not owned(k)]
+    # The mirror looks two days back for an hour of errors. Older hours from before
+    # it took them at all (2026-10-02) live in the laptop copies only.
+    taken = datetime.datetime.fromisoformat(m['taken']) if m.get('taken') else datetime.datetime.now(datetime.timezone.utc)
+    cutoff = (taken - datetime.timedelta(hours=48)).strftime('err_%Y-%m-%dT%H')
+    old_errs = [k for k in missing if k.startswith('err_') and k < cutoff]
+    missing = [k for k in missing if k not in orphans and k not in old_errs]
+    done = state.get('passDoneAt') or 0
+    when = datetime.datetime.fromtimestamp(done / 1000, datetime.timezone.utc).strftime('%Y-%m-%d %H:%M UTC') if done else 'never'
+    print(f'  the store held {len(ks)} keys when this copy was taken ({m.get("taken", "?")[:16]})')
+    print(f'  the mirror\'s last finished pass: {when}; refused that pass: {state.get("failed", 0)}')
+    print(f'  {len(copied & set(ks))} have a second home, {len(skipped)} are never copied by design, {len(stray)} are old strays')
+    if missing:
+        fams = sorted({re.sub(r'[_/].*$', '_', k) if ('_' in k or '/' in k) else k for k in missing})
+        print(f'  NOT IN THE OFF-SITE COPY: {len(missing)} keys of kinds the mirror should take — ' + ', '.join(fams))
+        for k in missing[:40]:
+            print('    ' + k)
+        if len(missing) > 40:
+            print(f'    … and {len(missing) - 40} more')
+    if orphans:
+        print(f'  {len(orphans)} belong to no account on the registers (removed by hand, or from before artists had ids) — nothing reads them:')
+        print('    ' + ', '.join(orphans))
+    if old_errs:
+        print(f'  {len(old_errs)} old hour(s) of errors were never copied (the mirror looks two days back): ' + ', '.join(old_errs))
+    if unknown:
+        print(f'  A KIND NOBODY CLASSIFIED: {len(unknown)} keys — add a line to FAMILIES in netlify/functions/_mirror.mjs')
+        for k in unknown[:40]:
+            print('    ' + k)
+    whole = not missing and not unknown
+    print('  every document has a second home' if whole else '  THE OFF-SITE COPY IS NOT COMPLETE')
+    return whole
+
+
 def newest_age_days():
     cs = copies()
     if not cs:
@@ -338,6 +473,19 @@ if __name__ == '__main__':
         st = args[args.index('--wipe') + 1]
         d = args[args.index('--from') + 1] if '--from' in args else ''
         sys.exit(0 if wipe(st, d) else 1)
+    if '--from-r2' in args:
+        out, complete = from_r2()
+        whole = os.path.exists(os.path.join(out, 'manifest.json')) and verify(out)
+        sys.exit(0 if (complete and whole) else 1)
+    if '--coverage' in args:
+        i = args.index('--coverage')
+        d = args[i + 1] if len(args) > i + 1 and not args[i + 1].startswith('--') else None
+        if d is None:
+            cs = copies()
+            if not cs:
+                sys.exit('no laptop copy to check — take one first')
+            d = os.path.join(ROOT, cs[-1])
+        sys.exit(0 if coverage(d) else 1)
     if '--dry-run' in args:
         ks = keys()
         print(f'{len(ks)} keys would be copied to {ROOT}')

@@ -510,7 +510,7 @@ Linked steps: 369938
 | attribute | type | what it holds |
 | --- | --- | --- |
 | `byArtist[aid].k / at / end / skip` (46156) | Single-line text | the next occurrence key, its start and end, and a refused start remembered so it is not retried |
-| `live[aid]` (46157) | Single-line text | shows the cron started and must end |
+| `live[aid]` (46157) | Single-line text | every show the live walk saw live, with its last sign of life — the idle sweep's list; written by the walk, never by a start (decision 0154). Beside it `liveSeen[aid]` (what the walk last saw: status, start, end) and `liveCursor` |
 | `lastRunAt / runningSince` (46158) | Date picker | the tick's lock — a ring that finds runningSince set and fresh does nothing |
 | `healedAt / healCursor` (46159) | Number | the slow walk that re-reads calendars when the index is suspect |
 

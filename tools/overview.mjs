@@ -159,6 +159,11 @@ async function facts() {
       shards: lib.SHARDS,
       castBurst: lib.CAST_BURST,
       castPerMin: lib.CAST_PER_MIN,
+      // the cast receipts a fan record keeps for a retry (decision 0148)
+      receiptsKept: lib.RECEIPTS_KEPT, receiptMinutes: lib.RECEIPT_MS / 60e3,
+      // new phones per network per show, the count a fan file allows, and how recent a head is (decision 0149)
+      newDevicesPerNetwork: lib.NEW_DEVICES_PER_NETWORK, netQuota: lib.NET_QUOTA, netMax: lib.NET_QUOTA * lib.SHARDS,
+      presenceMinutes: lib.PRESENCE_WINDOW_MS / 60e3,
       countdownMs: lib.COUNTDOWN_MS,
       maxVideoBytes: video.MAX_VIDEO_BYTES,
       clipLinkSecs: r2.LINK_SECS,
@@ -392,6 +397,9 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Venue Studio actions | ${f.shape.venueActions.length} |
 | Fan-record shards | ${f.constants.shards} |
 | Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
+| Cast receipts a fan record keeps for a retry, and for how long (\`RECEIPTS_KEPT\`, \`RECEIPT_MS\`, decision 0148) | ${f.constants.receiptsKept} / ${f.constants.receiptMinutes} minutes |
+| New phones one network brings into a show with free votes — the founder's number, the count each fan file allows, and the most a script on one network can get (\`NEW_DEVICES_PER_NETWORK\`, \`NET_QUOTA\`, decision 0149) | ${f.constants.newDevicesPerNetwork} / ${f.constants.netQuota} a file / ${f.constants.netMax} |
+| The room's head count, for the polling rung and the board's length: phones seen in the last (\`PRESENCE_WINDOW_MS\`) | ${f.constants.presenceMinutes} minutes |
 | A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
 | A sign-in session lasts / renews itself on a reply once it is older than (\`TOKEN_LIFE\`, \`RENEW_AFTER_MS\`, decision 0172) | ${f.security.sessionDays} days / ${f.security.renewAfterHours} hours |
 | Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |

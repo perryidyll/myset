@@ -204,8 +204,13 @@ await mutateShow(kai.artistId, (s) => { s.startedAt = Date.now() - 120 * 60e3; r
 for (const f of ['ann', 'bob', 'cy']) { await hit(meFn, `https://x/api/me?a=kai-rivers&fan=${f}&in=1`); await hit(voteFn, 'https://x/api/vote?a=kai-rivers', { fan: f, song: 'valerie' }); }
 await AS(TK, 'play', { song: 'valerie' });
 await hit(voteFn, 'https://x/api/vote?a=kai-rivers', { fan: 'ann', song: 'zombie' });
+/* Since 0154 a start writes no global document: the live walk at the top of the
+   register's bell reads the artist's show record and leaves the mark there. */
+eq('starting wrote no mark itself', (((await readDoc('gigsched', null)).data || {}).regdirty || {})[kai.artistId], undefined);
+const { walkLive } = await import('../netlify/functions/_lifecycle.mjs');
+await walkLive();
 const marksBefore = ((await readDoc('gigsched', null)).data || {}).regdirty || {};
-ok('starting left the register a mark, with no fold on the tap', !!marksBefore[kai.artistId] && !(await R.readRegister()), marksBefore);
+ok('the live walk left the register a mark, with no fold on the tap', !!marksBefore[kai.artistId] && !(await R.readRegister()), marksBefore);
 ok('the show ends', (await AS(TK, 'status', { status: 'ended' })).ok);
 const show = (await readDoc(`show_${kai.artistId}`, null)).data;
 eq('the night was stamped with the gig\'s country, zone and the plan it was played on', [show.country, show.tz, show.plan], ['Thailand', 'Asia/Bangkok', 'plus']);
@@ -307,7 +312,11 @@ console.log('\nTHE BELL  idle rings are cheap; a mark or a stale walk makes it f
   const ring = async () => (await cron(new Request('https://x/', { method: 'POST', body: '{}' }))).text();
   await casDoc('registersync', () => ({}), (d) => { d.lastRunAt = Date.now() - 6 * 60e3; d.lastFullAt = Date.now(); return true; });
   const ops = __opsStart(); const idle = await ring(); const o = __opsStop();
-  eq('nothing dirty, a fresh full walk: idle, two reads', [idle, o.filter((l) => /^get /.test(l)).length], ['idle', 2]);
+  const { isVenueOwner } = await import('../netlify/functions/_events.mjs');
+  const walked = Object.keys((await readArtists()).byId).filter((id) => !isVenueOwner(id)).length;
+  eq('nothing dirty, a fresh full walk: idle — the live walk (the registry, the index, a show record an artist) and two reads',
+    [idle, o.filter((l) => /^get /.test(l)).length], ['idle', 2 + walked + 2]);
+  ok('…and the walk wrote nothing, because nothing had changed', !o.some((l) => l === 'set gigsched'), o);
   await casDoc('gigsched', () => ({}), (d) => { d.regdirty = { nobody: Date.now() }; return true; });
   await casDoc('registersync', () => ({}), (d) => { d.lastRunAt = Date.now() - 6 * 60e3; return true; });
   eq('a mark makes it fold', await ring(), 'ok');

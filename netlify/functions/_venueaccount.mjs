@@ -51,7 +51,11 @@ export async function keysForVenue(vid) {
   const o = OWNER(vid);
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
     `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `rec_${o}`,
-    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`];   // paylim_: the checkout limiter (0111)
+    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`,   // paylim_: the checkout limiter (0111)
+    /* Three a venue grew after this list was written, so none had a second home and
+       each outlived the venue (0146): the pitches it was sent (0123), its alert
+       devices (0124), and its answers to shows listed at its place (0128). */
+    `vpitch_${vid}`, `push_${o}`, `gigok_${vid}`];
   const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);
   for (const slot of ['cover', 'avatar', 'idcheck', ...Array.from({ length: 12 }, (_, i) => 'p' + i)])
     keys.push(IMG(vid, slot));

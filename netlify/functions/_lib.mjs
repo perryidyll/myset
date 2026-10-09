@@ -400,6 +400,9 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
 }
 
 /* ---------- show config ---------- */
+/* How many Play taps the show remembers (decision 0151). A retry follows its tap by
+   seconds; eight is every song of the last half hour or so, and a few hundred bytes. */
+export const TAPS_KEPT = 8;
 function normShow(s) {
   const d = defaultShow();
   const show = { ...d, ...(s || {}) };
@@ -409,6 +412,14 @@ function normShow(s) {
   if (typeof show.freeCredits !== 'number') show.freeCredits = DEFAULT_FREE_CREDITS;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
   if (!Array.isArray(show.log)) show.log = [];
+  /* How many songs have been started, ever, and the count each song was started
+     at tonight — what makes Play one write (decision 0147, `liveFans` below). */
+  show.plays = Math.max(0, parseInt(show.plays, 10) || 0);
+  show.col = show.col && typeof show.col === 'object' && !Array.isArray(show.col) ? show.col : {};
+  /* The last few Play taps that started a song, by the id the Studio sent with each
+     (decision 0151) — what lets a retry of the same tap be answered, not obeyed. */
+  show.taps = (Array.isArray(show.taps) ? show.taps : [])
+    .filter((t) => t && typeof t.id === 'string' && t.id).slice(-TAPS_KEPT);
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
@@ -486,6 +497,57 @@ export async function getShow(aid, { withName = true } = {}) {
   }
   return show;
 }
+/* THE SHOW FOR THE PERSONAL POLL, WITHOUT CARRYING IT EVERY TIME (decision 0152,
+   INVARIANT 0hz).
+
+   /api/me is polled by every phone in the room and never cached, and the show record
+   it reads carries the whole song library and the night's play log: about 100 KB for a
+   typical act and up to 540 KB, read 250 times a second at 5,000 phones (the 2 October
+   2026 audit). Nearly every one of those reads finds the record exactly as the last one
+   did, because only the artist changes it.
+
+   So a warm function instance keeps the record it last read for an artist, with the
+   etag the store gave it, and asks the store ON CONDITION: only if it is no longer
+   that. The store answers 304 and no body when nothing has changed, and the whole
+   record when something has — one strong read either way, the read the poll always
+   made, without the bytes. The kept copy is used ONLY when the store has just said it
+   is still the current one, so it is never older than a plain read would have been.
+   It is frozen: a caller that tried to change it would throw rather than change it for
+   the next phone. Anything else — a read that throws, a reply without the etag, no
+   record at all — goes the ordinary way (`readDoc`), which decides what a failure is.
+
+   For callers that only read the show and never show the artist's name. */
+const SHOW_MEMO = new Map();                 // aid -> { etag, show }, oldest first
+const SHOW_MEMO_MAX = 16;                    // artists one instance keeps
+const frozen = (o) => {
+  if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); for (const k of Object.keys(o)) frozen(o[k]); }
+  return o;
+};
+function keepShow(aid, data, etag) {
+  const show = normShow(data);
+  show.artistId = aid;
+  SHOW_MEMO.delete(aid);
+  if (!data || !etag) return show;            // nothing stored, or nothing to ask with next time
+  SHOW_MEMO.set(aid, { etag, show: frozen(show) });
+  while (SHOW_MEMO.size > SHOW_MEMO_MAX) SHOW_MEMO.delete(SHOW_MEMO.keys().next().value);
+  return show;
+}
+export async function getShowKept(aid) {
+  const held = SHOW_MEMO.get(aid);
+  if (held) {
+    let r = null;
+    try { r = await store().getWithMetadata(KEY.show(aid), { type: 'json', consistency: 'strong', etag: held.etag }); }
+    catch { r = null; }
+    if (r && r.data === null && r.etag === held.etag) {
+      // used: newest again — unless a newer copy replaced it while this read was out
+      if (SHOW_MEMO.get(aid) === held) { SHOW_MEMO.delete(aid); SHOW_MEMO.set(aid, held); }
+      return held.show;
+    }
+    if (r && r.data && r.etag) return keepShow(aid, r.data, r.etag);
+  }
+  const { data, etag } = await readDoc(KEY.show(aid), null);
+  return keepShow(aid, data, etag);
+}
 /* INVARIANT 4 says a conditional write can report success without sticking under
    concurrency, which is why every FAN write goes through a read-back verify. The
    SHOW write never did — so an acked-but-lost write meant the artist's tap silently
@@ -506,6 +568,20 @@ export const mutateShow = (aid, fn) => {
   (d) => stamp === null || !!(d && d.updatedAt === stamp));
 };
 
+/* A RESUME OF THE SAME NIGHT (decision 0156). "Resume it instead" after an End tapped
+   by mistake is the same night, not a new show: it is never counted against the free
+   plan and never refused at its cap. The same night is one that is not live, that the
+   free plan already counted (`freeNight` names this showId), and that started less than
+   SAME_NIGHT_MS ago — so a night cannot be resumed next week to play for free, and a
+   night given back (a discard, a quiet calendar night) counts again if it is resumed.
+   Here, not in _lifecycle.mjs, because the Studio's stage payload asks it too and must
+   not load the lifecycle to do so. Pure: no reads. */
+export const SAME_NIGHT_MS = 12 * 3600e3;
+export function sameNightResume(sh, now = Date.now()) {
+  return !!(sh && sh.status !== 'live' && sh.showId && Number(sh.startedAt) > 0
+    && sh.freeNight && sh.freeNight.id === sh.showId && now - Number(sh.startedAt) < SAME_NIGHT_MS);
+}
+
 /* ---------- fan shards ---------- */
 /* Does this object carry `k` ITSELF — not through its prototype? `bag[fanId]` for a
    fan called `__proto__` is Object.prototype: truthy, so `||=` kept it, and every
@@ -514,6 +590,10 @@ export const mutateShow = (aid, fn) => {
    the belt to that brace — decision 0110). */
 export const own = (o, k) => (o != null && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 
+/* Every write to a fan file also tidies the receipts of every record in it (decision
+   0148): a receipt past RECEIPT_MS is dropped and one in the old long shape is
+   shortened. The file is being rewritten whole anyway, so this costs no read and no
+   write — only the bytes the next writer of this file no longer has to move. */
 export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
   casDoc(
     shardKey(aid, shardOf(fanId)),
@@ -521,7 +601,9 @@ export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
     (bag) => {
       const me = own(bag, fanId) || (bag[fanId] = { v: [], extra: 0, ts: {} });
       me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0; me.va ||= {};
-      return fn(me, bag);
+      const out = fn(me, bag);
+      if (out !== false) pruneReceipts(bag);
+      return out;
     },
     verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
   );
@@ -846,22 +928,79 @@ export function takeCastToken(me, now = Date.now()) {
   return true;
 }
 
+/* THE CAST RECEIPTS — decision 0148.
+
+   A cast id makes a retry safe (INVARIANT 15h): the outcome of every cast is kept on
+   the fan's record, and the same id arriving again is answered from it instead of
+   casting twice. Each receipt used to be the whole id and the whole outcome as an
+   object — about 118 bytes — and twenty were kept for the whole night, so they were
+   the largest thing on a voter's record: 355 of 796 bytes after three casts. Every
+   vote rewrites a twelfth of the room, so every byte on every record is moved by
+   every writer of its file (the 2 October 2026 scale audit's write ceiling).
+
+   Now a receipt is [key, at, votes, cost, remaining]: the key is the first twelve hex
+   characters of the id's hash (one device's last twenty casts; a false match is one
+   in 10^13), and the outcome is three numbers. A receipt is kept for RECEIPT_MS. A
+   retry is the same tap asking again — 0.9 s after its first try fails, and a try
+   fails at the latest when the phone's network gives up on a dead connection, which
+   is minutes, not half an hour. The page keeps no cast id past the tap that made it.
+
+   An old receipt is read as it is and shortened by the next write to its file. */
+export const RECEIPTS_KEPT = 20;
+export const RECEIPT_MS = 30 * 60e3;
+const receiptKey = (castId) => sha(castId).slice(0, 12);
+/** A cast's receipt, in the shape that is kept. */
+export const receipt = (castId, at, out) =>
+  [receiptKey(castId), at, out.votes, out.cost, out.remaining === undefined ? null : out.remaining];
+/** The outcome a cast with this id had, if this record still remembers it. */
+export function findReceipt(casts, castId) {
+  if (!castId || !Array.isArray(casts)) return null;
+  const k = receiptKey(castId);
+  for (const c of casts) {
+    if (Array.isArray(c) && c[0] === k) return { voted: true, votes: c[2], cost: c[3], remaining: c[4] };
+    if (c && !Array.isArray(c) && c.id === castId) return { ...(c.out || {}) };   // the long shape, before its next write
+  }
+  return null;
+}
+/** The receipts worth keeping: short, younger than RECEIPT_MS, the last RECEIPTS_KEPT. */
+export function keepReceipts(casts, now = Date.now()) {
+  const out = [];
+  for (const c of Array.isArray(casts) ? casts : []) {
+    const r = Array.isArray(c) ? c
+      : (c && typeof c.id === 'string' ? receipt(c.id, Number(c.at) || 0, c.out || {}) : null);
+    if (r && now - (Number(r[1]) || 0) < RECEIPT_MS) out.push(r);
+  }
+  return out.slice(-RECEIPTS_KEPT);
+}
+/** Every record in a fan file, its receipts tidied. Records without any are untouched. */
+export function pruneReceipts(bag, now = Date.now()) {
+  for (const id of Object.keys(bag || {})) {
+    const f = bag[id];
+    if (!f || f.casts === undefined) continue;
+    const kept = keepReceipts(f.casts, now);
+    if (kept.length) f.casts = kept; else delete f.casts;
+  }
+  return bag;
+}
+
 export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
   chargeFan(fan, show, 0);                    // normalize legacy ledger fields first
   fan.va ||= {};
   const rows = (fan.va[songId] ||= []);
   let freeLeft = Math.max(0, (show.freeCredits || 0) - fan.freeUsed);
-  /* [credit cost, paid portion, WHEN]. The third field is the moment of the
-     cast, per vote, so the night's event log (_evlog.mjs, decision 0066) can say
-     when each vote arrived after the song has played and the row is gone from
-     here. Readers take the first two fields and ignore the rest, and a row from
-     before the stamp existed is read with the song's first-vote time instead. */
-  const at = Date.now();
+  /* [credit cost, paid portion, WHEN, PLAYS SEEN]. The third field is the moment
+     of the cast, per vote, so the night's event log (_evlog.mjs, decision 0066)
+     can say when each vote arrived after the song has played and the row is gone
+     from here. Readers take the first two fields and ignore the rest, and a row
+     from before the stamp existed is read with the song's first-vote time instead.
+     The fourth is `show.plays` as THIS cast read it — how a vote that set off
+     before its song started is known for what it is when it lands after (0147). */
+  const at = Date.now(), seen = show.plays || 0;
   for (let i = 0; i < count; i++) {
     const price = unlimited ? 0 : cost;
     const fromFree = Math.min(price, freeLeft);
     freeLeft -= fromFree;
-    rows.push([price, price - fromFree, at]);
+    rows.push([price, price - fromFree, at, seen]);
   }
   chargeFan(fan, show, unlimited ? 0 : cost * count);
 }
@@ -949,7 +1088,11 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
 export async function refundSongVotes(aid, songId, show) {
   if (!songId) return [];
   const harvested = [];                      // every vote it gave back — see dropSongVotes
-  await Promise.all(
+  /* Every file's write has finished, one way or the other, before this answers. With
+     Promise.all the first file that failed answered at once while the other eleven
+     kept writing, so a refund reported as failed could still land a moment later —
+     after the artist had already shown the song again (decision 0155). */
+  const done = await Promise.allSettled(
     Array.from({ length: SHARDS }, (_, n) => {
       let got = [];
       return casDoc(shardKey(aid, n), () => ({}), (bag) => {
@@ -994,6 +1137,8 @@ export async function refundSongVotes(aid, songId, show) {
         .then(() => { for (const h of got) harvested.push(h); });
     })
   );
+  const failed = done.find((d) => d.status === 'rejected');
+  if (failed) throw failed.reason;
   return harvested;
 }
 
@@ -1048,18 +1193,154 @@ export function roomCounts(fans) {
 }
 export const uniqueRoom = (fans) => roomCounts(fans).phones;
 
-/** One write per device per show. Called only from the voting page, only while a
- *  show is live, and skipped entirely once the stamp is already there. */
-export async function markPresence(aid, fanId, show, req) {
-  if (!fanId || !show || show.status !== 'live') return;
+/* NEW PHONES PER NETWORK, PER SHOW — decision 0149.
+
+   Every new device id was handed tonight's free votes, and the id is the phone's own
+   to choose: a loop minting a fresh one per request outvoted a fifty-phone room with
+   fifty requests (the 2 October 2026 audit). The network address is the one thing the
+   caller does not choose (Netlify sets it; 0111). So a network brings at most about
+   NEW_DEVICES_PER_NETWORK phones into a show with free votes. Past that a phone still
+   opens the page, sees the board and can buy votes: it is a phone that has already
+   spent its free ones.
+
+   THE COUNT IS KEPT IN THE FAN FILE THE PHONE LIVES IN, in the write that is happening
+   anyway. A phone's first write of the night — its "I'm here" or its first vote —
+   counts the phones from its network already let in to ITS file tonight (a twelfth of
+   the room), and is let in while that is under NET_QUOTA. No new document, no extra
+   read or write, and the decision is the same compare-and-swap that writes the
+   record: there is no separate counter for a flood to jam its way past. A phone held
+   out with nothing on its record is not written at all, so fakes do not grow the
+   files either.
+
+   The price of counting per file is that the number is not exact: a network's phones
+   fall into the twelve files by chance. NET_QUOTA is the smallest per-file count under
+   which a network of exactly NEW_DEVICES_PER_NETWORK real phones loses, on average,
+   under a tenth of a phone — so a bar of that size on one wifi is let in whole, and a
+   script from one network is held to NET_QUOTA × SHARDS however fast it asks.
+
+   ONE NUMBER, the founder's to choose (his desk offers 60, 200 or 500). Infinity
+   switches the cap off. Not counted: a request whose network cannot be named (0111's
+   rule) and the artist's own unlimited devices. */
+export const NEW_DEVICES_PER_NETWORK = 200;
+export const NET_QUOTA = (() => {
+  const n = NEW_DEVICES_PER_NETWORK, p = 1 / SHARDS;
+  if (!Number.isFinite(n)) return Infinity;
+  /* P(k of the network's n phones land in one file), worked in logs so a big n does
+     not underflow, then the expected number over the quota across all the files. */
+  const pk = [];
+  let lp = n * Math.log(1 - p);
+  for (let k = 0; k <= n; k++) { pk.push(Math.exp(lp)); lp += Math.log((n - k) / (k + 1)) + Math.log(p / (1 - p)); }
+  for (let q = 1; q <= n; q++) {
+    let lost = 0;
+    for (let k = q + 1; k <= n; k++) lost += (k - q) * pk[k];
+    if (SHARDS * lost < 0.1) return q;
+  }
+  return n;
+})();
+
+/** Let into tonight's free votes: stamped present tonight. */
+export const admitted = (me, show) => !!me && !!show && !!show.showId && me.seenShow === show.showId;
+/** Held out of them tonight (and so, already, their allowance stamped as spent). */
+export const heldOut = (me, show) => !!me && !!show && !!show.showId && me.nf === show.showId;
+
+/** For a phone not decided yet: 'in' or 'out', from the file it lives in. `bag` may
+ *  be that file or the whole room merged; only records in the phone's own file count. */
+export function freeVerdict(bag, fanId, show, net) {
+  if (!net || isUnlimited(fanId, show) || !Number.isFinite(NET_QUOTA)) return 'in';
+  const home = shardOf(fanId);
+  let n = 0;
+  for (const id of Object.keys(bag || {})) {
+    const f = bag[id];
+    if (id !== fanId && f && f.seenShow === show.showId && f.ipH === net && shardOf(id) === home && ++n >= NET_QUOTA) return 'out';
+  }
+  return 'in';
+}
+/** HELD OUT = THE FREE ALLOWANCE STAMPED AS SPENT, ON NOTHING. `used` and `freeUsed`
+ *  move together, exactly as a phone that spent its free votes would have them, so
+ *  every place that works out a fan's credits — vote.mjs, buildMe, _requests.mjs, the
+ *  request check in pay.mjs, paidUsed, unspentPaid, the decline refund — gives the
+ *  right answer without a line of it changing: bought votes are spent as bought votes,
+ *  counted as paid, and carried to the next show. `nf` names the night. */
+export function holdOut(me, show) {
+  chargeFan(me, show, 0);                                   // normalise a legacy ledger first
+  chargeFan(me, show, Math.max(0, (show.freeCredits || 0) - me.freeUsed));
+  me.nf = show.showId;
+  return me;
+}
+/** Decide a phone, inside the write being made: let in (stamped present), or held
+ *  out. True when it was let in, or already had been. */
+export function settleFree(me, bag, fanId, show, net, now = Date.now()) {
+  if (admitted(me, show)) return true;
+  if (heldOut(me, show)) return false;
+  if (freeVerdict(bag, fanId, show, net) === 'in') {
+    me.seenShow = show.showId; me.ipH = net; me.seenAt = now;
+    return true;
+  }
+  holdOut(me, show);
+  return false;
+}
+/** A record with nothing on it: what mutateFan makes for an id it has never seen. */
+const blankFan = (me) => Object.keys(me).every((k) => {
+  const v = me[k];
+  return ['v', 'extra', 'ts', 'spent', 'va'].includes(k) && (!v || (typeof v === 'object' && !Object.keys(v).length));
+});
+/** What /api/me shows a phone, from the file it read: its own record — or, for a
+ *  phone not let in tonight whose network has no room left in its file, the same
+ *  record with the free votes withheld, so the page never offers a free vote the
+ *  server would refuse (INVARIANT 0ad). */
+export function freeView(bag, fanId, show, net) {
+  const me = own(bag, fanId) || null;
+  if (admitted(me, show) || heldOut(me, show) || freeVerdict(bag, fanId, show, net) === 'in') return me;
+  return holdOut(me ? JSON.parse(JSON.stringify(me)) : { v: [], extra: 0 }, show);
+}
+
+/* WHEN A STAMP FALLS DUE. A phone on the page polls at least every twenty times the
+   floor (vote.html's terminal rung), with up to a fifth of jitter: 72 seconds in a pub,
+   eight minutes at the twenty-second floor. Its stamp is written again on the first
+   poll after its own due time, between ten and twenty minutes — spread by device, so a
+   room that arrived together does not come back together. A stamp is therefore at
+   most twenty minutes plus one slow poll old; the window is thirty, and a phone that
+   has stopped polling (a locked screen) drops out of the count, which is right for a
+   dial whose job is load. The price is one write a phone about every quarter hour. */
+export const PRESENCE_WINDOW_MS = 30 * 60e3;
+export function presenceDue(fanId) {
+  let h = 7;
+  for (let i = 0; i < fanId.length; i++) h = (h * 31 + fanId.charCodeAt(i)) >>> 0;
+  return 10 * 60e3 + (h % 600) * 1000;
+}
+/** Is this phone's stamp tonight's, and not yet due? A stamp from before its time was
+ *  kept is current, as it always was. The network is not compared: see markPresence. */
+export const presenceCurrent = (me, show, fanId, now = Date.now()) =>
+  admitted(me, show) && !(Number(me.seenAt) > 0 && now - me.seenAt >= presenceDue(fanId));
+
+/** One write per device per show, and one more each time its stamp falls due
+ *  (decision 0149). Called only from the voting page, only while a show is live, and
+ *  skipped entirely while the stamp is current. A phone's first stamp of the night is
+ *  also where it is let into tonight's free votes or held out of them (`settleFree`);
+ *  a phone held out with nothing on its record is not written at all. Returns the
+ *  record as written, or null when nothing was. */
+export async function markPresence(aid, fanId, show, req, now = Date.now()) {
+  if (!fanId || !show || show.status !== 'live') return null;
   const ipH = roomHash(aid, clientIp(req));
   try {
-    await mutateFan(aid, fanId, (me) => {
-      if (me.seenShow === show.showId && me.ipH === ipH) return false;   // already counted
-      me.ipH = ipH; me.seenShow = show.showId;
-      return true;
+    const r = await mutateFan(aid, fanId, (me, bag) => {
+      if (heldOut(me, show)) return false;                      // decided tonight: nothing to stamp
+      /* THE NETWORK A PHONE WAS LET IN ON IS ITS NETWORK FOR THE NIGHT. This used to
+         write the new one on every change of network (wifi to mobile data), which was
+         a shard write each time — and once the network count existed, a loop: let a
+         file's worth in on one address, move them to another, and the first has room
+         again. vote.mjs has always kept the first stamp (`||=`); so does this now. */
+      if (admitted(me, show)) {
+        if (presenceCurrent(me, show, fanId, now)) return false;        // already counted, recently
+        me.ipH ||= ipH; me.seenAt = now;
+        return true;
+      }
+      const blank = blankFan(me);                               // before settleFree writes on it
+      if (settleFree(me, bag, fanId, show, ipH, now)) return true;      // let in, and stamped
+      return !blank;                     // held out: written only if the record holds something real
     });
-  } catch { /* a missed head-count must never break the voting page */ }
+    return r && r.ok ? own(r.data, fanId) || null : null;
+  } catch { return null; /* a missed head-count must never break the voting page */ }
 }
 
 /** Earliest moment each song received a vote — used to break ties fairly. */
@@ -1095,10 +1376,18 @@ export function rankSongs(list, counts, first) {
     one document per arrival, and arrivals are exactly the moment a room is busiest
     — 10,000 people through one CAS door is the queue that breaks. Counting a bag
     that has already been read is free. */
-export function countInRoom(fans, show) {
+/* ...AND ONLY PHONES SEEN RECENTLY (decision 0149). A stamp used to count all night,
+   so a burst of fake "I'm here" pings held a pub on the slowest rung until it ended.
+   A phone still on the page refreshes its stamp now and then (`presenceDue`), so the
+   count is the phones seen in the last PRESENCE_WINDOW_MS. A stamp from before the
+   time was kept on it counts as it always did. */
+export function countInRoom(fans, show, now = Date.now()) {
   if (!show || !show.showId) return 0;
   let n = 0;
-  for (const id of Object.keys(fans)) if (fans[id].seenShow === show.showId) n++;
+  for (const id of Object.keys(fans)) {
+    const f = fans[id];
+    if (f.seenShow === show.showId && !(Number(f.seenAt) > 0 && now - f.seenAt >= PRESENCE_WINDOW_MS)) n++;
+  }
   return n;
 }
 
@@ -1172,6 +1461,57 @@ export function boardLimitFor(heads) {
   if (n <= 1000) return 40;
   if (n <= 3000) return 25;
   return 15;
+}
+
+/* PLAY IS ONE WRITE — decision 0147.
+
+   Starting a song used to be two things: the show write that says what is playing,
+   then a sweep of all twelve fan files to take that song's votes off the board. A
+   cast reads the show ONCE, before its own write, and retries that write for as
+   long as it takes — so in a rush a vote that set off before Play could land after
+   the sweep had passed its file. It stayed on the song that had just started, and
+   once that song was in `played` it read as a request to hear it again, bought at
+   the ordinary price. (Simulated at 5,000 phones: 1 to 13 a Play.) And a sweep
+   that ran out of tries left a twelfth of the room's votes behind, silently.
+
+   Now the show write carries the answer. `show.plays` counts every song started;
+   `show.col[song]` is the count that song was last started at. A cast stamps each
+   vote row with the `plays` it read. A row whose stamp is LOWER than its song's
+   mark set off before that song started: the song has collected it, whichever
+   side of the sweep it landed on. Nothing is refunded — the fan voted for a song
+   and it is playing, the same outcome as landing a millisecond earlier.
+
+   The sweep still runs. It is housekeeping now: it files the votes in the night's
+   event log and keeps the files small. If it loses, the board is still right.
+
+   Only a row that carries a stamp can be collected this way. A row from before
+   the stamp existed, and votes bought for a song at checkout (`grantPaidSongVotes`,
+   which a fan paid money for), are left exactly as they were.
+
+   These two take the collected rows out of records ALREADY READ — never out of
+   the store. The rows stay in the file until the sweep or the end of the night
+   files them (`harvestAll` reads the file as it is, so every vote is still filed
+   once: INVARIANT 0fq). */
+export function liveFan(fan, show) {
+  const col = show && show.col;
+  if (!fan || !fan.va || !col) return fan;
+  for (const song of Object.keys(fan.va)) {
+    const mark = col[song], rows = fan.va[song];
+    if (!mark || !Array.isArray(rows)) continue;
+    const kept = rows.filter((r) => !(Array.isArray(r) && Number.isInteger(r[3]) && r[3] < mark));
+    let gone = rows.length - kept.length;
+    if (!gone) continue;
+    fan.v = (fan.v || []).filter((x) => (x === song && gone > 0 ? (gone--, false) : true));
+    if (kept.length) { fan.va[song] = kept; if (fan.ts) fan.ts[song] = Number(kept[0][2]) || fan.ts[song]; }
+    else { delete fan.va[song]; if (fan.ts) delete fan.ts[song]; }
+  }
+  return fan;
+}
+export function liveFans(fans, show) {
+  const col = show && show.col;
+  if (!fans || !col || !Object.keys(col).length) return fans;      // nothing has played: nothing to do
+  for (const id of Object.keys(fans)) liveFan(fans[id], show);
+  return fans;
 }
 
 export function voteCounts(fans) {

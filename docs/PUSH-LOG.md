@@ -14,6 +14,10 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** PR #150 is on today's main and two steps further: a session lasts a week and renews itself in use (0172), the activity log is complete (0173), and /api/health says whether a deploy holds MYSET_SECRET and whether the keyring opens under it. Nothing live yet; the merge is the switch
 **Other sessions:** readDoc/casDoc now carry both 0142 (StoreError, timeout) and 0113 (sealed path); ring() rethrows StoreError. x-myset-token rides back on no-store replies from guard() — both Studios' api() keep it; stamps rewritten. note() appends to an _append log (size 200) with parts on keysFor/keysForVenue; appendLog has size/upgrade opts. Decisions 0172/0173 taken without the sessions board. The Notion record says MYSET_SECRET was set 2026-09-28; the preview's /api/health seal field is how to check without reading a variable
 
+### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
+**tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record
+**Other sessions:** PENDING.md row for 8f9bde6 (_passgate.mjs); clear it with ./tools/decide.sh if anyone writes 0115-style record for the passcode door
+
 ### 2026-10-07 14:56 — fa9c189 — sample-cover@ux/sample-decks-every-visit (8 files since origin/main)
 **tl;dr:** A sample's Studio (artist and venue) now shows its welcome every time it opens, and each tab's tip deck the first time that tab is opened in the visit — no longer once per phone.
 **Other sessions:** studio.js / venue-studio.js: tipOnce + VISIT (in-memory Set) replace Tips.first for samples only; real accounts unchanged (once per phone); practice-round pr-* decks still once per phone. Decision 0171.
@@ -49,6 +53,20 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
 **tl;dr:** Docs: scale-audit week one recorded as live
 **Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
+### 2026-10-03 04:09 — eba38db — scale-p2@test/contention-sim (54 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test no longer runs slower on GitHub's machine than on a Mac
+**Other sessions:** tools/roomsim.mjs registers test/hooks.mjs's redirect() through module.registerHooks when present (Node >= 22.15), falling back to register(); test/hooks.mjs exports redirect(spec).
+### 2026-10-03 04:06 — 7c496a0 — scale-p2-life@fix/show-lifecycle (105 files since origin/main)
+**tl;dr:** A failed Decline + refund can no longer finish itself a moment later, after the artist has shown the song again (0155)
+**Other sessions:** refundSongVotes now awaits Promise.allSettled over the twelve fan files and rethrows the first failure; test/refundowed.mjs has a one-file-fails, one-file-slow section. Other Promise.all-over-shards writers (dropSongVotes, consumePlayedVotes) have the same shape — not changed tonight.
+
+### 2026-10-03 03:08 — db2f143 — scale-p2-life@fix/show-lifecycle (83 files since origin/main)
+**tl;dr:** Tapping End stops the room at once and the night is priced after, on a clock; a count Stripe could not finish says so; Decline + refund can be finished if it fails; vibes stop blocking paid requests; an accidental End on the tenth free show can be undone (0153-0156)
+**Other sessions:** STACKED on #231. money.source may be 'stripe-partial' (treat only 'stripe' as known). Start/End no longer write gigsched; registercron's walkLive fills gigsched.live/regdirty (up to 300 a ring) — never re-add a shared write to start/end. show.refundsOwed + settleOwedRefund. MAX_VIBES separate. sameNightResume narrows 0120 (founder card resume-at-cap). No new blob keys.
+
+### 2026-10-03 03:05 — b9c9680 — scale-p2-fans@perf/fan-files (60 files since origin/main)
+**tl;dr:** Votes in a packed room write about a quarter fewer bytes; one network can bring about 200 new phones into a show with free votes (the founder's number still pending); the room's head count is who is still here (0148, 0149)
+**Other sessions:** STACKED on #226. RULE (0149): anything that marks a phone present (seenShow) goes through settleFree. markPresence body rewritten (optional now, returns record|null; week one's PRESENCE_TRIES goes in as mutateFan's 5th arg). New _lib exports NEW_DEVICES_PER_NETWORK=200, NET_QUOTA, settleFree, freeView, freeVerdict, presenceCurrent, PRESENCE_WINDOW_MS (30 min), RECEIPTS_KEPT 20, RECEIPT_MS 30 min. No new blob keys. Known gap: _requests.mjs does not apply the cap.
 
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
@@ -97,6 +115,28 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
 **tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
 **Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+### 2026-10-03 02:55 — 8e2d516 — scale-p2-show@fix/show-poll-split (83 files since origin/main)
+**tl;dr:** A slow Play tapped twice no longer skips a song; every song stays votable in a huge room once the vote page uses the new list; each phone's check-in stops re-downloading the song library (0150, 0151, 0152)
+**Other sessions:** STACKED on #219. admin play/playTop take optional tap id (show.taps, TAPS_KEPT); studio.js playAct. New endpoint GET /api/fan?what=songs&a=&v= (songs.mjs) + lean board (lean=1, tally) + board.songsV — contract in 0150, week one builds vote.html to it. me.mjs reads the show via getShowKept(aid) (conditional read vs a frozen per-instance copy); vote.mjs should follow. 0152's hot show record NOT built (design only). No new blob keys.
+
+### 2026-10-03 02:49 — df20945 — scale-p2@test/contention-sim (64 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test passes on GitHub's runner
+**Other sessions:** test/contention.mjs: byte-identical repeat only on Node >= 24; on 20/22 it compares status counts + votes landed/lost. roomsim preloads every netlify/functions/*.mjs before the virtual clock.
+
+### 2026-10-03 02:40 — fc9d1d8 — scale-p2@test/contention-sim (64 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test now gives the same result twice on GitHub's runner too
+**Other sessions:** tools/roomsim.mjs flush() turns the event loop until test/blobs-fake.mjs stats.calls stops moving (max 64 turns a virtual ms); the fake counts every get/set in stats.calls. Seeded runs failed to repeat on Node 22 (CI) while they did on Node 26 (Mac).
+
+### 2026-10-03 02:05 — 412642c — scale-p2-play@fix/play-is-one-write (36 files since origin/main)
+**tl;dr:** Play is one write: a vote cast just before the artist presses Play, that lands just after, no longer stays on the song that just started (0147)
+**Other sessions:** STACKED on test/contention-sim (#218): merge that first. NEW RULE: anything that counts live votes from fan records calls liveFans(fans, show) first (INVARIANT 0hu). A vote row now has a FOURTH field (the plays its cast read); show.plays/show.col are written inside Play's mutateShow. _lib.mjs: normShow, chargeVotes, liveFan/liveFans above voteCounts — week one's readDoc change is a different region. test/blobs-fake.mjs gains __slowReads(ms, re).
+### 2026-10-03 02:15 — 61229d0 — scale-p2@test/contention-sim (36 files since origin/main)
+**tl;dr:** No change for a person: the test run's temporary key log now starts on GitHub's Linux runner as well as on a Mac
+**Other sessions:** #218's suite check failed in 8 s on 'mktemp: too few X's'; test/run.sh now uses mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX".
+
+### 2026-10-03 02:02 — 3ff2f52 — scale-p2@test/contention-sim (26 files since origin/main)
+**tl;dr:** The test suite now runs a crowded room on every pull request, and every kind of saved document now has an off-site copy or a stated reason it has none; the off-site copy was read back and restored in a rehearsal (0145, 0146)
+**Other sessions:** NEW RULE once merged: a new kind of blob key needs a line in _mirror.mjs FAMILIES or the suite's last step (test/keyfamilies.mjs) fails; test/run.sh exports MYSET_KEYLOG. test/blobs-fake.mjs gains __latency (keep it beside week one's __failReads when rebasing). keysFor gains bugs_; keysForVenue gains vpitch_, push_v_, gigok_ (now deleted with their account). PR for 0147 (Play is one write) is stacked on this branch.
 
 ### 2026-10-03 01:54 — 1e58aeb — about-voice@docs/about-voice-0161-live (3 files since origin/main)
 **tl;dr:** Docs: decision 0161 (magazine-voice About) recorded as live as 72dbe98

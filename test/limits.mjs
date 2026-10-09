@@ -58,14 +58,16 @@ ok('she discards it', (await A('status', { status: 'ended', discard: true })).ok
 eq('THE RULE: a discarded show gives its count back', (await getShow(ana.artistId)).gigCount, 0);
 ok('discarding an ended show again changes nothing', (await A('status', { status: 'ended', discard: true })).ok);
 eq('still nothing used', (await getShow(ana.artistId)).gigCount, 0);
-/* A resume counts again (so a night cannot be stretched over many), and a discard
-   gives back everything that night used. */
+/* A resume of the SAME night is not another show (decision 0156: an End tapped by
+   mistake is undone, not paid for); a resume of a night over twelve hours old counts
+   again, so a night still cannot be stretched over many (test/vibesandresume.mjs).
+   A discard gives back everything that night used. */
 ok('a show starts', (await A('newShow')).ok);
 ok('she ends it', (await A('status', { status: 'ended' })).ok);
 ok('and resumes it', (await A('status', { status: 'live' })).ok);
-eq('the resume counted too', (await getShow(ana.artistId)).gigCount, 2);
+eq('the same night is one show', (await getShow(ana.artistId)).gigCount, 1);
 ok('then discards the night', (await A('status', { status: 'ended', discard: true })).ok);
-eq('and both come back', (await getShow(ana.artistId)).gigCount, 0);
+eq('and it comes back', (await getShow(ana.artistId)).gigCount, 0);
 ok('a kept show is not given back', (await A('newShow')).ok);
 ok('ended and saved', (await A('status', { status: 'ended', title: 'Kept' })).ok);
 eq('it stays counted', (await getShow(ana.artistId)).gigCount, 1);

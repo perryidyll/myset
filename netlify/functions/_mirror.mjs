@@ -26,6 +26,8 @@ import { r2Enabled, r2Put } from './_r2.mjs';
    already is was what the first ring in production did, and it hit Netlify's
    ten-second limit twice (2026-09-13 17:40Z, 12.9 s and 11.7 s, no log line). A
    restore from this copy is a restore of the record, not of a show in progress.
+   FAMILIES below is that list in full, one line a kind of document, and the suite
+   fails on a kind nobody put there (test/keyfamilies.mjs, INVARIANT 0hs).
 
    TIME-BOXED, PER KEY. A scheduled function has ten seconds, not minutes. The
    deadline is checked after every key, not only between owners: a ring copies
@@ -56,24 +58,92 @@ export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 
                         /* the founder's register (0095): its head, its working state and its
                            bell's state; the month shards are named by the head (globalKeys) */
                         'register', 'register_work', 'registersync',
+                        /* Everything the 2026-10-02 audit found with no second home (0146):
+                           the sample pages' registers, the CRM's index, library and sealed
+                           Gmail tokens (ciphertext without the server's secret), the factory's
+                           settings and queue, the company's costs, venues' suggestions, the
+                           sheet hand-over, the media dashboard, and payments still owed a
+                           delivery (0138). */
+                        'samplereg', 'samplearc', 'samplesup', 'samplestat', 'crm', 'crmlib', 'crmgmail',
+                        'factorycfg', 'factoryq', 'costs', 'suggest', 'gsheet',
+                        'mediadash/data', 'mediadash/boosts', 'payowed',
                         /* the sealing keyring (0113): wrapped, so safe to copy — and a copy
                            of the sealed records without it could never be opened again */
                         'sealkeys'];
-/** The global keys, with the register's month shards read off its head — computable, no list(). */
-export async function globalKeys() {
+/* How far back a pass looks for an hour of errors. A pass runs daily, so two days
+   means every hour is seen twice before it leaves the window. */
+export const ERR_HOURS = 48;
+/** The global keys, with every family whose keys are named by an index document
+ *  read off that index — computable, no list(): the register's month shards off
+ *  its head, a CRM contact off `crm`, a sample's snapshot off `samplearc`, a
+ *  thumbnail off the media dashboard's posts, a city's featured slots off the
+ *  city index, and the error log's recent hours off the clock. */
+export async function globalKeys(now = Date.now()) {
   const out = [...GLOBALS];
+  const doc = async (k) => { try { return (await readDoc(k, null)).data || {}; } catch { return {}; } };
+  const [reg, crm, arc, media, cities] = await Promise.all([doc('register'), doc('crm'), doc('samplearc'), doc('mediadash/data'), doc('cityindex')]);
+  for (const m of reg.months || []) for (let i = 0; i < Math.max(1, m.parts || 1); i++) out.push(i ? `register_${m.ym}_${i}` : `register_${m.ym}`);
+  for (const cid of Object.keys(crm.byId || {})) out.push(`crm_${cid}`);
+  for (const owner of Object.keys(arc.byOwner || {})) out.push(`samplearc_${owner}`);
+  for (const p of Array.isArray(media.posts) ? media.posts : []) if (p && p.id) out.push(`mediadash/thumb/${p.id}`);
+  for (let i = 0; i < ERR_HOURS; i++) out.push('err_' + new Date(now - i * 3600e3).toISOString().slice(0, 13));
+  /* A city's featured slots. The key is derived from the city's name, so every
+     city on the index names one; a city that has left the index is still named
+     by the artists who bought a spot there (mirrorcron's keysOf). */
   try {
-    const { readDoc } = await import('./_lib.mjs');
-    const { data } = await readDoc('register', null);
-    for (const m of (data && data.months) || []) for (let i = 0; i < Math.max(1, m.parts || 1); i++) out.push(i ? `register_${m.ym}_${i}` : `register_${m.ym}`);
-  } catch { /* no head yet */ }
-  return out;
+    const { cityKey } = await import('./_featured.mjs');
+    for (const [country, list] of Object.entries(cities.countries || {})) for (const city of Object.keys(list || {})) out.push(cityKey(country, city));
+  } catch { /* the index is unreadable: the artists' own rows still name them */ }
+  return [...new Set(out)];
 }
-/* Never the ID photo: it is deleted the moment the owner decides (0bk), and a copy
-   on R2 would outlive that decision — the mirror copies, it does not delete. Found
-   2026-09-28 (decision 0110); dropImage also removes any copy already made. */
-export const SKIP = /^(sess_|lock_|authc_|authnet_|paylim_|authsecret$|f\d+_|vid_)|_idcheck$/;   // authnet_/paylim_: a limiter's hour, never worth a copy (0111)
-export const skipped = (k) => SKIP.test(k);
+
+/* EVERY KIND OF DOCUMENT THE APP WRITES, AND WHO COPIES IT — decision 0146.
+
+   The audit of 2 October 2026 found a dozen kinds of document with no second home.
+   Each had been added by a batch that had no reason to think of this file: the
+   mirror copied what it was told about and said nothing about the rest. So the
+   rest is said here. A key is one of three things:
+
+     owner   named by `keysFor` / `keysForVenue` for the artist, venue or sample
+             page it belongs to, and copied with that owner
+     global  one of GLOBALS, or named by `globalKeys` off an index document
+     skip    never copied, and the line says why
+
+   test/keyfamilies.mjs reads every key the whole suite wrote and fails on one
+   that matches no line, so a new kind of document cannot ship unclassified. What
+   the table cannot prove is that an `owner` kind really is in `keysFor` — that is
+   checked against production itself: `tools/backup.py` lists every key the store
+   holds and names any the mirror's manifests have never copied. */
+export const FAMILIES = [
+  [/^(artists|venues|cityindex|acctindex|flags|idqueue|promos|sheetsync|gigsched|vidqueue|delqueue|ledger_platform)$/, 'global'],
+  [/^(register|register_work|registersync|register_\d{4}-\d{2}(_\d+)?)$/, 'global'],
+  [/^sealkeys$/, 'global'],     // the sealing keyring (0113): wrapped by MYSET_SECRET, so safe to copy — and the sealed copies are nothing without it
+  [/^(samplereg|samplearc|samplesup|samplestat|samplearc_.+)$/, 'global'],
+  [/^(crm|crmlib|crmgmail|crm_.+)$/, 'global'],
+  [/^(factorycfg|factoryq|costs|suggest|gsheet|payowed)$/, 'global'],
+  [/^mediadash\/(data|boosts|thumb\/.+)$/, 'global'],
+  [/^err_\d{4}-\d{2}-\d{2}T\d{2}$/, 'global'],
+  /* never copied */
+  [/^(sess_|lock_|authc_|authnet_)/, 'skip', 'a session, a lockout or a sign-in code: ephemeral, and a copy of a secret is a second place to lose it'],
+  [/^authsecret$/, 'skip', 'the key that mints every session (0110)'],
+  [/_idcheck$/, 'skip', 'the ID photo is deleted the moment the owner decides (0bk); a copy would outlive that'],
+  [/^paylim_/, 'skip', "a limiter's hour, never worth a copy (0111)"],
+  [/^(hqlock|showlock)$/, 'skip', 'wrong-passcode counts for the CRM and Show log doors: fifteen minutes of state'],
+  [/^f\d+_/, 'skip', "the room's fan files: device records for tonight, never exported (0bu)"],
+  [/^vid_/, 'skip', 'clip bytes already live on R2 under the same key (0dq)'],
+  [/^(vidchunk_|vidup_)/, 'skip', 'an upload in pieces: gone once the clip is whole, or within the hour'],
+  [/^(mirror|mirror_.+)$/, 'skip', "the mirror's own cursor and manifests: rebuilt by the next pass"],
+  [/^watch$/, 'skip', 'what the watch has already told the founder (0157): rebuilt at its next ring'],
+  /* an owner's */
+  [/^(show|meta|profile|histidx|histids|histpend|hist|req|ev|lists|learn|push|connect|fb|fbarch|apitch|songstats|posts|postsarch|likes|billing|log|rec|pkeys|vidpend|ledger|ledidx|feats|rsvp|biz|wishes|diary|img|lyr|chart|evt|ver|vers|cred|inbox|inboxarch|msg|sample|bugs)_/, 'owner'],
+  [/^(vprofile|vouch|gigok|vpitch)_/, 'owner'],
+  [/^feat_/, 'global'],         // a city's featured slots: named by the city index, and by each artist who bought one
+];
+export const familyOf = (k) => {
+  for (const [re, how, why] of FAMILIES) if (re.test(String(k))) return { how, why: why || '' };
+  return null;
+};
+export const skipped = (k) => (familyOf(k) || {}).how === 'skip';
 
 const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0, err: null });
 const emptyManifest = () => ({ v: 1, at: 0, by: {} });

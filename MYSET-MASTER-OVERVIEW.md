@@ -535,13 +535,16 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 20 — about.html, artist.html, artists.html, community.html, crm.html, dash.html, diary.html, factory.html, index.html, mediadash.html, privacy.html, report.html, shop.html, sign.html, stage.html, studio.html, terms.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 41 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
+| HTTP functions | 42 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `songs`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 7 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
 | Shared libraries | 76 |
 | Artist Studio actions | 136 |
 | Venue Studio actions | 57 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
+| Cast receipts a fan record keeps for a retry, and for how long (`RECEIPTS_KEPT`, `RECEIPT_MS`, decision 0148) | 20 / 30 minutes |
+| New phones one network brings into a show with free votes — the founder's number, the count each fan file allows, and the most a script on one network can get (`NEW_DEVICES_PER_NETWORK`, `NET_QUOTA`, decision 0149) | 200 / 28 a file / 336 |
+| The room's head count, for the polling rung and the board's length: phones seen in the last (`PRESENCE_WINDOW_MS`) | 30 minutes |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
 | A sign-in session lasts / renews itself on a reply once it is older than (`TOKEN_LIFE`, `RENEW_AFTER_MS`, decision 0172) | 7 days / 24 hours |
 | Checkouts a device may open in a row / per minute after that (`PAY_BURST`, `PAY_PER_MIN`, decision 0111) | 40 / 10 |

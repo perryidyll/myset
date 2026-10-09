@@ -1,6 +1,6 @@
 import { COUNTDOWN_MS, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, countInRoom, pollFloorFor, boardLimitFor, tipsTonight,
-         GENRES, playable, votable } from './_lib.mjs';
+         GENRES, playable, votable, liveFan, liveFans, sha } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { VIBE_OPTIONS } from './_requests.mjs';
@@ -51,6 +51,7 @@ export function buildBoard({ aid, show, fans, flags, meta = null, at = Date.now(
   const roomCap = Number(show.roomCap) > 0 ? Number(show.roomCap) : null;
   const live = show.status === 'live';
   const heads = live ? countInRoom(fans, show) : 0;
+  liveFans(fans, show);            // a vote its song has already collected is not on the board (0147)
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
 
@@ -157,17 +158,10 @@ export function buildBoard({ aid, show, fans, flags, meta = null, at = Date.now(
     // what a phone that has never voted starts with — the page's fallback if /api/me is unreachable
     freeCredits: Math.max(0, show.freeCredits || 0),
     setlist: show.listId ? { name: show.listName } : null,
-    /* Only the genres actually used by a song the room can see — a filter row of
-       fifteen chips where twelve match nothing is worse than no filter row. */
-    tags: (() => {
-      const used = new Set();
-      for (const s of pool) {
-        for (const t of s.tags || []) used.add(t);
-      }
-      const labels = Object.fromEntries([...GENRES, ...show.tags.map((t) => [t.id, t.label])]);
-      return [...used].filter((id) => labels[id]).map((id) => ({ id, label: labels[id] }))
-        .sort((a, b) => a.label.localeCompare(b.label));
-    })(),
+    tags: usedTags(show, pool),
+    /* WHICH SONG LIST THIS BOARD BELONGS TO (decision 0150). A phone that holds the
+       list under another version fetches it again, once; see `songList` below. */
+    songsV: songList(show).v,
     /* Only advertised when it is actually on, so the page never renders a button
        that leads to "sorry, not tonight". */
     asks: {
@@ -210,6 +204,74 @@ export function buildBoard({ aid, show, fans, flags, meta = null, at = Date.now(
   };
 }
 
+/* Only the genres actually used by a song the room can see — a filter row of
+   fifteen chips where twelve match nothing is worse than no filter row. */
+function usedTags(show, pool) {
+  const used = new Set();
+  for (const s of pool) {
+    for (const t of s.tags || []) used.add(t);
+  }
+  const labels = Object.fromEntries([...GENRES, ...show.tags.map((t) => [t.id, t.label])]);
+  return [...used].filter((id) => labels[id]).map((id) => ({ id, label: labels[id] }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/* EVERY SONG THE ROOM CAN VOTE FOR, ONCE PER PAGE OPEN (decision 0150, INVARIANT 0hx).
+
+   Past 3,000 phones the board carries fifteen songs, and the page could list and
+   search only what the board carried: a song nobody had voted for yet could not be
+   found, so the early leaders froze in place. The cut was right about bytes and wrong
+   about what a fan can choose. So the list itself — titles, artists, prices, tags —
+   is its own reply, the same for every phone, and it only changes when the artist
+   does something: a song started, added, hidden, a setlist picked, a price changed.
+   Votes never change it. That is what lets it be kept at the edge for a day under a
+   version (`v`) that is a hash of exactly what it says.
+
+   `songs` is what is still to play, in the order the board ranks songs that hold no
+   votes (`rankSongs`, by title); `played` is what was played and can be asked for
+   again, newest first — the same two groups, the same filters and the same prices as
+   the board's (`votable`, `costOf`), and between shows the whole setlist at 1 with
+   nothing played, as the board shows it. The nowPlaying song is in neither.
+
+   `SONGLIST_FORM` is part of every version: change the shape of an entry and bump it,
+   or a phone could be served a day-old copy of the old shape under a version that
+   still matches. */
+export const SONGLIST_FORM = 1;
+export function songList(show) {
+  const dark = show.status !== 'live';
+  const { songs: pool } = playable(show);
+  const item = (s) => ({ id: s.id, title: s.title, artist: s.artist || '',
+                         cost: dark ? 1 : costOf(s.id, show), tags: s.tags || [] });
+  const songs = rankSongs(pool
+    .filter((s) => dark || (s.id !== show.nowPlaying && !show.played.includes(s.id)))
+    .map(item), {}, {});
+  const canVote = votable(show);
+  const played = dark ? [] : show.played
+    .map((id) => show.songs.find((s) => s.id === id))
+    .filter((s) => s && canVote(s))
+    .map(item)
+    .reverse();
+  const body = { songs, played, tags: usedTags(show, pool) };
+  return { v: sha(SONGLIST_FORM + JSON.stringify(body)).slice(0, 16), ...body };
+}
+
+/* THE POLL WITH ONLY THE TALLIES (decision 0150). For a page that holds the list:
+   the board without the song shapes, and `tally` instead — [id, votes, firstAt] for
+   every song that holds a vote, the songs still to play first in the board's rank
+   order (the top of the chart and then the tail below its cut), then the played ones
+   in `played`'s order. A song the list has and the tally does not holds no votes.
+   Asked for with `lean=1`; without it the board is exactly what it always was. */
+export function leanBoard(board) {
+  const { songs, played, tail, tags, ...rest } = board;
+  const row = (s) => [s.id, s.votes, s.firstAt || null];
+  const tally = [
+    ...(songs || []).filter((s) => s.votes > 0).map(row),
+    ...(tail || []),
+    ...(played || []).filter((s) => s.votes > 0).map(row),
+  ];
+  return { ...rest, tally };
+}
+
 /** The Live tab's figures, for the vote page, as far as the artist allows. */
 export function crowdNumbers(show, fans, counts, meta, live) {
   const c = show.crowd || {};
@@ -226,7 +288,7 @@ export function crowdNumbers(show, fans, counts, meta, live) {
 /** What is true of ONE phone and nobody else. Reads nothing: the caller hands it
  *  the fan's own record, which came out of one shard. */
 export function buildMe({ show, fanId, me, myAsks }) {
-  const rec = me || { v: [], extra: 0 };
+  const rec = liveFan(me, show) || { v: [], extra: 0 };      // without what its song collected (0147)
   const mine = rec.v || [];
   const total = show.freeCredits + (rec.extra || 0);
   const used = creditsUsed(rec, show);

@@ -264,6 +264,11 @@ export const noteMine = (aid, row) =>
     return true;
   });
 
+/** The city documents this artist ever bought a spot in — how the off-site copy
+ *  names a `feat_` key without a list() (0146). */
+export const cityKeysOf = async (aid) =>
+  [...new Set((await readMine(aid)).list.map((r) => r && r.key).filter((k) => typeof k === 'string' && k.startsWith('feat_')))];
+
 /** Everything this artist has featured, cleaned of nights that have gone. */
 export const upcomingMine = async (aid, today) =>
   (await readMine(aid)).list.filter((r) => r && r.date >= today).sort((a, b) => a.date.localeCompare(b.date));

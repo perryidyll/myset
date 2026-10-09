@@ -1,17 +1,17 @@
 import { guard } from './_errlog.mjs';
-import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
+import { COUNTDOWN_MS, getShow, mutateShow, readFans, liveFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
          MIN_CODE, weakCode, studioCodeHash, cleanArtistId,
          normPacks, normAsk,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, DEFAULT_ARTIST,
-         DEFAULT_FREE_CREDITS, readDoc, KEY } from './_lib.mjs';
+         DEFAULT_FREE_CREDITS, readDoc, KEY, TAPS_KEPT } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, MAX_CHART } from './_chart.mjs';
 import { genresFor, MAP_SIZE } from './_genremap.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong,
-         completeSongRequests, declineRequestsForSong } from './_requests.mjs';
+         completeSongRequests, settleOwedRefund } from './_requests.mjs';
 import { readArtists, mutateArtists, artistById } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
@@ -2001,9 +2001,13 @@ const main = async (req) => {
   let err = null, playedNow = null, clearBoard = false, note = null;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
-  let counts = null, firstAt = null, votersNow = 0;
+  let counts = null, firstAt = null, votersNow = 0, showBefore = null;
   if (action === 'play' || action === 'playTop') {
-    const f = await readFans(aid);
+    // what the board shows: without the votes a song already collected (0147).
+    // The show read is the one `prevShow` below would have made, moved up — not a new one.
+    const [f0, sh0] = await Promise.all([readFans(aid), getShow(aid)]);
+    showBefore = sh0;
+    const f = liveFans(f0, sh0);
     counts = voteCounts(f); firstAt = firstVotedAt(f);
     votersNow = Object.values(f).filter((x) => (x.v || []).length).length;
   }
@@ -2048,6 +2052,19 @@ const main = async (req) => {
      round the check, and there IS a test that sets it back up to prove the guard
      fires. */
   const DOUBLE_TAP_MS = Number(process.env.MYSET_DOUBLE_TAP_MS ?? 8000);
+  /* ONE TAP, ONE SONG (decision 0151). The window has an edge: a Play slower than it
+     (bar wifi and a busy store, with no clock on the Studio's request) comes back to
+     a retry the window no longer covers, and Play Top then starts the NEXT song down
+     while the first goes to "played" unperformed. So the Studio sends an id with each
+     Play tap and the SAME id with that tap's retry, and the show keeps the last few in
+     the same write that starts the song. An id the show already holds is answered with
+     what that tap did, never obeyed twice. `rq` names this request, so a loop that went
+     round again after its own write landed (the read-back met a later write) knows the
+     tap it finds is its own and carries on with the sweep and the event log. */
+  const tap = (action === 'play' || action === 'playTop')
+    ? String(body.tap || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) : '';
+  const rq = tap ? Math.random().toString(36).slice(2, 12) : '';
+  let repeat = null;
   let droppedSong = null, refundSong = null, completedSong = null;
   /* `prevShow` used to exist so the round reset could price the round it was
      wiping. There is no round reset any more (a night is one round) and a vote is
@@ -2055,7 +2072,7 @@ const main = async (req) => {
      still wants the pre-mutation show for `logPlay`, and the release note below
      compares the playable set before and after. */
   const NEEDS_BEFORE = new Set(['play', 'playTop', 'freeCredits', 'replayCost']);
-  const prevShow = NEEDS_BEFORE.has(action) ? await getShow(aid) : null;
+  const prevShow = NEEDS_BEFORE.has(action) ? (showBefore || await getShow(aid)) : null;
   /* setCode's deny-list refuses the page's own name, which is a registry read and
      so is taken before the CAS. `show.slug` was never a field, so that refusal
      silently never fired until 2026-09-28 (0110). */
@@ -2072,6 +2089,10 @@ const main = async (req) => {
      them; the values used are the run that stuck. */
   let showIdNow = null, playedEntry = null, before = null;
   await mutateShow(aid, (show) => {
+    if (tap) {
+      const seen = show.taps.find((t) => t.id === tap);
+      if (seen) { if (seen.rq !== rq) repeat = seen; return false; }
+    }
     showIdNow = show.showId || null;
     before = JSON.stringify(show);
     // which songs exist, before anything in the switch runs — see the compare at
@@ -2116,13 +2137,19 @@ const main = async (req) => {
          play past the two-hundredth is still filed there. */
       if (show.log.length > 200) show.log = show.log.slice(-200);
     };
+    /* THE SONG COLLECTS ITS VOTES IN THIS WRITE (decision 0147). Every vote row
+       says how many songs had started when it was cast; marking this song with the
+       new count makes every row stamped lower one this song has collected —
+       including a vote still on its way that lands after the sweep below. */
+    const collect = (id) => { show.plays = (show.plays || 0) + 1; show.col[id] = show.plays; };
 
     switch (action) {
       /* A DOUBLE START IS ALWAYS A MISTAKE. No musician starts two songs eight
          seconds apart, but a lost response on bar wifi made it easy: the write
          landed, the Studio showed "try again", the artist tapped again, and a second
          song burned along with the round's votes. So the guard is on the physical
-         reality rather than on request ids, which cannot survive a human retry.
+         reality, which needs nothing from the page. Past its window the tap id does
+         the job instead: the Studio carries one tap's id to that tap's retry (0151).
          `play` names a song, so re-sending the SAME one is simply already done. */
       case 'play': {
         const id = body.song;
@@ -2137,6 +2164,7 @@ const main = async (req) => {
         show.nowPlaying = id || null;
         show.nowPlayingAt = Date.now();
         show.windowOpen = true; playedNow = id;
+        collect(id);
         break;
       }
       case 'playTop': {
@@ -2165,6 +2193,7 @@ const main = async (req) => {
         show.nowPlaying = pool[0].id;
         show.nowPlayingAt = Date.now();
         show.windowOpen = true; playedNow = pool[0].id;
+        collect(pool[0].id);
         break;
       }
       case 'endSong': {
@@ -2244,6 +2273,9 @@ const main = async (req) => {
           }
         }
         sg.active = turningOn;
+        /* Shown again, the declined song is un-declined: the votes still on it stand,
+           and there is no refund left to owe on them (0155). */
+        if (turningOn && show.refundsOwed) delete show.refundsOwed[sg.id];
         break;
       }
       case 'addSong': {
@@ -2336,7 +2368,10 @@ const main = async (req) => {
       }
       case 'removeSong':
         show.songs = show.songs.filter((s) => s.id !== body.song);
-        droppedSong = String(body.song || '');   // remove standing votes; do not refund
+        /* a declined song whose votes are still owed back is refunded, not dropped: the
+           refund was promised when it was declined (0155); its mark stays until it has run */
+        if (((show.refundsOwed || {})[body.song] || {}).show === show.showId) refundSong = String(body.song);
+        else droppedSong = String(body.song || '');   // remove standing votes; do not refund
         break;
       case 'declineSong': {
         const sg = show.songs.find((s) => s.id === body.song);
@@ -2344,6 +2379,10 @@ const main = async (req) => {
         if (show.nowPlaying === sg.id) { err = ['That song is playing now', 409]; return false; }
         if (show.played.includes(sg.id)) { err = ['Played songs can’t be declined as ordinary votes', 409]; return false; }
         sg.active = false;
+        /* The refund is written down in the same write that hides the song (0155): if
+           giving the votes back then fails, the Studio still has the song to finish it
+           with — hiding it used to take the only button away. */
+        show.refundsOwed = { ...(show.refundsOwed || {}), [sg.id]: { show: show.showId, title: sg.title || '', at: Date.now() } };
         refundSong = sg.id;
         break;
       }
@@ -2370,6 +2409,8 @@ const main = async (req) => {
       case 'clearSetlist': show.songs = []; break;
       default: err = ['unknown action', 400]; return false;
     }
+    // only a tap that started a song gets here: every refusal above returned false
+    if (tap) show.taps = [...show.taps, { id: tap, rq, song: playedNow, at: Date.now() }].slice(-TAPS_KEPT);
     /* MEASURED, not listed. The previous version kept an allow-list of actions that
        touch the library, with a comment asking the next person to remember to add
        to it — and two new handlers were added in the very same change that didn't.
@@ -2379,6 +2420,14 @@ const main = async (req) => {
     return true;
   });
 
+  /* A retry of a tap that already started its song. The first request did the work and
+     is finishing it (the sweep, the event log) or has; this one does none of it again,
+     and answers with the stage as it stands, which shows what that tap started. */
+  if (repeat) {
+    let stage = null;
+    try { stage = await stagePayload(aid, me); } catch { /* the first tap's write stands */ }
+    return json({ ok: true, stage, note: null, songId: null, repeat: true });
+  }
   if (err) return bad(err[0], err[1]);
   // the library changed => what's in the active setlist may have changed with it
   if (libChanged) {
@@ -2403,11 +2452,9 @@ const main = async (req) => {
   }
   if (clearBoard) await logLeft(aid, showIdNow, 'reset', await wipeBoard(aid)).catch(() => {});
   else if (refundSong) {
-    let given = [];
-    try { given = await refundSongVotes(aid, refundSong, await getShow(aid)); }
-    catch { return bad('Song hidden, but the vote return is still finishing — tap “Decline + refund” again.', 503); }
-    await logLeft(aid, showIdNow, 'refund', given).catch(() => {});
-    await declineRequestsForSong(aid, refundSong, await getShow(aid));
+    const settled = await settleOwedRefund(aid, refundSong);
+    if (!settled.ok) return bad('Song hidden — its votes haven’t all gone back yet. Tap “Finish the refund” on the Live tab.', 503);
+    await logLeft(aid, showIdNow, 'refund', settled.given).catch(() => {});
   }
   // a deleted song's votes must not go on being counted for a song nobody can see
   else if (droppedSong) await logLeft(aid, showIdNow, 'drop', await dropSongVotes(aid, droppedSong)).catch(() => {});

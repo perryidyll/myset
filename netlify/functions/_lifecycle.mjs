@@ -1,19 +1,21 @@
-import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts } from './_lib.mjs';
+import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts, readDoc, KEY, sameNightResume } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
-import { readEvents, nextOccurrence, occKey } from './_events.mjs';
+import { readEvents, nextOccurrence, occKey, isVenueOwner } from './_events.mjs';
 import { planForArtist, isPlatformOwner } from './_plan.mjs';
 
 const AUTO_INDEX = 'gigsched';
-/* `regdirty` rides on the same write (decision 0095): the founder's register
-   (`_register.mjs`) folds an artist's nights the next time its bell rings, and
-   these two CAS writes are the ones every start and end already make — so a night
-   reaches myset.vip/moneymodel/shows within minutes at no extra round trip on the
-   End tap or in the scheduler's ring. The cron clears the mark once it has folded. */
-const markLive = (aid, at = Date.now()) => casDoc(AUTO_INDEX,
-  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; d.live[aid] = at; d.regdirty ||= {}; d.regdirty[aid] = at; return true; }).catch(() => {});
-const unmarkLive = (aid) => casDoc(AUTO_INDEX,
-  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; delete d.live[aid]; d.regdirty ||= {}; d.regdirty[aid] = Date.now(); return true; }).catch(() => {});
+/* ONE LIVE MARK PER ARTIST (decision 0154, INVARIANT 0ij). Every Start and every End
+   used to write this one global document — the bell's `live` list for the idle sweep,
+   and the register's `regdirty` mark (decision 0095) — in a CAS whose failure was
+   swallowed. A thousand starts around the top of the hour all wrote it, and so does
+   the bell's own lock and sweep: forty tries each, then nothing, and a live show the
+   idle sweep would never find. Now the live mark is the artist's own show record —
+   `status`, `startedAt`, `endedAt`, written in the same CAS as the flip, so it cannot
+   be lost on its own — and no start or end writes a global document. `walkLive`
+   (below) finds who is live by a computed route, the artist registry and one show
+   record each, and folds what it saw into `live` and `regdirty` in one write a ring.
+   The first-night note (below) still lands here: once per account, ever. */
 /* THE MORNING AFTER THE FIRST NIGHT (2026-09-15). One note, once per account, the
    morning after the first night that was filed: what the room did and what it
    paid, and the one next step. Queued here — the only place a night is filed —
@@ -29,6 +31,73 @@ const queueFirstNightNote = (aid, showId, endedAt) => casDoc(AUTO_INDEX,
     d.notes[aid] = { showId, due: endedAt + FIRST_NIGHT_NOTE_MS, at: endedAt };
     return true;
   }).catch(() => {});
+
+/* THE LIVE WALK (decision 0154). Run at the top of the register's bell
+   (`registercron.mjs`, every ten minutes): up to LIVE_WALK show records a ring,
+   LIVE_WALK_POOL at a time, round the artist registry from `liveCursor`, until
+   `deadline`. What it saw goes where the readers already look:
+     · `live[aid]` — the idle sweep's list (`_auto.mjs sweepIdle`). A live show is put
+       on it with its last sign of life (its start or its last write), and that is only
+       ever moved forward; a show seen not live is taken off.
+     · `regdirty[aid]` — the register's mark: set when the night changed since the walk
+       last looked (`liveSeen[aid]`: its status, start and end), so the fold in the same
+       ring files it. On the first lap every artist with a night is marked once.
+   ONE write, and only when something changed. A show record that cannot be read is
+   left as it was and looked at again next lap. Not 0140's `on` mark: that is the
+   calendar index saying tonight's start is settled, and it stays after the artist
+   ends the show; a hand-started show has no calendar entry to carry it.
+   Cost, written down: the registry, this index and one show record per artist walked;
+   at most one write. The registry is covered every ring up to LIVE_WALK artists, and
+   in LIVE_WALK-sized steps beyond — a show is found at most one lap after it starts. */
+export const LIVE_WALK = 300;
+export const LIVE_WALK_MS = 2000;
+const LIVE_WALK_POOL = 8;
+const liveSig = (s) => (s && s.startedAt ? `${s.status === 'live' ? 'L' : 'E'}${s.startedAt}.${s.endedAt || 0}` : '');
+export async function walkLive({ now = Date.now(), limit = LIVE_WALK, deadline = Infinity } = {}) {
+  const { readArtists } = await import('./_auth.mjs');
+  const [reg, idx] = await Promise.all([readArtists(), readDoc(AUTO_INDEX, null)]);
+  const ids = Object.keys(reg.byId || {}).filter((id) => !isVenueOwner(id)).sort();
+  const from = ids.length ? (Number((idx.data || {}).liveCursor) || 0) % ids.length : 0;
+  const order = ids.slice(from).concat(ids.slice(0, from)).slice(0, Math.max(1, limit));
+  const seen = {};
+  let taken = 0;
+  const worker = async () => {
+    while (taken < order.length) {
+      if (taken > 0 && Date.now() > deadline) return;
+      const aid = order[taken++];
+      try {
+        const { data: s } = await readDoc(KEY.show(aid), null);
+        seen[aid] = { live: !!s && s.status === 'live', sig: liveSig(s),
+                      last: Math.max(Number(s && s.startedAt) || 0, Number(s && s.updatedAt) || 0) };
+      } catch (e) { console.error('live walk: could not read', aid, e && e.message); }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(LIVE_WALK_POOL, order.length) }, worker));
+  const next = ids.length ? (from + taken) % ids.length : 0;
+  const lap = ids.length > 0 && from + taken >= ids.length;      // round the whole registry: forget who has left
+  const known = new Set(ids);
+  let added = 0, removed = 0, dirty = 0;
+  const fold = (d) => {
+    d.live ||= {}; d.regdirty ||= {}; d.liveSeen ||= {};
+    added = 0; removed = 0; dirty = 0;
+    let touched = false;
+    for (const [aid, s] of Object.entries(seen)) {
+      if (s.live) {
+        if (!(Number(d.live[aid]) >= s.last)) { if (!d.live[aid]) added += 1; d.live[aid] = Math.max(Number(d.live[aid]) || 0, s.last); touched = true; }
+      } else if (aid in d.live) { delete d.live[aid]; removed += 1; touched = true; }
+      if ((d.liveSeen[aid] || '') !== s.sig) {
+        if (s.sig) { d.liveSeen[aid] = s.sig; d.regdirty[aid] = now; dirty += 1; } else delete d.liveSeen[aid];
+        touched = true;
+      }
+    }
+    if (lap) for (const aid of Object.keys(d.liveSeen)) if (!known.has(aid)) { delete d.liveSeen[aid]; touched = true; }
+    if ((Number(d.liveCursor) || 0) !== next) { d.liveCursor = next; touched = true; }
+    return touched;
+  };
+  // nothing new against the copy already read: no write, and no second read
+  if (fold(JSON.parse(JSON.stringify(idx.data || {})))) await casDoc(AUTO_INDEX, () => ({ v: 1, byArtist: {}, live: {} }), fold);
+  return { looked: taken, of: ids.length, added, removed, dirty };
+}
 
 /* STARTING AND ENDING A SHOW — the one implementation.
 
@@ -57,7 +126,8 @@ const queueFirstNightNote = (aid, showId, endedAt) => casDoc(AUTO_INDEX,
 export function countGig(sh, by = 'artist') {
   sh.gigCount += 1;
   /* `auto` remembers the calendar began this night, so a quiet one can be given back
-     (below). A resume keeps what the night already was. */
+     (below). A resume keeps what the night already was — and a resume of the same
+     night never reaches here at all (0156, `sameNightResume`). */
   sh.freeNight = sh.freeNight && sh.freeNight.id === sh.showId
     ? { ...sh.freeNight, n: sh.freeNight.n + 1 } : { id: sh.showId, n: 1, auto: by === 'schedule' };
 }
@@ -199,6 +269,14 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   // A finished show must be snapshotted BEFORE anything wipes the tally —
   // carryFans() destroys the only copy.
   if (fresh) {
+    /* A refund still owed from a "Decline + refund" (0155) is finished BEFORE the fans
+       are carried into the new night: after that there is nothing left to give back to.
+       Never a reason the start fails — what cannot be finished is said in the log. */
+    try {
+      const { settleOwedRefunds } = await import('./_requests.mjs');
+      const owed = await settleOwedRefunds(aid);
+      if (owed.left.length) console.error('startShow: refunds still owed as a new night began', aid, owed.left.join(','));
+    } catch { /* the store is failing; the start below will say so if it must */ }
     try {
       const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
       await completeSongRequests(aid, '');
@@ -206,7 +284,8 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
     } catch { /* an expiring authorization must never block a new show */ }
     try {
       const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-      await archiveShow(aid, prev, fans);
+      // the same bound on pricing as the end (0153): a count cut short is finished later
+      await archiveShow(aid, prev, fans, { deadline: Date.now() + moneyAtEndMs() });
     } catch { /* never block starting a show on the archive */ }
   }
 
@@ -221,11 +300,18 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   let err = null, already = false, placed = null;
   await mutateShow(aid, (show) => {
     if (!fresh && show.status === 'live') { already = true; return false; }
+    /* AN ACCIDENTAL END CAN BE UNDONE AT THE CAP (decision 0156, INVARIANT 0il). A
+       resume of the night already counted, started less than twelve hours ago, is the
+       same night: it is not refused and not counted again. Anything else — a new show,
+       a resume of an older night or of one given back — meets the cap exactly as before. */
+    const sameNight = !fresh && sameNightResume(show, now);
     if (fresh && prevQuiet && prevShow.showId === show.showId) uncountGig(show);
-    if (gigCap !== null && show.gigCount >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
+    if (gigCap !== null && !sameNight && show.gigCount >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
     if (fresh) {
       show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
+      delete show.refundsOwed;          // last night's, finished above or past finishing (0155)
       show.log = [];
+      show.col = {};                 // last night's marks; `plays` itself only ever counts up (0147)
       show.showId = freshId;
       show.startedAt = now;
       show.windowOpen = true;
@@ -263,7 +349,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
        changes size underneath the people standing in it. Every show from here on
        carries its number. */
     show.roomCap = roomCap;
-    if (gigCap !== null) countGig(show, by);   // after the fresh showId, so the night it names is this one
+    if (gigCap !== null && !sameNight) countGig(show, by);   // after the fresh showId, so the night it names is this one
     show.status = 'live';
     show.startedBy = by;
     show.endedBy = null;
@@ -290,13 +376,20 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   }
   // paid votes survive a reset — only a fan who gifted them loses them
   if (fresh) await carryFans(aid, prevShow || (await getShow(aid)));
-  await markLive(aid, now);
+  // no global write: the show record above is the live mark, and the live walk finds it (0154)
   return { ok: true, err: null, note, already };
 }
 
+/* HOW LONG THE END MAY SPEND PRICING THE NIGHT (decision 0153). The room has already
+   stopped by then; this only bounds how long the tap (or the bell's ring) waits for
+   Stripe. A count it cuts short is filed as 'stripe-partial' and finished later
+   (`priceNight`). Read per call so the suite can shorten it; production never sets it. */
+const moneyAtEndMs = () => Number(process.env.MYSET_MONEY_AT_END_MS ?? 3000);
+
 /**
- * End a show. Archives first, always; idempotent (ending an ended show refreshes
- * the archive and changes nothing else). `by` is stamped for the Studio.
+ * End a show. The room stops first, then the night is filed; idempotent (ending an
+ * ended show refreshes the archive and changes nothing else). `by` is stamped for
+ * the Studio.
  */
 export async function endShow(aid, { by = 'artist', title = '', discard = false, ack = '' } = {}) {
   /* A discard of a real night is asked about FIRST, before anything is released or
@@ -312,29 +405,21 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
         return { ok: false, err: ['This was a real show. Check what discarding it means first.', 409], confirm: { ...verdict, cap: gigCap, used: sh.gigCount }, note: null };
     }
   }
-  /* Ending the night is not the same as finishing the current song. Anything the
-     artist never explicitly completed is released, never charged. */
-  try {
-    const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
-    await completeSongRequests(aid, '');
-    await cancelOpenPledges(aid);
-  } catch { /* Stripe will release an uncaptured authorization at expiry */ }
+  /* THE ROOM STOPS FIRST, THEN THE NIGHT IS FILED (decision 0153, INVARIANT 0ii). This
+     released the request holds and priced the whole night from Stripe — up to ten
+     pages — BEFORE the show was flipped to ended: a slow Stripe kept the room voting
+     after the artist had tapped End, and a tap that ran out of time ended nothing.
+     The flip is now the first write. Ending wipes no tally (only a fresh start does,
+     17c), so the archive below still files the whole night, and it reads the fans
+     AFTER the flip, when no more votes can land. Whether a calendar night was quiet
+     (0120) is still decided before the flip, because the flip gives it back. */
   let quiet = false;
   if (!discard) try {
-    const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-    quiet = quietAutoNight(prev, fans);
-    const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
-    // `endedBy` is written on the show record below, after the archive — so the filed night is told here (0095)
-    const filed = await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100), endedBy: by }, fans);
-    /* The first night on file gets the morning-after note. archiveShow returns
-       the index it wrote; one row means this was the first. */
-    if (filed && filed.indexed) {
-      /* The count rides on meta so the stage payload can say "first gig" for free. */
-      await mutateMeta(aid, (m) => { if (m.nights === filed.nights) return false; m.nights = filed.nights; return true; }).catch(() => {});
-      if (filed.nights === 1) await queueFirstNightNote(aid, prev.showId, Date.now());
-    }
-  } catch { /* never block ending a show on the archive */ }
-  await mutateShow(aid, (show) => {
+    const prev = await getShow(aid);
+    // quietAutoNight only ever says yes for a night the calendar began, so only that one needs the fans
+    if (prev.freeNight && prev.freeNight.auto && prev.freeNight.id === prev.showId) quiet = quietAutoNight(prev, await readFans(aid));
+  } catch { /* the end goes ahead, as it always did when this read failed */ }
+  const flipped = await mutateShow(aid, (show) => {
     hadNight = !!(show.freeNight && show.freeNight.id === show.showId);
     if (quiet || (discard && (!verdict || verdict.outcome === 'warned'))) uncountGig(show);
     if (discard && verdict && verdict.outcome === 'warned') show.discardWarnedAt = Date.now();
@@ -345,7 +430,7 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
     show.endedAt = Date.now();
     return true;
   });
-  await unmarkLive(aid);
+  const ended = flipped && flipped.data;
   /* Every free-plan discard is written down (0122), so a pattern shows on the Sheet's
      Discards tab: when, how long, how many votes, what it took, and what happened. */
   if (discard && gigCap !== null && hadNight) {
@@ -356,6 +441,36 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false,
       return true;
     }).catch(() => {});
   }
+  /* A refund still owed from a "Decline + refund" (0155) is finished here, while the
+     night's fans are still the night's; what cannot be finished stays owed for the
+     Studio and the next fresh start. */
+  try {
+    const { settleOwedRefunds } = await import('./_requests.mjs');
+    await settleOwedRefunds(aid);
+  } catch { /* still owed; nothing about ending waits on it */ }
+  /* Ending the night is not the same as finishing the current song. Anything the
+     artist never explicitly completed is released, never charged. After the flip, so
+     no new hold can arrive (a request needs a live show), and before the archive, so
+     a hold captured here is in the night's money. */
+  try {
+    const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
+    await completeSongRequests(aid, '');
+    await cancelOpenPledges(aid);
+  } catch { /* Stripe will release an uncaptured authorization at expiry */ }
+  if (!discard && ended) try {
+    const fans = await readFans(aid);
+    const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
+    // the record already says who ended it (0095): the flip above wrote `endedBy`
+    const filed = await archiveShow(aid, { ...ended, archiveTitle: String(title || fallback).slice(0, 100) }, fans,
+      { deadline: Date.now() + moneyAtEndMs() });
+    /* The first night on file gets the morning-after note. archiveShow returns
+       the index it wrote; one row means this was the first. */
+    if (filed && filed.indexed) {
+      /* The count rides on meta so the stage payload can say "first gig" for free. */
+      await mutateMeta(aid, (m) => { if (m.nights === filed.nights) return false; m.nights = filed.nights; return true; }).catch(() => {});
+      if (filed.nights === 1) await queueFirstNightNote(aid, ended.showId, Date.now());
+    }
+  } catch { /* never block ending a show on the archive: it is ended already, and a fresh start files it (17c) */ }
   const note = verdict && verdict.outcome === 'counted' ? `Discarded — it still counts as one of your ${gigCap} free shows.` : null;
   return { ok: true, err: null, note };
 }

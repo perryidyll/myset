@@ -12,6 +12,10 @@
 # behave the way production does.
 set -e
 cd "$(dirname "$0")/.."
+# Every test process appends the keys it wrote here; the last step reads them all
+# (test/keyfamilies.mjs): no kind of document without a second home, or a reason.
+MYSET_KEYLOG="$(mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX")"
+export MYSET_KEYLOG
 echo "── syntax ──"
 node --import ./test/register.mjs test/syntax.mjs
 echo
@@ -38,6 +42,9 @@ node test/qr.mjs
 echo
 echo "── how big a room can get ──"
 node --import ./test/register.mjs test/roomsize.mjs
+echo
+echo "── a traffic jam: many phones writing the same file at once ──"
+node test/contention.mjs
 echo
 echo "── cross-tenant isolation ──"
 node --import ./test/register.mjs test/tenancy.mjs
@@ -81,11 +88,26 @@ echo
 echo "── a vote stays on its song ──"
 node --import ./test/register.mjs test/votesstay.mjs
 echo
+echo "── Play is one write: a vote that lands after its song started (0147) ──"
+node --import ./test/register.mjs test/playonewrite.mjs
+echo
+echo "── one tap, one song: a slow Play and its retry (0151) ──"
+node --import ./test/register.mjs test/onetap.mjs
+echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs
 echo
+echo "── the cast receipts are short (0148) ──"
+node --import ./test/register.mjs test/receipts.mjs
+echo
+echo "── new phones per network, and a head count of who is still here (0149) ──"
+node --import ./test/register.mjs test/netcap.mjs
+echo
 echo "── paid-vote attribution and artist decline/refund ──"
 node --import ./test/register.mjs test/decline.mjs
+echo
+echo "── a refund owed is written down before it is paid (0155) ──"
+node --import ./test/register.mjs test/refundowed.mjs
 echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
@@ -114,11 +136,20 @@ echo
 echo "── the shared-board split ──"
 node --import ./test/register.mjs test/split.mjs
 echo
+echo "── every song the room can vote for, and the poll with only the tallies (0150) ──"
+node --import ./test/register.mjs test/songlist.mjs
+echo
+echo "── the personal poll asks for the show on condition (0152) ──"
+node --import ./test/register.mjs test/showkept.mjs
+echo
 echo "── the one warm door ──"
 node --import ./test/register.mjs test/fandoor.mjs
 echo
 echo "── the free plan's limits ──"
 node --import ./test/register.mjs test/limits.mjs
+echo
+echo "── free vibes keep their own places; the same night resumes at the cap (0156) ──"
+node --import ./test/register.mjs test/vibesandresume.mjs
 echo
 echo "── verifying an artist automatically ──"
 node --import ./test/register.mjs test/autoverify.mjs
@@ -129,6 +160,9 @@ echo
 echo "── shows that start and end themselves ──"
 node --import ./test/register.mjs test/autoshow.mjs
 echo
+echo "── one live mark per artist: no start or end writes a shared document (0154) ──"
+node --import ./test/register.mjs test/livewalk.mjs
+echo
 echo "── where a night happened ──"
 node --import ./test/register.mjs test/place.mjs
 echo
@@ -137,6 +171,9 @@ node --import ./test/register.mjs test/histname.mjs
 echo
 echo "── a tip after the show is still that night's money ──"
 node --import ./test/register.mjs test/latetips.mjs
+echo
+echo "── the room stops first; the night is priced after, on a clock (0153) ──"
+node --import ./test/register.mjs test/endfirst.mjs
 echo
 echo "── the first gig: the sign, the count, the morning-after note ──"
 node --import ./test/register.mjs test/firstgig.mjs
@@ -245,3 +282,7 @@ node test/seatstudio.mjs
 echo
 echo "── push alerts per seat: who hears what, and a sign-out ends them (0114) ──"
 node --import ./test/register.mjs test/pushseats.mjs
+
+echo
+echo "── no kind of document without a second home, or a reason (0146) ──"
+node --import ./test/register.mjs test/keyfamilies.mjs

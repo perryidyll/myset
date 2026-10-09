@@ -94,8 +94,8 @@ def report():
     print(f'  {"TOTAL":<14} {len(ks)}')
 
     print('\nTHINGS WORTH KNOWING')
-    print('  spreadsheet export .. there is NO Google Sheet and never was;'
-          ' nothing is mirrored outside Netlify')
+    print('  off-site copy ....... mirrorcron copies every document to R2 once a day'
+          ' (decisions 0069, 0146); `python3 tools/backup.py --coverage` names what it has not')
     # the sealing keyring (decision 0113): after a rotation, MYSET_SECRET_PREVIOUS may be
     # removed once "last wrapped" is later than the deploy that brought the new value
     ring = blob('sealkeys')

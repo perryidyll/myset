@@ -82,7 +82,7 @@ await cast('fan-3', 'echo', 1);
 {
   const fans = await readFans(AID);
   const row = fans['fan-1'].va.alpha[0];
-  ok('a vote row carries the moment of the cast', Array.isArray(row) && row.length === 3 && row[2] >= t0 && row[2] <= Date.now(), row);
+  ok('a vote row carries the moment of the cast, and how many songs had started (0147)', Array.isArray(row) && row.length === 4 && row[2] >= t0 && row[2] <= Date.now() && row[3] === 0, row);
   eq('nothing in the log before a song plays', (await readEventLog(AID, showId)).n, 0);
 }
 await A('play', { song: 'alpha' });
@@ -250,6 +250,116 @@ console.log('\nTHE SECOND HOME');
   ok('an hour on it tries again, and copies once R2 answers', r10.done && r10.copied === r8.failed && r10.failed === 0 && r10.err === null, r10);
   __r2.uninstall();
   eq('with R2 off, the ring says so and copies nothing', await runMirror({ owners, keysOf }), { off: true });
+}
+
+console.log('\nEVERY KIND OF DOCUMENT HAS A SECOND HOME  (decision 0146)');
+{
+  /* The 2 October 2026 audit found a dozen kinds of document the nightly copy never
+     took. One of each is made here — through the real code where there is some —
+     and then the REAL bell is rung, so the wiring in mirrorcron.mjs (which owners,
+     which keys) is what is tested, not a stand-in for it. */
+  const mirrorcron = (await import('../netlify/functions/mirrorcron.mjs')).default;
+  const S = await import('../netlify/functions/_sample.mjs');
+  const { createContact } = await import('../netlify/functions/_crm.mjs');
+  const { createVenue } = await import('../netlify/functions/_venues.mjs');
+  const { logErr, hourKey } = await import('../netlify/functions/_errlog.mjs');
+  const { noteMine } = await import('../netlify/functions/_featured.mjs');
+  const { familyOf, skipped, globalKeys, FAMILIES } = await import('../netlify/functions/_mirror.mjs');
+  const put = (k, v) => store().set(k, typeof v === 'string' || Buffer.isBuffer(v) ? v : JSON.stringify(v));
+
+  const live = await S.createSample({ kind: 'artist', name: 'The Second Homes', by: 'founder' }, { fetchMedia: false });
+  const liveV = await S.createSample({ kind: 'venue', name: 'The Second Home Bar', by: 'founder' }, { fetchMedia: false });
+  const gone = await S.createSample({ kind: 'artist', name: 'Taken Down Trio', by: 'founder' }, { fetchMedia: false });
+  ok('two sample pages and one to take down', live.ok && liveV.ok && gone.ok, [live, liveV, gone]);
+  await S.archiveSample(gone.owner);
+  const c = await createContact('artist', { name: 'A Contact', email: 'contact@example.com' });
+  const v = await createVenue({ email: 'owner@thelamp.example', name: 'The Lamp Second', city: 'Chaweng', country: 'Thailand' });
+  const vid = v && (v.venueId || v.vid || (v.venue && v.venue.venueId));
+  ok('a contact and a venue', c.ok && !!vid, { c: c.ok, v });
+  await put(`vpitch_${vid}`, { v: 1, list: [] });
+  await put(`push_v_${vid}`, { v: 1, subs: [] });
+  await put(`gigok_${vid}`, { v: 1, by: {} });
+  await put(`bugs_${AID}`, { v: 1, list: [{ at: 1, text: 'the button did nothing' }] });
+  await logErr('second-home-test', new Error('an error worth keeping'));
+  await noteMine(AID, { sid: 'h1', key: 'feat_thailand-chaweng-0a1b2c3d', date: '2099-01-01' });
+  await put('feat_thailand-chaweng-0a1b2c3d', { v: 1, byDate: {} });
+  await put('mediadash/data', { posts: [{ id: '2026-10-01_A_POST' }] });
+  await put('mediadash/thumb/2026-10-01_A_POST', Buffer.from('jpeg bytes'));
+  for (const k of ['mediadash/boosts', 'crmlib', 'crmgmail', 'costs', 'suggest', 'gsheet', 'factorycfg', 'factoryq', 'samplesup', 'samplestat', 'payowed']) await put(k, { v: 1 });
+  /* The founding page is in the registry in production; in this file it has only
+     ever been reached by its code, so it is put on the list the walk reads. */
+  const { mutateArtists } = await import('../netlify/functions/_auth.mjs');
+  await mutateArtists((reg) => { reg.byId[AID] ||= { slug: AID, name: 'The Founder', createdAt: 1, plan: 'free' }; reg.bySlug[AID] = AID; return true; });
+  // what must still never cross
+  for (const k of ['hqlock', 'showlock', `vidup_${AID}_clip1`, `vidchunk_${AID}_clip1_0`]) await put(k, { v: 1 });
+
+  __r2.install(); __r2.reset();
+  for (const k of [...__dump().keys()].filter((x) => x.startsWith('mirror'))) await store().delete(k);
+  process.env.MYSET_MIRROR_BUDGET_MS = '60000';
+  const res = await mirrorcron(new Request('https://x/.netlify/functions/mirrorcron', { method: 'POST', body: '{}' }));
+  delete process.env.MYSET_MIRROR_BUDGET_MS;
+  const st = (await readDoc(STATE, null)).data || {};
+  ok('the real bell finished a pass with nothing refused', res.status === 200 && st.passDoneAt > 0 && st.failed === 0 && st.copied > 30, st);
+  const home = new Set([...__r2.objects.keys()]);
+  const want = {
+    'a sample page that is not on the list yet': `profile_${live.owner}`,
+    'its record': `sample_${live.owner}`,
+    'a sample venue': `vprofile_${liveV.owner.slice(2)}`,
+    'the samples register': 'samplereg',
+    'the index of pages taken down': 'samplearc',
+    'a taken-down page\'s snapshot': `samplearc_${gone.owner}`,
+    'the do-not-build list': 'samplesup',
+    'the sample counters': 'samplestat',
+    'the CRM index': 'crm',
+    'a CRM contact': `crm_${c.cid}`,
+    'the message library': 'crmlib',
+    'the sealed Gmail tokens': 'crmgmail',
+    'the factory\'s settings': 'factorycfg',
+    'and its queue': 'factoryq',
+    'the company\'s costs': 'costs',
+    'venues\' suggestions': 'suggest',
+    'the sheet hand-over': 'gsheet',
+    'payments still owed a delivery': 'payowed',
+    'the media dashboard': 'mediadash/data',
+    'its boosts': 'mediadash/boosts',
+    'a thumbnail, named by its post': 'mediadash/thumb/2026-10-01_A_POST',
+    'this hour of errors': hourKey(),
+    'what fans reported from a room': `bugs_${AID}`,
+    'a city\'s featured slots, named by the artist who bought one': 'feat_thailand-chaweng-0a1b2c3d',
+    'the pitches a venue was sent': `vpitch_${vid}`,
+    'a venue\'s alert devices': `push_v_${vid}`,
+    'a venue\'s answers to shows at its place': `gigok_${vid}`,
+  };
+  for (const [what, k] of Object.entries(want)) ok(`${what} (${k.replace(/_[a-z0-9-]{8,}$/, '_…')})`, home.has(PREFIX + k));
+  ok('never a door\'s wrong-try count or an upload in pieces',
+     !['hqlock', 'showlock', `vidup_${AID}_clip1`, `vidchunk_${AID}_clip1_0`].some((k) => home.has(PREFIX + k)));
+  /* The table and the walk agree: everything that crossed is a kind the table
+     says is copied, and everything left behind is a kind it says is not. */
+  const crossed = [...home].map((k) => k.slice(PREFIX.length));
+  eq('everything that crossed is a kind the table says is copied', crossed.filter((k) => !familyOf(k) || skipped(k)), []);
+  const left = [...__dump().keys()].filter((k) => !home.has(PREFIX + k));
+  const unexplained = left.filter((k) => !skipped(k) && !/^(log_test_|ver_|vers_)/.test(k) && !/^(profile|show)_nobody$/.test(k));
+  eq('and everything left behind is a kind it says is not', unexplained, []);
+  ok('every line that says "never copied" says why', FAMILIES.every(([, how, why]) => how !== 'skip' || (why && why.length > 10)));
+  ok('the global list names nothing twice', new Set(await globalKeys()).size === (await globalKeys()).length);
+
+  /* AND IT CAN BE BROUGHT BACK. tools/r2pull.mjs lists the bucket and writes the
+     copy into the folder shape tools/backup.py --restore reads. Until 2026-10-02
+     nothing had ever read the R2 copy. */
+  const { pull } = await import('../tools/r2pull.mjs');
+  const { mkdtempSync, readFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { createHash } = await import('node:crypto');
+  const dir = mkdtempSync(tmpdir() + '/myset-r2pull-');
+  const man = await pull(dir);
+  ok('the pull reads every object, past the listing\'s first page', man.copied === home.size && man.failed.length === 0 && home.size > 25, { copied: man.copied, of: home.size, failed: man.failed });
+  const disk = (k) => readFileSync(`${dir}/keys/${k.replace(/\//g, '%2F')}`);
+  ok('each file on disk is the document the store holds, byte for byte',
+     man.rows.every((r) => { const b = __dump().get(r.key); return b && Buffer.compare(disk(r.key), Buffer.from(b.body)) === 0; }));
+  ok('with the checksum the restore compares against', man.rows.every((r) => createHash('sha256').update(disk(r.key)).digest('hex') === r.sha256));
+  ok('a key with a slash in it lands as one file', man.rows.some((r) => r.key === 'mediadash/thumb/2026-10-01_A_POST') && disk('mediadash/thumb/2026-10-01_A_POST').toString() === 'jpeg bytes');
+  rmSync(dir, { recursive: true, force: true });
+  __r2.uninstall();
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

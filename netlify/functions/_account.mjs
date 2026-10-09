@@ -96,7 +96,8 @@ export async function keysFor(aid) {
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
     `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`,
     `paylim_${aid}`,    // the checkout limiter (0111)
-    KEY.diary(aid)];    // the artist diary (0085)
+    KEY.diary(aid),     // the artist diary (0085)
+    `bugs_${aid}`];     // what fans reported from this room (0146: it had no second home, and outlived the account)
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
   const [hist, show, profile, posts, ids, pend, diary] = await Promise.all([
