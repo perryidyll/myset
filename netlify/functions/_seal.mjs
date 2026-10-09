@@ -198,6 +198,28 @@ export async function open(key, buf) {
   } catch { return { fail: 'tamper' }; }
 }
 
+/** How the keyring stands against the configured secret — for the health address and
+ *  the watch (decision 0157), READ-ONLY: it never makes the ring and never unwraps a key.
+ *    'off'       no secret configured (plaintext mode)
+ *    'absent'    a secret, and no ring yet — the first sealed write makes it
+ *    'ours'      the ring is wrapped under this secret
+ *    'previous'  wrapped under MYSET_SECRET_PREVIOUS — the next sealed write re-wraps it
+ *    'other'     wrapped under a value this server does not hold: sealed records read as
+ *                missing and nothing sealed can be written, so new sign-ins fail
+ *    'malformed' a document under the ring's key that is not a ring
+ *  A read that fails throws (StoreError, 0142) for the caller to report as such. */
+export async function ringState() {
+  const ks = keysFor('wrap');
+  if (!ks) return 'off';
+  const { readDoc } = await import('./_lib.mjs');
+  const { data: d } = await readDoc(RING_KEY, null);
+  if (!d) return 'absent';
+  if (!d.keys || typeof d.keys !== 'object' || !d.kek || !d.cur) return 'malformed';
+  if (d.kek === kidOf(ks.sign)) return 'ours';
+  if (ks.previous && d.kek === kidOf(ks.previous)) return 'previous';
+  return 'other';
+}
+
 /* One line per key per warm instance — the key's name and the reason, never the bytes. */
 export function sealFailed(key, why) {
   sayOnce(`sealed record ${key} could not be opened (${why}) — read as missing, writes refused`);

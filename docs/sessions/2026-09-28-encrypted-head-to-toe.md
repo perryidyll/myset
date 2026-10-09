@@ -156,3 +156,75 @@ set; live `myset.vip/moneymodel` answers the model with no passcode (`0130`, as
 intended). **Not checked:** the tool against the real Netlify CLI and Keychain — that
 run is the founder's; `DATA-MODEL.md` has no entity for `suggest` (main's `0127` did not
 add one).
+
+## 2026-10-09 — slice C on today's main again, a week-long session, a whole activity log
+
+**Asked.** "What are the next big steps on encryption and security?" — then "do all of
+this now". The list: bring PR #150 up to date, check Netlify's sensitive-variable
+policy, drop `'unsafe-inline'` from the CSP, shorten sessions to a week with silent
+renewal, keep an activity log that is append-only and off-platform. (The edge rate
+limit on the list had already shipped as `0160` on 2026-10-02 — one item fewer.)
+
+**Main had moved thirty-five commits** since `e56a4af` (the scale audit week, the
+watch `0157`, the edge rules `0160`, the generator and sample work). Merged at
+`e995d43`; five conflicts, one in code. `0142` had made `readDoc` throw a `StoreError`
+on a read that fails or times out, where slice C had made it read a protected key as
+bytes and open it. The merged `readDoc` does both: the timeout race wraps either read;
+a protected document that cannot be opened still reads as missing with `sealed` set,
+and `casDoc` still refuses to write over it. `ring()` in `_seal.mjs` now lets a
+`StoreError` through instead of remembering the ring as unreadable for a minute — the
+store not answering is 503 "busy", never a round of sealed records reading as missing.
+`sh test/run.sh` exit 0 on the merged tree.
+
+**Decision 0172 — a session lasts a week and renews itself in use.** `TOKEN_TTL` seven
+days (the venue token reads the same constant). A token more than a day old is answered
+with a fresh one for the same address, `rev` and `sid`: `renewToken` in `_auth.mjs`,
+offered against the request in `requireArtist` (`offerRenewal`, a `WeakMap`), sent by
+`guard()` as `x-myset-token` — only on a `no-store` reply, never on `jsonCached` or a
+page, so a cache can never hand one phone's token to the next. Both Studios' `api()`
+keep it (three lines each; stamps rewritten). Nobody is signed out by the change; a
+device signed out stays signed out across a renewal. `test/sessionlife.mjs`, 34 checks;
+with the `no-store` rule removed two fail, with a month again five fail.
+
+**Decision 0173 — the activity log is complete.** `note()` appends to an `_append.mjs`
+log in parts of two hundred (`appendLog` grew `size` and `upgrade` options; the default
+spill is untouched), never trimmed; `readLog` reads the newest twenty-five newest first,
+from the last part just after a spill; the parts are on both account key lists, so the
+mirror copies them and a delete finds them; `log_` and its parts are a sealed family.
+A log kept the old way is reversed and counted on its first new note. `test/activity.mjs`,
+23 checks; with the part read removed two fail.
+
+**The CSP step, measured and not taken.** A hash covers a `<script>` block and never a
+button's `onclick=`; the pages wire about 480 of those, 350 of them built inside scripts
+(`studio.js` 247, `venue-studio.js` 104, `vote.html` 45). `'unsafe-hashes'` cannot
+carry a handler built at run time and Safari before 15.4 does not know the keyword, so
+a half-step would kill the vote page's buttons for part of a room. Deferred with the
+numbers (SEC-006, SECURITY.md Tier 1, an open-risk row): a pass of its own, every
+handler to `addEventListener` with a real-browser CSP check per page.
+
+**Is the secret already set?** The Notion task row (closed 2026-10-02 from the sessions
+board) says a session set `MYSET_SECRET` on the founder's word on 2026-09-28 — Production,
+Deploy Previews and Branch deploys, marked secret, a Keychain copy under the account
+`mysetvip` — which the 2026-10-01 session did not know, and main's ledger still calls
+PER-017 not started. A cloud session cannot read Netlify's variables without the risk of
+printing one, so the answer is read BY CONTENT instead: `/api/health` now carries
+`seal: { secret, ring }` from `ringState()` in `_seal.mjs` — read-only, never a key,
+never makes the ring — and the watch (0157) treats a ring the secret cannot open as a
+problem somebody is told about, because that is the one way a mismatched value would
+show itself (new sign-ins failing). The preview of #150, once rebuilt, says whether the
+deploy-preview context holds a secret; production says so the moment the merge lands.
+`test/seal.mjs` "HOW THE RING STANDS", twelve checks.
+
+**Netlify's sensitive-variable policy.** The docs say *Require approval* is the default
+once sensitive variables are detected on a public repository's project, UI-only (no API
+field) — so it stays the founder's ten-second glance (PER-020, the exact page linked).
+The project reader shows the plan is `nf_team_pro`.
+
+**Verified:** named above, per suite; `node tools/overview.mjs --tests` stamps the
+whole run below. **Not checked:** a phone's Studio reading the renewal header (three
+lines, `node --check` clean); the mirror carrying a log part to R2 on production; the
+tool against the real Netlify CLI and Keychain — the founder's run.
+
+**Still the founder's:** `MYSET_SECRET` (one command), then "merge #150"; `ADMIN_CODE`;
+2FA; the Site-policies glance. Decision numbers 0172 and 0173 were taken on this branch
+without the sessions board (a cloud session cannot read it).

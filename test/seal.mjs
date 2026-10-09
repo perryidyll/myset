@@ -24,7 +24,7 @@ process.env.ADMIN_CODE = 'devlocal';
 delete process.env.MYSET_SECRET;
 delete process.env.MYSET_SECRET_PREVIOUS;
 
-const { protectedKey, seal, open, isSealed, MAGIC, ring, RING_KEY, __resetRing } = await import('../netlify/functions/_seal.mjs');
+const { protectedKey, seal, open, isSealed, MAGIC, ring, RING_KEY, ringState, __resetRing } = await import('../netlify/functions/_seal.mjs');
 const { readDoc, casDoc, KEY, SHARDS } = await import('../netlify/functions/_lib.mjs');
 const { putImage, getImage } = await import('../netlify/functions/_img.mjs');
 const { setPassword, checkPassword, hasPassword, credKey } = await import('../netlify/functions/_cred.mjs');
@@ -199,6 +199,36 @@ console.log('\nCHEAP');
   for (let i = 0; i < 200; i++) await open('sess_bench', await seal('sess_bench', doc));
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / 200;
   ok(`seal + open: ${ms.toFixed(3)} ms a document (under a millisecond)`, ms < 1, ms);
+}
+
+console.log('\nHOW THE RING STANDS  the health address says, read-only — and a secret that cannot open it is told about');
+{
+  const healthFn = (await import('../netlify/functions/health.mjs')).default;
+  const { look } = await import('../netlify/functions/_watch.mjs');
+  const health = async () => { const r = await healthFn(new Request('https://x/api/health')); return { status: r.status, ...(await r.json()) }; };
+  __reset(); __resetRing(); secret(null);
+  eq('no secret: off', await ringState(), 'off');
+  let h = await health();
+  eq('…and the health address says so, well', [h.status, h.seal], [200, { secret: false, ring: 'off' }]);
+  secret(KEY1); __resetRing();
+  eq('a secret and no ring yet: absent — and asking made none', [await ringState(), raw(RING_KEY)], ['absent', null]);
+  await seal('sess_probe', 'hello');
+  eq('after the first sealed write: ours', await ringState(), 'ours');
+  h = await health();
+  eq('…health: well, the secret on, the ring ours', [h.status, h.seal], [200, { secret: true, ring: 'ours' }]);
+  secret(KEY2); __resetRing();
+  eq('a value that did not wrap the ring: other', await ringState(), 'other');
+  h = await health();
+  eq('…health says 503 and names the seal', [h.status, h.why.includes('seal'), h.seal.ring], [503, true, 'other']);
+  const seen = await look(Date.now());
+  ok('…and the watch would tell the founder, in words that say what fails', seen.problems.some((p) => p.kind === 'seal' && /cannot open its keyring/.test(p.title) && /new sign-ins fail/.test(p.body)), seen.problems);
+  ok('…without touching the ring', JSON.stringify(ringDoc()).includes('"kek"') && raw(RING_KEY) !== null);
+  secret(KEY2, KEY1); __resetRing();
+  eq('the previous value set beside it: previous — the next sealed write re-wraps', await ringState(), 'previous');
+  eq('…which is not a problem', (await health()).status, 200);
+  await casDoc(RING_KEY, () => ({}), (d) => { d.v = 1; d.cur = 'x'; delete d.keys; delete d.kek; return true; });
+  __resetRing();
+  eq('a document under the ring\'s key that is no ring: malformed, and a problem', [await ringState(), (await health()).status], ['malformed', 503]);
 }
 
 __reset();

@@ -139,6 +139,8 @@ Revocation lives on the **registry row the verifier is already holding**: `byId[
 
 The list a person looks at is a cold document, `sess_<owner>`, read only when the sessions screen opens. It holds a device CLASS ("iPhone · Safari"), never the raw User-Agent, and never an IP. "Last opened Settings" is written at most once an hour from the two settings actions the Studio already calls — it is labelled that way because printing "last used two hours ago" from a number that only moves when somebody opens Settings would be a number that lies.
 
+**A session lasts a week and renews itself in use** (decision 0172, 2026-10-09). The token used to be good for thirty days from the moment it was minted. Now it lives seven days, and on any authenticated request where it is more than a day old the server answers with a fresh token for the same device — same address, same `rev`, same session id — in one response header, `x-myset-token`, which the Studio's `api()` keeps. A device that opens the Studio inside the week never notices; one left alone for a week signs in again. The renewal is an HMAC and a comparison, once a day per device: no read, no write, nothing on the poll. It rides only on a reply marked `no-store` — never on a shared, cached one. A device that was signed out stays signed out: the dead entry outlives every token it could have had. A token minted before this keeps its own expiry and renews the first time it is used a day in.
+
 **Only the owner sees, and signs out, every device** (decision 0104). For any other seat the list, *Sign out* on a row, and *Sign out my other devices* reach only the devices signed in with that seat's own address. A session id outside that list is refused. Before this a crew phone's *Sign out my other devices* signed the artist's Studio out mid-gig. The venue side is the same.
 
 ### 6.3 Roles
@@ -220,7 +222,9 @@ Venues get all of this too, keyed `v_<vid>`, on a new `keysForVenue()` — until
 
 ### 6.7 The activity log
 
-`log_<owner>`, capped at 100 entries, written best-effort with `.catch(() => {})`: **a logging failure must never be the reason a musician cannot start a show.** Sign-ins, code sends, seats added and removed, roles changed, the studio code set, recovery codes made and used, the address moved, deletion started and cancelled. Never an IP, never a fan id (INVARIANT 0bu), never an amount.
+`log_<owner>`, written best-effort with `.catch(() => {})`: **a logging failure must never be the reason a musician cannot start a show.** Sign-ins, code sends, seats added and removed, roles changed, the studio code set, recovery codes made and used, the address moved, deletion started and cancelled. Never an IP, never a fan id (INVARIANT 0bu), never an amount.
+
+**Complete since decision 0173** (2026-10-09). It was the newest hundred entries and the hundred-and-first fell off. It is now an append-only log in the shape every other record has (`_append.mjs`, decision 0068): a head of at most two hundred entries, oldest first, spilled into write-once parts `log_<owner>_p<n>` that are never rewritten and never trimmed. The screen still shows the newest twenty-five, newest first. The head and its parts are sealed at rest (`0113`), on the export-and-delete key list, and copied to R2 nightly by the mirror — which never deletes a copy, so the record outlives the account. A log kept the old way is carried over, in order, on its first new note.
 
 ---
 

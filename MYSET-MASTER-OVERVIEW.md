@@ -537,12 +537,13 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 20 — about.html, artist.html, artists.html, community.html, crm.html, dash.html, diary.html, factory.html, index.html, mediadash.html, privacy.html, report.html, shop.html, sign.html, stage.html, studio.html, terms.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 41 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `health`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 7 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron, watchcron |
-| Shared libraries | 74 |
+| Shared libraries | 76 |
 | Artist Studio actions | 136 |
 | Venue Studio actions | 57 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
+| A sign-in session lasts / renews itself on a reply once it is older than (`TOKEN_LIFE`, `RENEW_AFTER_MS`, decision 0172) | 7 days / 24 hours |
 | Checkouts a device may open in a row / per minute after that (`PAY_BURST`, `PAY_PER_MIN`, decision 0111) | 40 / 10 |
 | …and a whole network — sized so a packed bar on one wifi never meets it (`PAY_NET_BURST`, `PAY_NET_PER_MIN`) | 300 / 120 |
 | Sign-in codes one network may ask for in an hour, artist and venue doors together (`NET_CODES_PER_HOUR`) | 60 |
@@ -557,10 +558,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
-| Invariants | 300 (last: 0gx) |
-| Test suites | 72 |
-| Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 157 |
+| Invariants | 305 (last: 0ht) |
+| Test suites | 78 |
+| Assertions | **5,602**, 0 failing, last run 2026-10-09 |
+| Decision records | 161 |
 
 ### Feature flags in force
 
@@ -1191,7 +1192,12 @@ owner / manager / crew.
 
 **Sessions.** Every token carries a session id, so one phone can be signed out without
 signing out the band. Revocation lives on the registry row the verifier is already reading
-and is normally absent, so it costs nothing on any request.
+and is normally absent, so it costs nothing on any request. A session lasts a week and
+renews itself while the Studio is in use (§2.1 has the numbers; decision 0172): a token
+more than a day old comes back fresh on the reply, for the same device, so a copied
+token is worth a week at most and nobody who uses their Studio ever signs in for it.
+The activity log behind *Settings* is complete — append-only, in sealed parts, never
+trimmed (decision 0173).
 
 Only the owner sees and signs out every device on the account; any other seat reaches only its own (decision 0104).
 

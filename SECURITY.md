@@ -94,7 +94,7 @@ already hidden.
 | **Tenant isolation** | `test/tenancy.mjs` — 46 assertions whose only job is to prove one artist cannot read, write or bill another. It runs on every `npm test`. Most startups do not have this. |
 | **Money is never re-derived** | Stripe is the source of truth (`INVARIANT 5d`). Prices come from the stored record, never the request — a hand-made checkout cannot set its own price. |
 | **Direct charges are scoped** | Every Stripe call carries the connected account explicitly, and the test double *fails* a call made in the wrong scope. That is the bug class that leaks one artist's money into another's dashboard. |
-| **Tokens are revocable** | HMAC-signed, 30 days, carrying a session id. A per-account `rev` counter and a per-session kill list mean "sign out everywhere" is real, and costs no extra read. |
+| **Tokens are revocable, and short** | HMAC-signed, carrying a session id; since `0172` a token lives a week and renews itself on a reply once it is a day old, so a device in use never notices and a copied token is worth a week at most. A per-account `rev` counter and a per-session kill list mean "sign out everywhere" is real, costs no extra read, and holds across a renewal. |
 | **Roles are default-deny** | `CAN` in `_session.mjs`, and both admin surfaces gate on an allow-list — anything not named is owner-only, so a new action is locked until somebody decides it should not be. |
 | **Fans are counted, never named** | `INVARIANT 0bu`. The audience never signs in, a device id never leaves the server, and no export or payload contains one. There is no fan database to breach. |
 | **ID photos are unservable** | The `idcheck` slot is deliberately excluded from every pattern `/api/img` will serve (`0bk`), so a verification photo cannot be fetched by anyone, including us, through the web. |
@@ -186,7 +186,7 @@ company buys with headcount. Almost everything below is paperwork and habits.
 | **Edge rate limiting** | Netlify has traffic rules. A per-IP ceiling on `/api/*` bounds both abuse and the bill. In-code limits on every anonymous write are `0111`; the edge rule is still worth having as a ceiling on scripts, set well above what a bar's wifi produces. |
 | **A backup you have actually restored** | ~~Blobs are the only datastore. Nobody has ever tested a restore.~~ Done 2026-09-14: `tools/backup.py --restore` wrote the 2026-09-13 copy into a rehearsal store and read every key back equal (decision `0069`, session `2026-09-14-data-foundations.md`); and `mirrorcron` copies every document to R2 nightly. Still to do: rehearse it again in six months, and the R2 copy on a hard delete. |
 | **Error and alert monitoring** | Today a failure is a line in a log nobody reads. Sentry's free tier, or Netlify's own alerts, plus one alert on a spike in 5xx. |
-| **CSP script hashes** | Removes `'unsafe-inline'`. A build step that hashes each inline block, or moving the scripts to files. |
+| **CSP script hashes** | Removes `'unsafe-inline'`. A build step that hashes each inline block, or moving the scripts to files. **Measured 2026-10-09 and deferred, not forgotten:** a hash covers a `<script>` block, never a button's `onclick=`, and the pages wire about 480 of those — some 130 in the HTML and about 350 built inside scripts (`studio.js` 247, `venue-studio.js` 104, `vote.html` 45). `'unsafe-hashes'` cannot carry the ones built at run time, and Safari before 15.4 does not know the keyword at all, so a half-step would kill the vote page's buttons for part of a room. The real step is moving every handler to `addEventListener` with a real-browser CSP check on every page first — a pass of its own, after the secret is live. |
 | **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. Since 2026-09-28 the photo is never mirrored and its R2 copy is deleted with the original (`0110`); `0113` seals it at rest, with the other records that hold a person. |
 | **A privacy policy and a data-retention rule** | You collect email addresses and sell things. Both are legally required in most of the markets you would sell into, and neither exists. |
 
@@ -198,7 +198,7 @@ company buys with headcount. Almost everything below is paperwork and habits.
 | **A written incident-response plan** | Who is told, in what order, within what time. Half a day to write, and it is what turns an incident into a story with an ending. |
 | **A real staging environment** | `main` is production. Preview deploys exist but nothing runs against a production-shaped dataset. |
 | **One external penetration test** | A few thousand dollars. Finds the things you cannot find by reading your own code. |
-| **Structured logging with retention** | Today's audit log is 100 entries per account. A real one is append-only, off-platform, and survives a deleted account. |
+| **Structured logging with retention** | ~~Today's audit log is 100 entries per account. A real one is append-only, off-platform, and survives a deleted account.~~ Done 2026-10-09 (`0173`): the activity log is append-only in write-once parts, never trimmed, sealed at rest, copied to R2 nightly by the mirror, which never deletes a copy. Still to come: the platform's own log (errors are hourly buckets, 0157 watches them). |
 | **A moderation queue** | A platform-level view of reported posts, so removal is not "Perry, by hand". |
 | **A DPA and sub-processor list** | Netlify, Stripe, Resend, Google. Enterprise customers ask for this by name. |
 
@@ -218,7 +218,7 @@ does not have 2FA is a document about nothing.
 | Data | Today | Verdict |
 |---|---|---|
 | Everything in Blobs | Encrypted at rest by Netlify; in transit over TLS | Fine. |
-| Session tokens | HMAC-signed, revocable, 30 days | Fine. Shortening to 7 days with silent renewal is a small win. |
+| Session tokens | HMAC-signed, revocable; with `0172`, seven days, renewed in use | Fine — ~~Shortening to 7 days with silent renewal is a small win.~~ Done 2026-10-09 (`0172`): a week, renewed once a day on the reply, never on a shared one. |
 | Recovery codes | HMAC-hashed, single use; with `0112`, a salted scrypt that depends on no key, in a sealed document | Fine — forty bits under a fast hash was one leaked key away from a graphics card. |
 | Studio codes | A bare SHA-256; with `0112`, a salted scrypt | A bare SHA-256 of an eight-character code is an afternoon's work for whoever holds a copy of the show record. Fixed by `0112`. |
 | The booker inbox, passwords, sessions, the logs, HQ's contacts and Gmail | Plain JSON in Blobs; with `0113`, sealed under a keyring `MYSET_SECRET` wraps | **Seal these.** `0113` does it; nothing the room reads is touched. |

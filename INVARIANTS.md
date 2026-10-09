@@ -2836,4 +2836,31 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     as missing and is never written over; nothing protected is written in the clear
     while a secret is set; the keyring is never made twice. A rotation re-wraps the one
     document and keeps every old data key. `MYSET_SECRET` is never removed and
-    `sealkeys` never deleted; the mirror and the backup carry it. `test/seal.mjs`.
+    `sealkeys` never deleted; the mirror and the backup carry it. `/api/health` and
+    the watch (0157) read how the ring stands against the secret (`ringState`, read-only,
+    never a key): `other` — a secret that did not wrap the ring — is a problem somebody
+    is told about, because new sign-ins fail until it is fixed. `test/seal.mjs`.
+
+## The security pass, slice C, continued — a week, and a whole record (2026-10-09, decisions `0172`, `0173`)
+
+0hs. **A session lasts a week and renews itself in use; a renewal is never a way back
+    in, and never shared.** `TOKEN_LIFE` is seven days (`_auth.mjs`; the venue token
+    reads the same constant). On an authenticated request whose token is more than
+    `RENEW_AFTER_MS` old, `requireArtist` / `requireVenue` mint a fresh token for the
+    SAME address, `rev` and `sid`, and `guard()` sends it as `x-myset-token` — only on
+    a reply that says `cache-control: no-store`, never on `jsonCached` or a page, so a
+    cache can never hand one phone's token to the next. The Studios' `api()` keep it.
+    No read and no write: the verifier already holds everything the renewal needs
+    (0ci stands). A device signed out stays signed out across a renewal (0dd: the
+    dead entry outlives every token, old or new). A token minted before this keeps its
+    own expiry and renews on first use. `test/sessionlife.mjs`.
+
+0ht. **The activity log is complete.** `log_<owner>` is an append-only log in parts
+    (`_append.mjs`, 0068's shape): a head of at most `LOG_CHUNK` entries, oldest
+    first, spilled into write-once `log_<owner>_p<n>` that are never rewritten and
+    never trimmed. The screen reads the newest twenty-five newest first — from the
+    last part too, just after a spill. A log kept the old way (newest first, capped)
+    is taken over on its first new note without an entry moving. Head and parts are a
+    sealed family (0hb), on both account key lists (export, delete, the mirror), and
+    the mirror's R2 copy is never deleted, so the record outlives the account. Still
+    written best-effort: a logging failure never stops a show. `test/activity.mjs`.
