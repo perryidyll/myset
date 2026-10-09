@@ -93,6 +93,7 @@ node --import ./test/register.mjs test/playonewrite.mjs
 echo
 echo "── one tap, one song: a slow Play and its retry (0151) ──"
 node --import ./test/register.mjs test/onetap.mjs
+node test/studioclock.mjs
 echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs

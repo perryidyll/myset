@@ -365,6 +365,15 @@ function hdrs(){
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
   return h;
 }
+const READ_MS=10*1000, WRITE_MS=20*1000, FIRST_MS=30*1000, UPLOAD_MS=60*1000;   // decision 0201
+/* The few calls that cannot go through api() (a file download, a read with no
+   sign-in, a sample's own door) get the same clock: the request is aborted at `ms`,
+   its body included, and the caller's own catch treats it as a miss (0201). */
+function clocked(u,o={},ms=READ_MS){
+  const ac=window.AbortController?new AbortController():null;
+  if(ac) setTimeout(()=>ac.abort(),ms);
+  return fetch(u,{...o,...(ac?{signal:ac.signal}:{})});
+}
 async function api(p,o={}){
   /* A sample's Studio: reads go to the server on the key, everything else is a claim. */
   if(SAMPLE){ const r=sampleRoute(p,o); if(r) return r; }
@@ -380,12 +389,25 @@ async function api(p,o={}){
   // `quiet` for background refreshes — the live tab re-reads every few seconds,
   // and flashing the overlay at it looked like something was wrong
   if(!o.quiet) busy(true);
+  /* EVERY CALL HAS A CLOCK (decision 0201). A store that stalls holds a function
+     for as long as the platform lets it run, and the Studio waited with it: the
+     overlay up, the tap dead, the next poll stacked on the last. A GET gives up
+     after READ_MS and a POST after WRITE_MS (most of the Studio's reads are POSTs
+     to /admin, and some ask Stripe), and either is a dropped connection like any
+     other. When it was the artist's own tap (not `quiet`), the answer says it may
+     still land and the stage is read again, so the screen shows what happened
+     before they tap a second time. A photo passes its own, longer `timeout`. */
+  const post=!!(o.method&&o.method!=='GET'), tap=post&&!o.quiet, ms=o.timeout||(post?WRITE_MS:READ_MS);
+  const ac=window.AbortController?new AbortController():null;
+  let clock=null, late=false;
+  const deadline=new Promise((_,no)=>{ clock=setTimeout(()=>{ late=true; if(ac) ac.abort(); no(new Error('late')); },ms); });
+  const timed=(pr)=>Promise.race([pr,deadline]);
   try{
-    const r=await (early||fetch(API+p,{...o,headers:h}));
+    const r=await timed(early||fetch(API+p,{...o,headers:h,...(ac?{signal:ac.signal}:{})}));
     /* A SESSION RENEWS ITSELF (decision 0199): a token more than a day old comes back
        fresh on the reply, for this same device, and this is the one place it is kept. */
     try{ const nt=r.headers&&r.headers.get('x-myset-token'); if(nt&&!SAMPLE){ TOKEN=nt; localStorage.setItem('myset.token',nt); } }catch(e){}
-    const j=await r.json();
+    const j=await timed(r.json());
     /* A SERVER IN TROUBLE IS NOT A SIGN-OUT EITHER (decision 0142). When the store
        does not answer, every door now says 503 "busy" instead of acting on an empty
        document — and load() sent anything that was not ok to the sign-in screen,
@@ -396,8 +418,13 @@ async function api(p,o={}){
   // `offline` distinguishes "the network failed" from "the server said no".
   // load() used to treat both as an auth failure and throw the artist out to the
   // sign-in screen mid-gig, killing the refresh timer with it. INVARIANT 16.
-  }catch(e){ return {ok:false,offline:true,error:'Connection hiccup — try again'}; }
-  finally{ if(!o.quiet) busy(false); }
+  }catch(e){
+    const gone=late&&tap;   // the artist's own tap, unanswered: it may still land (0201)
+    if(gone) setTimeout(()=>{ load({quiet:true}).catch(()=>{}); },0);
+    return {ok:false,offline:true,...(gone?{late:true}:{}),
+      error:gone?'No answer yet — it may still go through. Check the screen before you tap again.':'Connection hiccup — try again'};
+  }
+  finally{ clearTimeout(clock); if(!o.quiet) busy(false); }
 }
 /* ─────────────────────────────────────────────────────────────────────────────
    TIP DECKS ON EVERY TAB (decision 0102). /tips.js holds the carousel and the words;
@@ -445,8 +472,8 @@ const tipVars=()=>({payday:(PLAN&&PLAN.ok&&PLAN.plan&&PLAN.plan!=='free')?'payou
    ───────────────────────────────────────────────────────────────────────────── */
 function sampleSeen(what){
   if(!SAMPLE||SAMPLE.pv)return;          // the founder's own look from the console counts nothing (0101)
-  fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({action:'seen',what,slug:SAMPLE.slug,key:SAMPLE.key,kind:'artist'})}).catch(()=>{});
+  clocked('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'seen',what,slug:SAMPLE.slug,key:SAMPLE.key,kind:'artist'})},WRITE_MS).catch(()=>{});
 }
 function sampleBoot(){
   sampleSeen('studio');
@@ -679,7 +706,9 @@ async function load(opts){
      a whole round-trip of nothing. `loadPlan` renders when it lands; render() is a
      no-op until D exists, so whichever arrives first is fine. */
   const planJob=(!D&&!PLAN)?loadPlan():null;
-  const d=await api('/stage',{quiet:!D, ...(opts||{})});
+  /* The first read has nothing on screen to fall back on, and a failed one shows the
+     sign-in screen, so it waits FIRST_MS rather than READ_MS (decision 0201). */
+  const d=await api('/stage',{quiet:!D, ...(D?{}:{timeout:FIRST_MS}), ...(opts||{})});
   // A transport failure is not a sign-out. Keep the last good screen and let the
   // interval retry — on bar wifi this fires constantly, and gating here used to
   // end the gig. `&&D` because on the very first load there is nothing to keep.
@@ -1890,7 +1919,7 @@ document.addEventListener('change',(e)=>{
 let GIG_MAPS_PROMISE=null;
 async function loadGigMaps(){
   if(window.google&&google.maps)return google.maps;if(GIG_MAPS_PROMISE)return GIG_MAPS_PROMISE;
-  GIG_MAPS_PROMISE=(async()=>{const c=await fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json());if(!c.ok||!c.enabled||!c.key)throw Error('maps unavailable');return new Promise((resolve,reject)=>{window.__mysetGigMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(c.key)}&v=weekly&loading=async&language=en&callback=__mysetGigMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)})})();
+  GIG_MAPS_PROMISE=(async()=>{const c=await clocked('/api/mapconfig',{cache:'no-store'}).then(r=>r.json());if(!c.ok||!c.enabled||!c.key)throw Error('maps unavailable');return new Promise((resolve,reject)=>{window.__mysetGigMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(c.key)}&v=weekly&loading=async&language=en&callback=__mysetGigMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)})})();
   return GIG_MAPS_PROMISE;
 }
 /* Who the dashboard is for: a paid owner. A member seat shares the plan's limits
@@ -1994,9 +2023,9 @@ async function loadProf(force){
   const slug=(D&&D.show&&D.show.slug)||'';
   PROFERR=null;
   /* a sample has no public profile to read: the private door hands over the same shape (0101) */
-  if(SAMPLE) PROF=await fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({action:'page',quiet:true,slug:SAMPLE.slug,key:SAMPLE.key,kind:'artist'})}).then(r=>r.json()).catch(()=>null);
-  else PROF=await fetch('/api/profile?t='+Date.now()+(slug?'&a='+encodeURIComponent(slug):''),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+  if(SAMPLE) PROF=await clocked('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'page',quiet:true,slug:SAMPLE.slug,key:SAMPLE.key,kind:'artist'})},WRITE_MS).then(r=>r.json()).catch(()=>null);
+  else PROF=await clocked('/api/profile?t='+Date.now()+(slug?'&a='+encodeURIComponent(slug):''),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
   // a miss is null, not a half-answer: a pull-to-refresh asks again, and the screen says why it waits
   if(!(PROF&&PROF.ok)){ PROF=null; PROFERR='Couldn’t load your page just now — pull down to try again'; }
   // the Gigs tab draws the tour poster from it too (0075) — not over a link being typed
@@ -3764,7 +3793,7 @@ async function openStageLyrics(id){
     <div class="chartview stage-lyrics" id="stageLyrics"><span class="spin"></span> Finding the words…</div>`);
   let d=null;
   const aq=ASLUG?'&a='+encodeURIComponent(ASLUG):'';
-  try{d=await fetch(`${API}/lyrics?song=${encodeURIComponent(id)}${aq}`).then(r=>r.json());}catch(e){}
+  try{d=await clocked(`${API}/lyrics?song=${encodeURIComponent(id)}${aq}`).then(r=>r.json());}catch(e){}
   const el=$('#stageLyrics');if(!el)return;
   if(!d||!d.ok||!d.found){el.innerHTML='<p class="muted" style="white-space:normal;font-size:15px">No lyrics for this one yet — you’ll have to wing it. 🎤</p>';return;}
   verses(el,d.plain);
@@ -4627,8 +4656,8 @@ function openEarnTips(){
 
 async function downloadLedger(){
   try{
-    const r=await fetch(`${API}/admin`,{method:'POST',headers:hdrs(),
-      body:JSON.stringify({action:'ledgerCsv',months:12})});
+    const r=await clocked(`${API}/admin`,{method:'POST',headers:hdrs(),
+      body:JSON.stringify({action:'ledgerCsv',months:12})},UPLOAD_MS);
     if(!r.ok){ toast('Couldn’t build that just now'); return; }
     const blob=await r.blob(), u=URL.createObjectURL(blob), a=document.createElement('a');
     a.href=u; a.download='myset-earnings.csv'; document.body.appendChild(a); a.click();
@@ -4670,8 +4699,8 @@ function booksCard(){
 
 async function booksCsv(){
   try{
-    const r=await fetch(`${API}/admin`,{method:'POST',headers:hdrs(),
-      body:JSON.stringify({action:'books',months:12,csv:true})});
+    const r=await clocked(`${API}/admin`,{method:'POST',headers:hdrs(),
+      body:JSON.stringify({action:'books',months:12,csv:true})},UPLOAD_MS);
     if(!r.ok){ toast('Couldn’t build that just now'); return; }
     const blob=await r.blob(), u=URL.createObjectURL(blob), a=document.createElement('a');
     a.href=u; a.download='myset-books.csv'; document.body.appendChild(a); a.click();
@@ -4855,7 +4884,7 @@ async function saveMerch(id){
   const staged=mcImgs.filter(x=>x.data), nid=id||d.id; let failed=0;
   for(let i=0;i<staged.length;i++){
     if(b) b.textContent=`Adding photo ${i+1} of ${staged.length}…`;
-    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:nid,data:staged[i].data}),quiet:true});
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:nid,data:staged[i].data}),quiet:true,timeout:UPLOAD_MS});
     if(r&&r.ok) MERCH=r.merch; else failed++;
   }
   closeSheet(); render();
@@ -4983,7 +5012,7 @@ async function saveDiaryPage(id){
   if(!d.ok){ toast(d.error||'Couldn’t save'); if(b){ b.disabled=false; b.textContent='Save'; } return; }   // the draft stays on the phone until the server has it
   DIARY=d.pages; DIARYCAP=Number(d.cap)||DIARYCAP; dDraftClear();
   if(!id&&DCOVER&&d.id){   // the page exists now: its cover follows, by the id the server minted
-    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhoto',id:d.id,data:DCOVER.data}),quiet:true});
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhoto',id:d.id,data:DCOVER.data}),quiet:true,timeout:UPLOAD_MS});
     if(r&&r.ok) DIARY=r.pages; else toast((r&&r.error)||'The page is saved; the cover didn’t make it — add it again from Edit');
   }
   DCOVER=null;
@@ -5843,7 +5872,7 @@ async function confirmCrop(){
         if(MCDRAFT){ MCDRAFT.imgs=[...(MCDRAFT.imgs||[]),{data}]; }
         cancelCrop(); return;
       }
-      const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:slot,data})});
+      const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:slot,data}),timeout:UPLOAD_MS});
       if(!r.ok){toast(r.error||'Could not save that photo');return;}
       MERCH=r.merch; const it=(MERCH||[]).find(x=>x.id===slot);
       if(MCDRAFT) MCDRAFT.imgs=(it&&it.imgs?it.imgs:[]).map(u=>({url:u}));
@@ -5851,7 +5880,7 @@ async function confirmCrop(){
     }
     if(diary){
       if(slot==='dnew'){ DCOVER={data}; cancelCrop(); return; }   // not saved yet: staged, uploaded by saveDiaryPage once the id exists
-      const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhoto',id:slot,data})});
+      const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhoto',id:slot,data}),timeout:UPLOAD_MS});
       if(!r.ok){toast(r.error||'Could not save that photo');return;}
       DIARY=r.pages; cancelCrop(); render(); toast('Cover added'); return;
     }
@@ -6099,7 +6128,12 @@ function start(){clearInterval(timer);
      staring at bars — better a half-filled Studio they can use. */
   setTimeout(()=>bootDone(true),6000);
   load();
-  timer=setInterval(()=>{if(!document.hidden&&TAB==='live'&&D&&D.show&&D.show.status==='live')load({quiet:true})},4000);}
+  /* One poll at a time (decision 0201): a stage read that takes longer than the
+     interval is waited for, not joined by another, so a slow store sees one
+     Studio poll in flight, never a growing pile of them. */
+  let polling=false;
+  timer=setInterval(()=>{if(polling||document.hidden||TAB!=='live'||!D||!D.show||D.show.status!=='live')return;
+    polling=true; load({quiet:true}).catch(()=>{}).finally(()=>{polling=false;});},4000);}
 /* A pull refreshes the Studio's data rather than reloading the page — no white
    flash, and the tab you were on stays the tab you are on. The installed Studio
    has no address bar and no swipe-down of its own, so without this there is no
