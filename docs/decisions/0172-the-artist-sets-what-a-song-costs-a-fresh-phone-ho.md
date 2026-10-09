@@ -8,7 +8,7 @@ area: voting
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [7c87dbe]
 tests: [test/credits.mjs, test/defaults.mjs, test/tenancy.mjs, test/finality.mjs]
 files: [netlify/functions/_lib.mjs, netlify/functions/admin.mjs, netlify/functions/stage.mjs, netlify/functions/_account.mjs, public/studio.js, public/studio.html, public/vote.html, tools/overview.mjs]
 ---
@@ -78,6 +78,8 @@ foundations, split, sheets, everyshow, playonewrite, netcap).
 In a browser at 375 px against tools/mock.mjs: the setlist rows show one "…",
 which opens the Actions sheet (Edit, Hide, Delete). Edit from that sheet opens
 "Edit song". Settings shows "Votes per song" with 1 selected.
+
+Live on myset.vip as `7c87dbe` (#250), production deploy 6ac8a059, checked by content: /studio serves studio.js?v=87d2e539 holding `saveSongCost`, `window.rowMenu` and `songmore`; /studio carries the `.songmore` style; /vote.html holds `isReplay`; /api/show answers `freeCredits: 1` for the founding room (migrated from 3).
 
 **Not checked:** the fan vote sheet at 2 votes per song in a browser; the swipe
 tray and long press on a real phone after the change.
