@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { casDoc, readDoc, store, mutateShow, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
+import { casDoc, readDoc, store, mutateShow, cleanArtistId, DEFAULT_ARTIST, songId, songSig } from './_lib.mjs';
 import { readArtists, mutateArtists, cleanSlug, RESERVED } from './_auth.mjs';
 
 /* SAMPLE PROFILES — a page the factory builds for an artist or a venue who has never
@@ -23,8 +23,10 @@ import { readArtists, mutateArtists, cleanSlug, RESERVED } from './_auth.mjs';
      · claiming adds ONE row to `artists` and takes this one away. Nothing is copied
        and nothing moves: the data was always under the account's own keys.
 
-   THE LINK. myset.vip/<slug>#sample-profile (a venue: /v/<slug>#sample-profile). The
-   words after the # are a label, the same on every page, and not a secret (the
+   THE LINK. myset.vip/<slug>?sample-profile (a venue: /v/<slug>?sample-profile). It was
+   #sample-profile until 2026-10-03, when Instagram's DMs dropped the # part and the page
+   opened as "no page here"; the pages still read both. The
+   words after the ? are a label, the same on every page, and not a secret (the
    founder's call, 2026-09-28: a link ending in twelve random characters looks like
    spam and does not get tapped). So the address alone opens a sample and the
    address alone can claim it. What stands between a stranger and somebody else's
@@ -48,6 +50,12 @@ export const ARCHIVE_MS = 180 * 86400e3;
 export const UNDO_MS = 14 * 86400e3;
 const REG = 'samplereg', ARC = 'samplearc', SUP = 'samplesup', STAT = 'samplestat';
 export const SAMPLE = (owner) => `sample_${owner}`;
+/* The factory's suggested songs (0167): twenty asked for, plus up to twenty of the act's
+   own from a pasted setlist (0169); never more than this kept. */
+export const SAMPLE_SONGS_MAX = 40;
+const songsOf = (payload) => ((payload && payload.songs && Array.isArray(payload.songs.songs)) ? payload.songs.songs : [])
+  .filter((g) => g && g.title).slice(0, SAMPLE_SONGS_MAX)
+  .map((g) => ({ title: clean(g.title, 80), artist: clean(g.artist, 60), group: ['theirs', 'world', 'home'].includes(g.group) ? g.group : 'home' }));
 export const ARCDOC = (owner) => `samplearc_${owner}`;
 export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 
@@ -78,7 +86,7 @@ export const ownerOfSlug = (reg, slug, kind = 'artist') => {
 /** The page's link for a row: its address, then the label after the #. */
 export async function linkFor(owner, row) {
   const site = process.env.URL || 'https://myset.vip';
-  return { key: SAMPLE_MARK, link: `${site}/${isVenueOwner(owner) ? 'v/' : ''}${row.slug}#${SAMPLE_MARK}` };
+  return { key: SAMPLE_MARK, link: `${site}/${isVenueOwner(owner) ? 'v/' : ''}${row.slug}?${SAMPLE_MARK}` };
 }
 
 /** Is there a sample at this address, asked for with the label? A wrong label and an
@@ -203,6 +211,29 @@ export const mutateFactoryCfg = (fn) => casDoc(CFG, defaultFactoryCfg, fn);
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
 const PHOTO_SLOTS = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'];   // p3, p4: a venue's five (0129)
 
+/* THE PHOTOS IN THE ORDER THE PAGE SHOWS THEM (decision 0136). A venue: the cover,
+   the square, the three small ones top to bottom, then the rail. An artist: the cover,
+   the portrait, the three small ones. `rolesOf` reads a profile the way venue.html and
+   artist.html draw it — a venue with no cover shows its last photo there, and blanks
+   in `photos` are skipped — so the console's labels are what a visitor sees. Every
+   console write goes through `writeRoles`, which stores that order plainly. */
+export const ROLES = { venue: ['cover', 'p0', 'p1', 'p2', 'p3', 'p4'], artist: ['cover', 'avatar', 'p0', 'p1', 'p2'] };
+export function rolesOf(kind, p = {}) {
+  const shots = (p.photos || []).filter(Boolean);
+  const out = kind === 'venue' ? [p.photo || (shots.length >= 2 ? shots.pop() : ''), ...shots] : [p.photo || '', p.avatar || '', ...shots];
+  while (out.length < ROLES[kind].length) out.push('');
+  return out;
+}
+export function writeRoles(kind, p, roles) {
+  const was = { cover: p.photo || '', avatar: p.avatar || '' };
+  p.photo = roles[0] || '';
+  if (kind === 'venue') { p.photos = roles.slice(1).filter(Boolean); return; }
+  p.avatar = roles[1] || '';
+  p.photos = roles.slice(2).filter(Boolean);
+  // a crop belongs to its frame: a photo moved into the cover or the portrait is cropped afresh (0135)
+  p.focus = { cover: p.photo && p.photo === was.cover ? (p.focus || {}).cover || '' : '', avatar: p.avatar && p.avatar === was.avatar ? (p.focus || {}).avatar || '' : '' };
+}
+
 export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   const kind = payload.kind === 'venue' ? 'venue' : 'artist';
   const name = clean(payload.name || [payload.first, payload.last].filter(Boolean).join(' '), kind === 'venue' ? 70 : 60);
@@ -210,14 +241,22 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   /* A REBUILD (`replace`: the owner it replaces) takes the old page's place: the old
      one is erased first so its address is free and the new one takes it, so a link
      already sent opens the new page. Only a page nobody has claimed. */
+  let kept = null;
   if (payload.replace) {
     const old = (await readSampleReg()).byId[payload.replace];
     if (old && old.st !== 'claiming') {
       payload = { ...payload, slug: payload.slug || old.slug, cp: old.cp };
-      await eraseData(payload.replace);
+      /* KEEP (decision 0136): a rebuild rewrites the words and links from the sources
+         and the founder's notes, and leaves what the founder set by hand — the photos
+         in their places, and a venue's hours, menu link and Google rating. The kept
+         pictures stay where they are stored; the new build's own are not stored. */
+      if (payload.keep) kept = await keptOf(payload.replace, kind);
+      await eraseData(payload.replace, kept ? kept.roles : []);
       await mutateSampleReg((r) => dropRow(r, payload.replace));
     }
   }
+  if (kept && kept.roles.some(Boolean)) payload = { ...payload, photos: {} };
+  else if (kept) kept.roles = null;
   const { newSampleNs, putImage, decodeDataUrl } = await import('./_img.mjs');
   const ns = newSampleNs();                          // outside every CAS: a retry keeps it
   /* Ready, or waiting for a look: a hand-made page is the founder's look already;
@@ -293,11 +332,27 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (shots.avatar) p.avatar = shots.avatar.url;
       p.photos = ['p0', 'p1', 'p2'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
       p.focus = { cover: (shots.cover && shots.cover.focus) || '', avatar: (shots.avatar && shots.avatar.focus) || '' };
+      if (kept && kept.roles) { writeRoles('artist', p, kept.roles); p.focus = kept.focus; }
       return true;
     });
     /* The Studio's header reads the name off the show record when the registry has
        none — and a sample is not in the registry. */
-    await mutateShow(owner, (s) => { s.artist = name; s.artistFirst = clean(payload.first || name, 60); return true; }).catch(() => {});
+    await mutateShow(owner, (s) => {
+      s.artist = name; s.artistFirst = clean(payload.first || name, 60);
+      /* THE SUGGESTED SONGS (decision 0167), into the library, which is the setlist while
+         no named list is chosen: the page shows them under "On the setlist" and the
+         Studio's preview has something to vote on. Shaped as addSong makes a row. */
+      const have = new Set(s.songs.map((x) => songSig(x.title, x.artist)));
+      for (const g of songsOf(payload)) {
+        const title = clean(g.title, 80), artist = clean(g.artist, 60), sig = songSig(title, artist);
+        if (!title || have.has(sig) || s.songs.length >= SAMPLE_SONGS_MAX) continue;
+        let id = songId(title, artist);
+        while (s.songs.some((x) => x.id === id)) id = `${songId(title, artist)}-${Math.random().toString(36).slice(2, 5)}`;
+        s.songs.push({ id, title, artist, active: true, key: '', tags: [] });
+        have.add(sig);
+      }
+      return true;
+    }).catch(() => {});
   } else {
     const vid = owner.slice(2);
     const { mutateVenueProfile } = await import('./_venues.mjs');
@@ -314,9 +369,20 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (payload.phone) p.phone = payload.phone;
       if (Array.isArray(payload.amenities)) p.amenities = payload.amenities;
       if (payload.hours && typeof payload.hours === 'object') p.hours = { ...p.hours, ...payload.hours };
+      /* No hours found: shut every day, which hides the block. A new profile's template
+         (every day 17:00–01:00) is a starting point for an owner, and on a sample it would
+         send someone to a shut door (0132). Hours set since (CRM's Details) are kept. */
+      else if (Object.values(p.hours || {}).every((h) => !h.closed && h.open === '17:00' && h.close === '01:00'))
+        p.hours = Object.fromEntries(Object.entries(p.hours || {}).map(([d, h]) => [d, { ...h, closed: true }]));
       p.links = { ...p.links, ...(payload.links || {}) };
+      if (payload.rating) p.rating = payload.rating;   // carried through a revive (0132)
+      if (/^https:\/\//.test(String(payload.menuUrl || ''))) p.menu = { ...(p.menu || {}), url: String(payload.menuUrl).slice(0, 300) };   // the page's Menu door
       if (shots.cover) p.photo = shots.cover.url;
       p.photos = ['p0', 'p1', 'p2', 'p3', 'p4'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
+      if (kept && kept.roles) writeRoles('venue', p, kept.roles);
+      if (kept && kept.rating) p.rating = kept.rating;
+      if (kept && kept.menuUrl) p.menu = { ...(p.menu || {}), url: kept.menuUrl };
+      if (kept && kept.hours) p.hours = kept.hours;
       return true;
     });
   }
@@ -326,15 +392,16 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       v: 1, owner, kind, slug, name, first: clean(payload.first || name, 60), ns,
       seed: payload.seed || null, sources: (payload.sources || []).slice(0, 60),
       facts: payload.facts || null, provenance: payload.provenance || null,
-      photos: photoMeta, quality: payload.quality || null, msgs: payload.msgs || {},
+      photos: kept && kept.roles ? kept.meta : photoMeta, quality: payload.quality || null, msgs: payload.msgs || {},
       supIds: (payload.supIds || []).slice(0, 12), by: payload.by === 'founder' ? 'founder' : 'factory',
+      ...(songsOf(payload).length ? { songs: { country: clean(payload.songs.country, 60), songs: songsOf(payload) } } : {}),
       usage: payload.usage || null, events: [{ t: Date.now(), e: 'built', m: payload.by || 'factory' }],
     });
     return true;
   });
   /* The console's card shows a thumbnail; keeping its address on the row saves a
      profile read per card. */
-  const cv = (shots.cover || shots.avatar || {}).url || '';
+  const cv = kept && kept.roles ? kept.roles[0] || (kind === 'artist' ? kept.roles[1] : '') || '' : (shots.cover || shots.avatar || {}).url || '';
   if (cv) await mutateSampleReg((r) => { if (!r.byId[owner]) return false; r.byId[owner].cv = cv; return true; }).catch(() => {});
   await bump('built');
   const row = (await readSampleReg()).byId[owner];
@@ -377,7 +444,7 @@ export async function sampleSeen(owner, what = 'open') {
    The account's own keys (keysFor / keysForVenue, the same lists that erase a
    deleted account), the photos under the sample's own name, and the sample's record.
    Re-runnable: deleting what is already gone is a no-op. */
-async function eraseData(owner) {
+async function eraseData(owner, spare = []) {
   const { sampleImgKeys } = await import('./_img.mjs');
   let keys = [];
   let urls = [];
@@ -396,9 +463,29 @@ async function eraseData(owner) {
     keys = await keysFor(owner).catch(() => []);
   }
   keys.push(...sampleImgKeys(urls), SAMPLE(owner));
+  // a rebuild that keeps the photos (0136) spares them — the account's own lists name them too
+  const keep = new Set(sampleImgKeys(spare));
   let gone = 0;
-  for (const k of new Set(keys)) { try { await store().delete(k); gone++; } catch {} }
+  for (const k of new Set(keys)) { if (keep.has(k)) continue; try { await store().delete(k); gone++; } catch {} }
   return gone;
+}
+/* What a rebuild keeps (0136), read before the old page is erased. Hours count as
+   set by hand only when some day is open: a page whose hours were never found has
+   every day shut, and a new build's hours are better than none. */
+async function keptOf(owner, kind) {
+  const { data: rec } = await readDoc(SAMPLE(owner), null);
+  let p = {};
+  if (kind === 'venue') { const { getVenueProfile } = await import('./_venues.mjs'); p = await getVenueProfile(owner.slice(2)).catch(() => ({})); }
+  else { const { getProfile } = await import('./_profile.mjs'); p = await getProfile(owner).catch(() => ({})); }
+  const roles = rolesOf(kind, p);
+  const out = { roles, focus: { cover: (p.focus || {}).cover || '', avatar: (p.focus || {}).avatar || '' },
+    meta: ((rec && rec.photos) || []).filter((x) => x && roles.includes(x.url)) };
+  if (kind === 'venue') {
+    if (p.rating && p.rating.stars) out.rating = p.rating;
+    if (p.menu && /^https:\/\//.test(String(p.menu.url || ''))) out.menuUrl = p.menu.url;
+    if (p.hours && Object.values(p.hours).some((h) => h && !h.closed)) out.hours = p.hours;
+  }
+  return out;
 }
 function dropRow(r, owner) {
   const row = r.byId[owner];
@@ -503,11 +590,12 @@ export async function reviveSample(owner, { fetch: F = globalThis.fetch } = {}) 
   const rec = snap.record || {};
   const payload = kind === 'venue'
     ? { kind, name: p.name || snap.row.name, slug: snap.row.slug, tagline: p.tagline, about: p.about, city: p.city, country: p.country,
-        address: p.address, mapUrl: p.mapUrl, lat: p.lat, lng: p.lng, phone: p.phone, amenities: p.amenities, hours: p.hours, links: p.links }
+        address: p.address, mapUrl: p.mapUrl, lat: p.lat, lng: p.lng, phone: p.phone, amenities: p.amenities, hours: p.hours, links: p.links,
+        menuUrl: (p.menu || {}).url, rating: p.rating }
     : { kind, name: p.name || snap.row.name, first: p.first, last: p.last, slug: snap.row.slug, tagline: p.tagline, style: p.style, bio: p.bio,
         links: p.links, media: (p.media || []).map((m) => ({ url: m.provider === 'youtube' && m.id ? `https://www.youtube.com/watch?v=${m.id}` : (m.href || ''), hero: m.hero, title: m.title })) };
   const made = await createSample({ ...payload, photos, cp: (snap.row.cp || 1) + 1, seed: rec.seed, sources: rec.sources, facts: rec.facts,
-    provenance: rec.provenance, quality: rec.quality, msgs: rec.msgs, supIds: rec.supIds, by: 'founder' }, { fetchMedia: true });
+    provenance: rec.provenance, quality: rec.quality, msgs: rec.msgs, supIds: rec.supIds, songs: rec.songs, by: 'founder' }, { fetchMedia: true });
   if (!made.ok) return made;
   await store().delete(ARCDOC(owner)).catch(() => {});
   await casDoc(ARC, () => ({ v: 1, byOwner: {} }), (d) => { if (!d.byOwner || !d.byOwner[owner]) return false; delete d.byOwner[owner]; return true; }).catch(() => {});

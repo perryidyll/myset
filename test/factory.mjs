@@ -75,6 +75,7 @@ const VIDS = {
   vlogday0003: { title: 'Tour vlog day 3', views: 90000, days: 30, dur: 'PT10M' },
   shortjam001: { title: 'sunset jam #shorts', views: 300000, days: 10, dur: 'PT30S' },
   riptide0001: { title: 'Acoustic session: Riptide', views: 800, days: 20, dur: 'PT3M' },
+  hollowlive1: { title: 'Pinch - Live @ The Hollow 2016', views: 300, days: 3000, dur: 'PT4M' },
 };
 const CHANNEL = { id: CH, snippet: { title: 'The Tide Lines', description: 'Acoustic duo. Covers and originals from Koh Phangan.', customUrl: '@thetidelines', country: 'TH',
   thumbnails: { default: { url: 'https://yt3.ggpht.com/avatar-tide=s88' }, high: { url: 'https://yt3.ggpht.com/avatar-tide=s800' } } },
@@ -180,7 +181,13 @@ function claude(body, headers) {
     }
     return reply(JSON.stringify({ photos: items.map(({ id: i, tag }) => ({ id: i, ...(VERDICT[tag] || VERDICT._) })) }));
   }
+  if (sys.includes('· COVER')) {
+    const ids = [...user.matchAll(/Image id=(\w+)/g)].map((m) => m[1]);
+    ai.covers = (ai.covers || []).concat([ids]);
+    return reply(JSON.stringify({ best: ai.coverPick === 'none' ? 'none' : ids[ai.coverPick || 0], why: 'canned' }));
+  }
   if (sys.includes('· COPY')) {
+    ai.copySys = (ai.copySys || []).concat([sys]);
     const f = (re) => at(re);
     if (user.startsWith('VENUE')) return reply(JSON.stringify({ tagline: { text: 'A bar with live music and outdoor seating', src: [f('venue_type'), f('music_nights'), f('amenity')] },
       about: [{ s: 'Sunset Bar is a bar with outdoor seating.', src: [f('venue_type'), f('amenity')] }, { s: 'It puts on live music.', src: [f('music_nights')] }],
@@ -196,6 +203,14 @@ function claude(body, headers) {
         { s: 'Their sets lean on indie folk with room for a singalong.', src: [genre] }],
       hook: { text: 'Loved your live Wonderwall from Sunset Bar.', src: [cover] } }) + '\n```');
   }
+  if (sys.includes('· SONGS')) {
+    ai.songsAsked = (ai.songsAsked || []).concat([user]);
+    if (ai.songsFail) return json({ type: 'error', error: { type: 'invalid_request_error', message: 'canned failure' } }, 400);
+    const home = Array.from({ length: 10 }, (_, i) => ({ title: `Thai Bar Song ${i + 1}`, artist: `Thai Artist ${i + 1}` }));
+    if (body.messages.length === 1 && ai.songsShort) home.pop();             // nine: forces the one repair
+    const theirs = /FOUNDER'S NOTES[\s\S]*Setlist:/.test(user) ? [{ title: 'Wonderwall', artist: 'Oasis' }, { title: 'Harvest Moon', artist: 'Neil Young' }, { title: 'Sunset Road', artist: '' }] : [];
+    return reply(JSON.stringify({ country: 'Thailand', theirs, home }));
+  }
   return json({ type: 'error', error: { type: 'invalid_request_error', message: 'unexpected call' } }, 400);
 }
 function youtubeApi(u) {
@@ -205,7 +220,7 @@ function youtubeApi(u) {
     contentDetails: { duration: VIDS[id].dur }, statistics: { viewCount: String(VIDS[id].views) }, status: { embeddable: true } });
   const pi = (id) => ({ contentDetails: { videoId: id } });
   if (what === 'channels') return json({ items: p.get('forHandle') === '@thetidelines' || p.get('id') === CH ? [CHANNEL] : [] });
-  if (what === 'playlistItems') return json(p.get('pageToken') === 'P2' ? { items: ['shortjam001', 'riptide0001'].map(pi) } : { items: ['wonderwall1', 'tidesong001', 'vlogday0003'].map(pi), nextPageToken: 'P2' });
+  if (what === 'playlistItems') return json(p.get('pageToken') === 'P2' ? { items: ['shortjam001', 'riptide0001', 'hollowlive1'].map(pi) } : { items: ['wonderwall1', 'tidesong001', 'vlogday0003'].map(pi), nextPageToken: 'P2' });
   if (what === 'videos') return json({ items: p.get('id').split(',').filter((id) => VIDS[id]).map(video) });
   return json({ items: [] });                                  // search.list and anything else: asserted never called
 }
@@ -315,10 +330,14 @@ const pg = S.parsePage('<meta property="og:title" content="x"><img src="/uploads
   + '<img src="/icons/fb.png"><img data-src="/gigs/barrow-night.jpg"><img src="/a.jpg" alt="facebook icon"><img src="/thumb.jpg" width="120"><a href="#top">top</a>', 'https://x.test/');
 eq('a page’s pictures: plain <img>, lazy data-src; no logos, icons, thumbnails — and never the page itself',
    pg.images.map((i) => i.url), ['https://x.test/uploads/lexicon-band.jpg', 'https://x.test/gigs/barrow-night.jpg']);
+const mhtml = '<a href="/about">About</a><a href="https://x.test/files/food-menu.pdf">Download</a><a href="/eat">Our Menu</a><a href="http://x.test/menu">m</a><a href="https://other.test/menu">Menu</a>';
+eq('a venue’s own menu link: its words say menu, on its own site, https (the Menu door, 2026-10-01)', S.parsePage(mhtml, 'https://x.test/', 'venue').menu, 'https://x.test/eat');
+eq('a menu PDF by its path when no link says menu', S.parsePage('<a href="/files/food-menu.pdf">Download</a><a href="https://other.test/menu">Menu</a>', 'https://x.test/', 'venue').menu, 'https://x.test/files/food-menu.pdf');
+eq('an artist’s page looks for none', S.parsePage(mhtml, 'https://x.test/', 'artist').menu, undefined);
 
 console.log('\nYOUTUBE  the Data API, never search.list, never a youtube.com page');
 const yt = await S.youtube(S.parseSeed('https://youtube.com/@thetidelines'), { ...net, ytKey: 'test-youtube-key' });
-eq('ranked: views and recency, music up, the vlog down, the Short out', yt.videos.map((x) => x.id), ['wonderwall1', 'tidesong001', 'riptide0001', 'vlogday0003']);
+eq('ranked: views and recency, music up, the vlog down, the Short out', yt.videos.map((x) => x.id), ['wonderwall1', 'tidesong001', 'riptide0001', 'vlogday0003', 'hollowlive1']);
 eq('one channel, two pages of uploads, one videos.list for all five: four quota units', yt.units, 4);
 eq('the channel: avatar at its largest, the banner at 1920', [yt.channel.avatar, yt.channel.banner], ['https://yt3.ggpht.com/avatar-tide=s800', 'https://yt3.googleusercontent.com/banner-tide=w1920']);
 ok('search.list was never called', !hit('/youtube/v3/search'));
@@ -336,10 +355,12 @@ let ctx2 = mini([JSON.stringify({ tagline: { text: 'An electrifying indie folk d
       { s: 'w'.repeat(450) + '.', src: [0] }, { s: 'y'.repeat(350) + '.', src: [0] }, { s: 'z'.repeat(340) + '.', src: [0] }] })]);
 let copy = await A.writeCopy(FACTS2, [{ url: 'https://a.test/', kind: 'website', title: 'a' }], 'artist', ctx2, { name: 'Duo' });
 ok('a hype word sends ONE repair, with the complaint in it', calls2.length === 2 && /no hype words: remove "electrifying"/.test(calls2[1].messages[2].content), calls2.map((c) => c.messages.length));
-eq('a sentence whose number is not in its facts is dropped, one too long is dropped whole, the bio stops before 700',
-   copy.sentences.map((x) => x.s.slice(0, 24)), ['They play indie folk.', 'They formed in 2019.', 'y'.repeat(24)]);
-ok('and it is under 700', copy.text.length <= 700, copy.text.length);
-eq('every kept line says where it came from', copy.sentences.map((x) => x.src), [[0], [0], [0]]);
+eq('a sentence whose number is not in its facts is dropped, one too long is dropped whole, the bio stops at two (0158)',
+   copy.sentences.map((x) => x.s.slice(0, 24)), ['They play indie folk.', 'They formed in 2019.']);
+eq('every kept line says where it came from', copy.sentences.map((x) => x.src), [[0], [0]]);
+const two = A.tidyCopy({ tagline: {}, hook: {}, style: {}, bio: [{ s: 'x'.repeat(360) + '.', src: [0] }, { s: 'A second line that would run long past the cap here.', src: [0] }, { s: 'Then a short one.', src: [0] }] }, FACTS2, false);
+eq('a second sentence that would pass 400 characters is passed over for one that fits', two.sentences.map((x) => x.s.slice(0, 10)), ['x'.repeat(10), 'Then a sho']);
+ok('and the About stays under 400', two.text.length <= 400, two.text.length);
 calls2.length = 0;
 ctx2 = mini(['not json at all', 'still not json']);
 let err = await A.extractFacts([{ kind: 'website', url: 'https://a.test/', title: 'a', text: 'Some words about a band.' }], ctx2).catch((e) => e);
@@ -360,8 +381,42 @@ ok('a call that timed out is not tried again: fifteen minutes is the whole budge
 const pk = A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900, kind: 'performing' },
   { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.72, textOverlay: 0.1, width: 1280, height: 720, kind: 'performing' }]);
 eq('the founder’s rule: a good-enough YouTube picture beats a better website one', pk.cover.id, 'b');
-eq('but a thumbnail with its title across it does not', A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900 },
-  { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.9, textOverlay: 0.5, width: 1280, height: 720 }]).cover.id, 'a');
+eq('but a thumbnail with its title across it does not', A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900, kind: 'performing' },
+  { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.9, textOverlay: 0.5, width: 1280, height: 720, kind: 'performing' }]).cover.id, 'a');
+/* 0137: Andrew's first page opened on two actors from his music video. */
+const shot = (id, from, group, kind, q = 0.8, w = 1280, h = 720, more = {}) => ({ id, from, group, isAct: true, coverOk: true, avatarOk: false, quality: q, textOverlay: 0, width: w, height: h, kind, people: 2, ...more });
+eq('an artist\'s cover is never a music video\'s story frame', A.pickPhotos([shot('s', 'youtube', 'yt:a', 'video-scene', 0.95), shot('w', 'website', 'web:1', 'performing', 0.75)]).cover.id, 'w');
+eq('the act playing beats a portrait, even from a later source', A.pickPhotos([shot('p', 'youtube', 'yt:a', 'portrait', 0.9), shot('g', 'website', 'web:1', 'group', 0.75)]).cover.id, 'g');
+eq('a portrait still covers when nothing shows them playing', A.pickPhotos([shot('p', 'youtube', 'yt:a', 'portrait', 0.9), shot('x', 'website', 'web:1', 'other', 0.95)]).cover.id, 'p');
+eq('and a story frame is not one of the small photos either', A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('s', 'youtube', 'yt:a', 'video-scene', 0.95)]).extras.length, 0);
+const three = A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('y1', 'youtube', 'yt:a', 'performing'), shot('y2', 'youtube', 'yt:a', 'performing', 0.7), shot('y3', 'youtube', 'yt:a', 'portrait', 0.65), shot('w1', 'website', 'web:1', 'portrait')]);
+eq('three small photos when three are there: a second frame of a video fills the strip', three.extras.map((j) => j.id).join(), 'c,w1,y2');
+eq('but never a shot the judge called a duplicate', A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('y1', 'youtube', 'yt:a', 'performing'), shot('y2', 'youtube', 'yt:a', 'performing', 0.7, 1280, 720, { dup: 'y1' })]).extras.map((j) => j.id).join(), 'c');
+/* 0159: the cover review — the best few covers looked at again, side by side. */
+const covs = [shot('a', 'youtube', 'yt:a', 'performing', 0.9), shot('b', 'youtube', 'yt:b', 'performing', 0.85), shot('c', 'website', 'web:1', 'group', 0.8), shot('d', 'website', 'web:2', 'portrait', 0.9), shot('e', 'website', 'web:3', 'performing', 0.75)].map((j) => ({ ...j, bytes: Buffer.from('jpeg'), type: 'image/jpeg' }));
+eq('the cover choices are the picker\'s order: playing first, then source, then quality', A.coverChoices(covs).map((j) => j.id).join(), 'a,b,c,e,d');
+const seen0 = [];
+const pickB = mini([(b) => { seen0.push(b); return json({ content: [{ type: 'text', text: '{"best":"b","why":"canned"}' }], stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 10 } }); }]);
+const rb = await A.reviewCover(A.coverChoices(covs), pickB, { name: 'X' });
+eq('the review sees four at most, and its choice is the cover', [seen0[0].messages[0].content.filter((x) => x.type === 'image').length, rb.id], [4, 'b']);
+const around = A.pickPhotos(covs, { cover: rb });
+ok('and the portrait and small photos are picked around it', around.cover.id === 'b' && !around.extras.includes(rb) && around.avatar !== rb, around.extras.map((j) => j.id));
+eq('0168: "none" is no longer an answer, so a page with pictures of the act always has a cover', await A.reviewCover(covs, mini(['{"best":"none"}', '{"best":"none"}'])).catch((e) => e.code), 'bad-json');
+eq('one choice needs no review: no call is made', (await A.reviewCover([covs[0]], mini([])).then((j) => j.id)), 'a');
+eq('an id it was not shown is refused, and a second bad answer is an error the factory catches', await A.reviewCover(covs, mini(['{"best":"zz"}', '{"best":"zz"}'])).catch((e) => e.code), 'bad-json');
+/* A venue whose site has no 1000-px hero still gets a cover (2026-10-01, Sand & Tan opened on a gradient). */
+const vsite = [{ id: 'v1', from: 'website', group: 'w1', isAct: true, coverOk: false, quality: 0.8, textOverlay: 0, width: 900, height: 600, kind: 'room' },
+  { id: 'v2', from: 'website', group: 'w2', isAct: true, coverOk: false, quality: 0.9, textOverlay: 0, width: 700, height: 900, kind: 'food' }];
+eq('a venue with no 1000-px cover takes its best wide photo instead', A.pickPhotos(vsite, { kind: 'venue' }).cover.id, 'v1');
+eq('an artist does not: its cover must be the act', A.pickPhotos(vsite).cover, null);
+/* 0168: Jay's five phone photos (2026-10-04), square and tall, none 1000 px wide: his page opened with no cover. */
+const jay = [shot('f1', 'founder', 'f:1', 'performing', 0.75, 1080, 1080, { coverOk: false, avatarOk: true, people: 1 }), shot('f2', 'founder', 'f:2', 'performing', 0.7, 832, 1254, { avatarOk: true, people: 1 }),
+  shot('f3', 'founder', 'f:3', 'portrait', 0.6, 1258, 1600, { coverOk: false, avatarOk: true, people: 1, textOverlay: 0.15 }), shot('f4', 'founder', 'f:4', 'performing', 0.65, 1600, 1451, { avatarOk: true, people: 1 }),
+  shot('f5', 'founder', 'f:5', 'portrait', 0.55, 1595, 1600, { coverOk: false, avatarOk: true, people: 1 })];
+eq('an artist with only phone photos still gets a cover: the judge\'s covers first, squarer first', A.coverChoices(jay).map((j) => j.id).join(), 'f4,f2,f1,f5,f3');
+ok('and the page is filled around it', (() => { const p = A.pickPhotos(jay); return p.cover.id === 'f4' && p.avatar && p.avatar.id === 'f1' && p.extras.map((j) => j.id).join() === 'f2,f3'; })(), A.pickPhotos(jay));
+eq('a blurry shot or a story frame is still never the cover', A.coverChoices([shot('b', 'founder', 'f:1', 'performing', 0.4, 1080, 1080), shot('s', 'founder', 'f:2', 'video-scene', 0.9, 1080, 1080)]).length, 0);
+eq('and a venue never makes a tall photo its cover', A.pickPhotos([vsite[1]], { kind: 'venue' }).cover, null);
 
 console.log('\nTHE GATE  when the founder should look first');
 const full = { kind: 'artist', name: 'X', identity: { ok: true, confidence: 0.9 }, cover: true, avatar: true, extras: 2, sentences: 3, tagline: 't', links: { instagram: 'i', website: 'w' }, media: 2 };
@@ -421,6 +476,9 @@ eq('YouTube first: the cover is a thumbnail, the portrait another video’s fram
 eq('three extras: another video, then the website’s — one frame per video', [ph.p0 && ph.p0.src.yt && ph.p0.src.yt.id, ph.p1 && ph.p1.from, ph.p2 && ph.p2.src.url],
    ['riptide0001', 'website', 'https://thetidelines.com/wp-content/uploads/hero-1600x1067.jpg']);
 ok('the too-big website picture came in as its smaller WordPress copy', ph.p2 && ph.p2.width === 1600);
+ok('a live video ranked past the top three is looked at for frames; the fourth, not live, is not (0159)', hit('/vi/hollowlive1/maxresdefault') && !hit('/vi/vlogday0003/maxres'));
+ok('the bio is asked for in a magazine voice with a wink of humour, still only from the facts (0161)', (ai.copySys || []).some((x) => !/VENUE|venue’s/.test(x) && /bio: exactly two sentences/.test(x) && /magazine/.test(x) && /wink of humour/.test(x) && /never an invented fact/.test(x) && /Only what the facts say/.test(x) && /exactly two sentences/.test(x)));
+ok('the cover review ran once, on two to four covers', (ai.covers || []).length >= 1 && ai.covers.every((ids) => ids.length >= 2 && ids.length <= 4), ai.covers);
 ok('every photo is real bytes under 900 KB, with a focus point', Object.values(ph).every((x) => Buffer.isBuffer(x.bytes) && x.bytes.length <= 900 * 1024 && /^\d+% \d+%$/.test(x.focus)));
 ok('the logo and the title-covered pictures were judged and left out', P.provenance.judged.some((j) => j.kind === 'logo') && !Object.values(P.provenance.photos).some((x) => /avatar|banner/.test(x)));
 eq('the founder’s note is source 0, labelled as what it is', P.sources[0], { url: '', kind: 'seed', title: 'The founder’s note' });
@@ -431,9 +489,8 @@ ok('the repair was asked for once, with the checker’s complaint', ai.calls.fil
    && /That did not pass the check/.test(ai.calls.filter((c) => /· FACTS/.test(c.body.system))[1].body.messages[2].content));
 eq('THE POINT: the unsourced sentence and the invented number never reach the bio', P.facts.copy.text.map((x) => x.s), [
   'The Tide Lines are Mia Hart on vocals and Joe Lin on guitar, an acoustic duo.',
-  'They formed on Koh Phangan in 2019 and play every Friday at Sunset Bar.',
-  'Their sets lean on indie folk with room for a singalong.']);
-ok('the bio is those three sentences, under 700', P.bio === P.facts.copy.text.map((x) => x.s).join(' ') && P.bio.length <= 700);
+  'They formed on Koh Phangan in 2019 and play every Friday at Sunset Bar.']);
+ok('the bio is those two sentences, under 400 (0158)', P.bio === P.facts.copy.text.map((x) => x.s).join(' ') && P.bio.length <= 400);
 eq('tagline, style and the hook', [P.tagline, P.style, P.msgs.hook], ['Acoustic duo playing indie folk and covers on Koh Phangan', 'Acoustic duo · indie folk · covers', 'Loved your live Wonderwall from Sunset Bar.']);
 ok('the gate: everything passed, no review needed', P.quality.score === 1 && P.quality.review === false, P.quality);
 ok('Remove will suppress all of it', [F.suppressIds(S.parseSeed(SEED))[0], 'the tide lines|koh phangan', CH.toLowerCase(), '@thetidelines', 'thetidelines.com'].every((x) => P.supIds.includes(x)), P.supIds);
@@ -452,6 +509,48 @@ ai.conf = 0.6;
 r = await F.runJob({ kind: 'artist', seed: { line: SEED } }, { ...net, isSuppressed: async () => false });
 ok('an identity of 0.6: built, but it waits for the founder', r.ok && r.payload.quality.review && !r.payload.quality.checks.identity && r.payload.quality.score < 0.85, r.payload && r.payload.quality);
 ai.conf = 0.92;
+ok('no songs asked for, no songs call and none on the page', !ai.calls.some((c) => /· SONGS/.test(c.body.system)) && !('songs' in P));
+
+console.log('\nTWENTY SUGGESTED SONGS  ten bar classics of the world, ten of the act\u2019s country (decisions 0167, 0170)');
+ai.calls.length = 0; ai.songsAsked = []; ai.songsShort = true;
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true, photos: ['https://img.test/sunset-inside.jpg'] } }, { ...net, isSuppressed: async () => false });
+ai.songsShort = false;
+const SG = (r.payload || {}).songs;
+ok('it builds, with twenty songs', r.ok && SG && SG.songs.length === 20, r.error || SG);
+eq('the world\u2019s ten bar classics first, then ten of the country', SG.songs.map((x) => x.group).join(','), [...Array(10).fill('world'), ...Array(10).fill('home')].join(','));
+eq('the classics are the fixed ten, never a genre guess', SG.songs.slice(0, 10).map((x) => x.title), A.WORLD_BAR_SONGS.map(([t]) => t));
+eq('the country rides along', [SG.country, SG.songs[10].title], ['Thailand', 'Thai Bar Song 1']);
+ok('nine of the country is refused and repaired once', ai.calls.filter((c) => /\u00b7 SONGS/.test(c.body.system)).length === 2 && P.usage && r.payload.usage.list.some((u) => u.call === 'songs:repair'));
+ok('asked from the place, with the smart model, never the genre', /Koh Phangan, Thailand/.test(ai.songsAsked[0]) && !/genre:/.test(ai.songsAsked[0])
+   && ai.calls.filter((c) => /\u00b7 SONGS/.test(c.body.system)).every((c) => c.body.model === 'claude-sonnet-5'));
+for (const [where, c] of [['in the US', 'United States'], ['country unknown', '']]) {
+  const n = ai.calls.length, U = await A.suggestSongs([], {}, { name: 'Bar Band', country: c });
+  ok(`${where}: the world\u2019s ten, then the American ten, no model call`, ai.calls.length === n && U.songs.length === 20 && U.country === 'United States'
+     && U.songs.slice(10).map((x) => x.title).join() === A.US_BAR_SONGS.map(([t]) => t).join(), U);
+}
+ok('THE POINT of 0166: the founder’s photo is judged before any video frame or website image', (r.payload.provenance.judged[0] || {}).id === 'f1', r.payload.provenance.judged.map((j) => j.id));
+eq('the songs ask rides on the seed, so a rebuild asks again', r.payload.seed.songs, true);
+ai.songsFail = true;
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true } }, { ...net, isSuppressed: async () => false });
+ai.songsFail = false;
+ok('a failed songs call costs the song list, never the page', r.ok && !r.payload.songs && !!r.payload.provenance.errors.songs, r.error || r.payload.provenance.errors);
+
+console.log('\nA SETLIST IN THE NOTES  goes first on the song list (decision 0169)');
+const LIST = 'Setlist: Wonderwall, Harvest Moon, Sunset Road (our own)';
+ai.songsAsked = [];
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: true, notes: LIST } }, { ...net, isSuppressed: async () => false });
+const TS = ((r.payload || {}).songs || {}).songs || [];
+ok('their three first, then the suggestions, Wonderwall not twice', r.ok && TS.length === 22 && TS.slice(0, 3).every((x) => x.group === 'theirs') && TS[3].group === 'world'
+   && TS.filter((x) => x.title === 'Wonderwall').length === 1, TS.map((x) => x.group));
+eq('a song of their own, with no performer given, is theirs by name', TS[2].artist, 'The Tide Lines');
+ok('the notes reach the songs call', /Setlist: Wonderwall/.test(ai.songsAsked[0] || ''));
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, songs: false, notes: LIST } }, { ...net, isSuppressed: async () => false });
+eq('suggestions switched off: only their own songs are kept', (((r.payload || {}).songs || {}).songs || []).map((x) => x.title), ['Wonderwall', 'Harvest Moon', 'Sunset Road']);
+r = await F.runJob({ kind: 'artist', seed: { line: SEED, notes: 'x'.repeat(2500) } }, { ...net, isSuppressed: async () => false });
+eq('notes keep 2,000 characters, room for a setlist', (r.payload.seed.notes || '').length, 2000);
+ai.calls.length = 0;
+r = await F.runJob({ kind: 'venue', seed: { line: 'Sunset Bar | Koh Phangan, Thailand', songs: true } }, { ...net, isSuppressed: async () => false });
+ok('a venue has no song list: never asked', !ai.calls.some((c) => /· SONGS/.test(c.body.system)) && !(r.payload || {}).songs);
 
 console.log('\nA VENUE  OpenStreetMap, opening hours, amenities, a founder’s photo');
 r = await F.runJob({ kind: 'venue', seed: { line: 'Sunset Bar | https://www.google.com/maps/place/Sunset+Bar/@9.7312,100.0136,17z | Koh Phangan, Thailand',
@@ -462,6 +561,12 @@ eq('the hours reader: a week that wraps, 26:00 as two in the morning', F.parseHo
      thu: { closed: true, open: '17:00', close: '01:00' }, fri: { closed: true, open: '17:00', close: '01:00' }, sat: { closed: false, open: '20:00', close: '02:00' },
      sun: { closed: false, open: '20:00', close: '02:00' } });
 eq('anything richer is left out, never guessed', [F.parseHours('Mo-Su 10:00-22:00; PH off'), F.parseHours('24/7'), F.parseHours('Mo-Fr 09:00-12:00,14:00-18:00')], [null, null, null]);
+const hk = (o) => o && Object.entries(o).map(([d, x]) => d + (x.closed ? ':shut' : `:${x.open}-${x.close}`)).join(' ');
+eq('HOURS AS A PERSON TYPES THEM (0132): daily, am/pm, an en dash', hk(F.humanHours('Daily 8 AM–10 PM')), 'mon:08:00-22:00 tue:08:00-22:00 wed:08:00-22:00 thu:08:00-22:00 fri:08:00-22:00 sat:08:00-22:00 sun:08:00-22:00');
+eq('ranges, a list of days, "to", a day shut after the fact', hk(F.humanHours('Mon-Fri 5pm-1am; Sat, Sun 12pm to 2am; Tue closed')),
+   'mon:17:00-01:00 tue:shut wed:17:00-01:00 thu:17:00-01:00 fri:17:00-01:00 sat:12:00-02:00 sun:12:00-02:00');
+eq('full day names, "till", midnight', hk(F.humanHours('Thursday to Sunday 6pm till midnight')), 'mon:shut tue:shut wed:shut thu:18:00-00:00 fri:18:00-00:00 sat:18:00-00:00 sun:18:00-00:00');
+eq('what it cannot read is refused, never guessed', [F.humanHours('blah'), F.humanHours('Mon-Fri'), F.humanHours('Daily 13pm-2am'), F.humanHours('')], [null, null, null, null]);
 ok('it builds', r.ok, r.error);
 eq('the seven days, from the OSM hours: Tuesday shut', V.hours && [V.hours.mon, V.hours.tue], [{ closed: false, open: '17:00', close: '01:00' }, { closed: true, open: '17:00', close: '01:00' }]);
 ok('amenities from OSM tags and sourced facts, every one a real key', V.amenities && V.amenities.includes('outdoor') && V.amenities.includes('livemusic'), V.amenities);
@@ -469,6 +574,8 @@ eq('address, phone, coordinates and the map link', [V.address, V.phone, V.lat, V
    'https://www.google.com/maps/place/Sunset+Bar/@9.7312,100.0136,17z']);
 ok('OpenStreetMap is credited in the sources', V.sources.some((x) => x.kind === 'osm' && /OpenStreetMap contributors/.test(x.title)));
 ok('the founder’s photo is the cover; a venue has no portrait', V.photos.cover && V.photos.cover.from === 'founder' && !V.photos.avatar);
+ok('a venue’s about is asked for in the same magazine voice (0161)', (ai.copySys || []).some((x) => /about: exactly two sentences/.test(x) && /magazine/.test(x) && /wink of humour/.test(x) && /never an invented fact/.test(x) && /Only what the facts say/.test(x) && /exactly two sentences/.test(x)));
+ok('the tagline is asked for in the magazine voice too, for acts and venues, still from a fact (0163)', ['bio', 'about'].every((k) => (ai.copySys || []).some((x) => new RegExp(k + ': exactly two sentences').test(x) && /tagline: at most 120 characters, in the same magazine voice/.test(x) && /never an invented one/.test(x) && /the style plain|the tagline and the about/.test(x))));
 ok('about, not bio; and it passes', V.about === 'Sunset Bar is a bar with outdoor seating. It puts on live music.' && !V.quality.review, V.quality);
 
 console.log('\nTHE WORKER  only with the key, and a job moves through its states');

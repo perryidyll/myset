@@ -4,7 +4,7 @@ import { parseMedia } from './_embeds.mjs';
 import { safeLink } from './_profile.mjs';
 import { parseSeed, classifyUrl, youtube, ytThumbs, readSite, musicBrainz, itunesArtist, nominatim,
          fetchImage, ldSummary, clean, norm, ctxOf, regionName, LINK_KINDS } from './_fsrc.mjs';
-import { discover, extractFacts, judgePhotos, pickPhotos, writeCopy, estimateCost, modelFast, modelSmart } from './_fai.mjs';
+import { discover, extractFacts, judgePhotos, pickPhotos, coverChoices, reviewCover, writeCopy, suggestSongs, NOTES_MAX, estimateCost, modelFast, modelSmart } from './_fai.mjs';
 
 /* THE SAMPLE FACTORY (decision 0101): one seed line in — "The Tide Lines | @thetidelines
    | thetidelines.com | Koh Phangan" — and out comes one sample page's worth of content,
@@ -123,6 +123,8 @@ function seedOf(job) {
     seed.media.push(...x.media);
   }
   seed.photos = [].concat((s && s.photos) || []).map(String).filter((u) => /^https:\/\/\S+$/.test(u)).slice(0, 6);
+  seed.notes = String((s && typeof s === 'object' && s.notes) || '').replace(/\r/g, '').trim().slice(0, NOTES_MAX);   // the founder's notes (0136; 2,000 since 0169)
+  seed.songs = !!(s && typeof s === 'object' && s.songs);   // twenty suggested songs for the song list (0167)
   seed.line = line;
   return seed;
 }
@@ -231,6 +233,49 @@ export function parseHours(raw) {
   return open ? out : null;
 }
 
+/* Hours as a person types them — "Daily 8am-10pm", "Mon-Fri 5pm-1am; Sat-Sun 12pm-2am; Tue
+   closed" — for CRM's Details (decision 0132), turned into the simple OSM form above and read
+   by parseHours, so there is one reader of hours. Anything it cannot read is refused (null),
+   never guessed. */
+const HDAY = { mo: 'Mo', tu: 'Tu', we: 'We', th: 'Th', fr: 'Fr', sa: 'Sa', su: 'Su' };
+function hDays(s) {
+  const t = s.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (/^(daily|every ?day|7 days( a week)?|mon(day)?\s*(-|–|to)\s*sun(day)?)$/.test(t)) return 'Mo-Su';
+  if (/^week ?days$/.test(t)) return 'Mo-Fr';
+  if (/^week ?ends?$/.test(t)) return 'Sa,Su';
+  const one = (w) => { const k = w.trim().slice(0, 2); return /^(mon|tue|wed|thu|fri|sat|sun)/.test(w.trim()) ? HDAY[k] : null; };
+  const parts = t.split(/\s*(?:,|&|\band\b)\s*/).filter(Boolean).map((x) => {
+    const r = x.split(/\s*(?:-|–|—|\bto\b)\s*/);
+    if (r.length > 2) return null;
+    const a = one(r[0]), z = r[1] != null ? one(r[1]) : a;
+    return a && z ? (a === z ? a : `${a}-${z}`) : null;
+  });
+  return parts.length && parts.every(Boolean) ? parts.join(',') : null;
+}
+function hTime(s) {
+  const m = /^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i.exec(s.trim());
+  if (!m) return null;
+  let h = +m[1]; const mm = m[2] || '00', ap = (m[3] || '').toLowerCase()[0];
+  if (ap) { if (h < 1 || h > 12) return null; h = (h % 12) + (ap === 'p' ? 12 : 0); }
+  return h <= 24 && +mm < 60 ? `${String(h % 24).padStart(2, '0')}:${mm}` : null;
+}
+export function humanHours(raw) {
+  const rules = String(raw || '').replace(/\bmidnight\b/gi, '12am').replace(/\bnoon\b/gi, '12pm').split(/\s*[;\n]\s*/).filter(Boolean).slice(0, 14);
+  if (!rules.length) return null;
+  const osm = [];
+  for (const rule of rules) {
+    const m = /^(.+?)[\s:]+(closed|off|(\d[\d:.]*\s*(?:[ap]\.?m\.?)?)\s*(?:-|–|—|\bto\b|\btill\b|\buntil\b)\s*(\d[\d:.]*\s*(?:[ap]\.?m\.?)?))$/i.exec(rule.trim());
+    if (!m) return null;
+    const days = hDays(m[1]);
+    if (!days) return null;
+    if (/^(closed|off)$/i.test(m[2])) { osm.push(`${days} off`); continue; }
+    const a = hTime(m[3]), z = hTime(m[4]);
+    if (!a || !z) return null;
+    osm.push(`${days} ${a}-${z}`);
+  }
+  return parseHours(osm.join('; '));
+}
+
 async function mapLimit(items, n, fn) {
   const out = new Array(items.length); let next = 0;
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
@@ -286,7 +331,8 @@ function sourceTexts(st) {
   const out = [];
   const add = (kind, url, title, text) => { if (clean(text, 60).length >= 20) out.push({ kind, url: url || '', title: clean(title, 140), text: String(text).slice(0, 14000) }); };
   add('seed', '', 'The founder’s note', [st.seed.name && `Name given by the founder: ${st.seed.name}`,
-    st.seed.city && `Where the founder came across them: ${[st.seed.city, st.seed.country].filter(Boolean).join(', ')}`].filter(Boolean).join('\n'));
+    st.seed.city && `Where the founder came across them: ${[st.seed.city, st.seed.country].filter(Boolean).join(', ')}`,
+    st.seed.notes && `The founder's notes: ${st.seed.notes}`].filter(Boolean).join('\n'));
   for (const p of (st.site && st.site.ok && st.site.pages) || []) add('website', p.url, p.title, [p.description, ldSummary(p.ld), p.text].filter(Boolean).join('\n'));
   if (st.yt && st.yt.ok) {
     const c = st.yt.channel;
@@ -308,10 +354,15 @@ function sourceTexts(st) {
 
 /* ---------- photos: YouTube first, then the website, then what the founder added ---------- */
 const img = (r) => ({ bytes: r.bytes, type: r.type, width: r.width, height: r.height });
+const LIVE_TITLE = /\blive\b|\bsession\b|\bconcert\b|\bunplugged\b|\bgig\b| @ /i;
 async function ytCandidates(st, ctx) {
   if (!(st.yt && st.yt.ok)) return [];
   const jobs = [];
-  for (const v of st.yt.videos.slice(0, 3)) for (const t of ytThumbs(v.id).slice(0, 3)) jobs.push({ ...t, vid: v.id, note: `from the video "${clean(v.title, 60)}"` });
+  /* The three best-ranked videos, and up to two more whose title says they were filmed
+     live (decision 0159): an older live clip with few views is often the one frame of
+     the act actually on a stage (Andrew's "Live @ The Hollow", ranked out of sight). */
+  const top = st.yt.videos.slice(0, 3), live = st.yt.videos.slice(3).filter((v) => LIVE_TITLE.test(v.title || '')).slice(0, 2);
+  for (const v of [...top, ...live]) for (const t of ytThumbs(v.id).slice(0, 3)) jobs.push({ ...t, vid: v.id, note: `from the video "${clean(v.title, 60)}"` });
   if (st.yt.channel.avatar) jobs.push({ url: st.yt.channel.avatar, variant: 'avatar', note: 'the channel picture' });
   return mapLimit(jobs, 4, async (t) => {
     let r = await fetchImage(t.url, ctx), variant = t.variant;
@@ -344,17 +395,29 @@ async function founderCandidates(st, ctx) {
 async function choosePhotos(st, ctx, { late }) {
   const judged = [], seen = new Set();
   let picks = { cover: null, avatar: null, extras: [] };
-  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && picks.extras.length >= (st.kind === 'venue' ? 5 : 2);
-  for (const [p, round] of [['y', ytCandidates], ['w', webCandidates], ['f', founderCandidates]]) {
+  /* three small photos for an artist (0137), each from a source not yet used if one
+     can be had: a second frame of the same video only once every source is judged.
+     The founder's own photos — links, or pictures uploaded in CRM's form (0166) — are
+     judged FIRST: they were chosen by hand, so enough good ones fill the page before a
+     video frame or a website image is fetched at all. */
+  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && pickPhotos(judged, { kind: st.kind, again: false }).extras.length >= (st.kind === 'venue' ? 5 : 3);
+  for (const [p, round] of [['f', founderCandidates], ['y', ytCandidates], ['w', webCandidates]]) {
     if (enough() || (judged.length && late())) break;
     // the same picture twice (og:image and an <img>) is judged once; over 8000 px the vision API refuses it
     const cands = (await round(st, ctx)).filter((c) => Math.max(c.width, c.height) <= 8000)
       .filter((c) => { const h = createHash('sha1').update(c.bytes).digest('hex'); return !seen.has(h) && seen.add(h); })
       .map((c, i) => ({ ...c, id: `${p}${i + 1}` }));
     if (!cands.length) continue;
-    try { judged.push(...(await judgePhotos(cands, ctx, { kind: st.kind, name: st.name })).judged); }
+    try { judged.push(...(await judgePhotos(cands, ctx, { kind: st.kind, name: st.name, notes: st.seed.notes })).judged); }
     catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.photos = clean(e.message, 160); continue; }
     picks = pickPhotos(judged, { kind: st.kind });
+  }
+  /* the cover review (0159): the best few covers again, side by side; a failed review
+     keeps the picker's choice, it never costs the page */
+  const options = coverChoices(judged, { kind: st.kind });
+  if (options.length > 1 && !late()) {
+    try { picks = pickPhotos(judged, { kind: st.kind, cover: await reviewCover(options, ctx, { kind: st.kind, name: st.name, notes: st.seed.notes }) }); }
+    catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.cover = clean(e.message, 160); }
   }
   return { judged, picks };
 }
@@ -414,7 +477,8 @@ function buildPayload(st, { facts, sources, copy, shots, usage, ctx }) {
     // hours only when all seven days are known: a guessed "open till one" sends somebody to a shut door
     const hours = parseHours(o.hours) || parseHours(ld.hours);
     return Object.assign(payload, { about: copy.text, address, mapUrl, phone: clean(o.phone || ld.telephone, 28), lat: o.lat ?? ld.lat ?? null,
-      lng: o.lng ?? ld.lng ?? null, amenities: amenitiesOf(o.tags, facts), ...(hours ? { hours } : {}) });
+      lng: o.lng ?? ld.lng ?? null, amenities: amenitiesOf(o.tags, facts), ...(hours ? { hours } : {}),
+      ...(st.site && st.site.ok && st.site.menu ? { menuUrl: st.site.menu } : {}) });
   }
   const { first, last } = splitName(st.name, actTypeOf(facts, st.d));
   return Object.assign(payload, { first, last, style: copy.style.text, bio: copy.text });
@@ -476,10 +540,21 @@ export async function runJob(job, opts = {}) {
     await stage('copy');
     // better a clear "try again" now than the platform's kill at fifteen minutes mid-write
     if (now() - t0 > 13 * 60e3) return { ok: false, error: 'timeout: the build ran past thirteen minutes', usage };
-    const copy = await writeCopy(facts, sources, kind, ctx, { name: st.name });
+    const copy = await writeCopy(facts, sources, kind, ctx, { name: st.name, notes: st.seed.notes });
+    /* the suggested songs (0167): asked for on the form, an artist only, and a failure
+       costs the song list, never the page. A setlist in the notes (0169) is read even with
+       the suggestions switched off — then only the act's own songs are kept. */
+    let songs = null;
+    if (kind === 'artist' && (seed.songs || seed.notes) && now() - t0 <= 13 * 60e3) {
+      try { songs = await suggestSongs(facts, ctx, { name: st.name, city: st.city, country: st.country, notes: st.seed.notes }); }
+      catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.songs = clean(e.message, 160); }
+      if (songs && !seed.songs) songs = { ...songs, songs: songs.songs.filter((x) => x.group === 'theirs') };
+      if (songs && !songs.songs.length) songs = null;
+    }
 
     await stage('gate');
     const payload = buildPayload(st, { facts, sources, copy, shots, usage, ctx });
+    if (songs) payload.songs = songs;
     if (await check(payload.supIds)) return { ok: false, skipped: 'suppressed', usage };
     return { ok: true, payload, usage };
   } catch (e) {

@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -107,7 +108,7 @@ async function showDoor(req, url) {
   return new Response(L.lockPage({ ready: L.ready(), until }), { status: 200, headers: baseHeaders() });
 }
 
-export default async (req) => {
+const main = async (req) => {
   const url = new URL(req.url);
   const onShows = /\/shows(\.|\/|$)/.test(url.pathname);
   if (onShows) { const shut = await showDoor(req, url); if (shut) return shut; }
@@ -135,3 +136,5 @@ export default async (req) => {
   catch (e) { return new Response('The model is not in this deploy: ' + e.message, { status: 500, headers: baseHeaders('text/plain; charset=utf-8') }); }
   return new Response(html, { status: 200, headers: baseHeaders() });
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('moneymodel', main);

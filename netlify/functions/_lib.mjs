@@ -303,24 +303,58 @@ export function shardOf(fanId) {
   return h % SHARDS;
 }
 
+/* A READ THAT FAILED IS NOT AN EMPTY DOCUMENT (decision 0142, INVARIANT 0hq).
+
+   This caught every error and returned the fallback, so "the store did not answer"
+   and "there is nothing there" were the same thing to every caller — and they are
+   opposites. With one fan file unreadable the board dropped a twelfth of the room's
+   votes and was cached for everyone; a fan was shown fresh credits; Play picked a
+   winner from partial votes; a sign-in check found no session and the Studio signed
+   the artist out mid-gig. All of it exactly when the store is busiest.
+
+   So: a document that is not there is still the fallback. A read that THROWS, or
+   does not answer inside READ_TIMEOUT_MS, throws a StoreError — and the caller
+   either catches it knowingly or lets it reach guard(), which answers 503 "busy"
+   so the page keeps what it last had and tries again.
+
+   The clock matters as much as the throw. Netlify's Blobs client waits five seconds
+   and retries, up to five times, when the store says "slow down" or errors, so
+   without a limit here a throttled read is a request that hangs for up to
+   twenty-five seconds rather than one that fails. */
+export const READ_TIMEOUT_MS = Math.max(50, Number(process.env.MYSET_READ_TIMEOUT_MS) || 4000);
+export class StoreError extends Error {
+  constructor(key, cause) {
+    super('store-unavailable');
+    this.name = 'StoreError';
+    this.code = 'store-read';
+    this.key = String(key);
+    this.cause = cause;
+  }
+}
+export const isStoreError = (e) => !!e && e.code === 'store-read';
+
 export async function readDoc(key, fallback) {
+  /* A sealed document (decision 0113, _seal.mjs) is read as bytes and opened. Every
+     other key takes the path it always took — one prefix test is all the poll pays. */
+  const sealed = protectedKey(key);
+  let r, timer;
   try {
-    /* A sealed document (decision 0113, _seal.mjs) is read as bytes and opened. One
-       that cannot be opened reads as missing and says so in `sealed`, which is what
-       makes casDoc refuse to write over it. Every other key takes the path it always
-       took — one prefix test is all the poll pays. */
-    if (protectedKey(key)) {
-      const r = await store().getWithMetadata(key, { type: 'arrayBuffer', consistency: 'strong' });
-      if (r && r.data) {
-        const o = await open(key, Buffer.from(r.data));
-        if (o.fail) { sealFailed(key, o.fail); return { data: fallback, etag: null, sealed: o.fail }; }
-        return { data: JSON.parse(o.data.toString('utf8')), etag: r.etag || null };
-      }
-      return { data: fallback, etag: null };
-    }
-    const r = await store().getWithMetadata(key, { type: 'json', consistency: 'strong' });
-    if (r && r.data) return { data: r.data, etag: r.etag || null };
-  } catch {}
+    r = await Promise.race([
+      store().getWithMetadata(key, { type: sealed ? 'arrayBuffer' : 'json', consistency: 'strong' }),
+      new Promise((_, no) => { timer = setTimeout(() => no(new Error('read timed out')), READ_TIMEOUT_MS); }),
+    ]);
+  } catch (e) { throw new StoreError(key, e); }
+  finally { clearTimeout(timer); }
+  if (r && r.data) {
+    if (!sealed) return { data: r.data, etag: r.etag || null };
+    /* One that cannot be opened reads as missing and says so in `sealed`, which is
+       what makes casDoc refuse to write over it. (A keyring the STORE would not hand
+       over is a StoreError from open(), and reaches the caller as one — 0142.) */
+    const o = await open(key, Buffer.from(r.data));
+    if (o.fail) { sealFailed(key, o.fail); return { data: fallback, etag: null, sealed: o.fail }; }
+    try { return { data: JSON.parse(o.data.toString('utf8')), etag: r.etag || null }; }
+    catch { sealFailed(key, 'shape'); return { data: fallback, etag: null, sealed: 'shape' }; }
+  }
   return { data: fallback, etag: null };
 }
 
@@ -330,8 +364,17 @@ export async function readDoc(key, fallback) {
  *  which protects against a conditional write that reports success but does not
  *  stick under heavy concurrency. */
 export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
+  let unread = 0;
   for (let i = 0; i < tries; i++) {
-    const { data, etag, sealed } = await readDoc(key, fallback());
+    const pause = () => new Promise((r) => setTimeout(r, Math.min(200, 15 + i * 10) + Math.random() * 70));
+    /* One failed read is retried — a blip must not lose a write that would have
+       landed a moment later, which is how this loop always behaved. A second in a
+       row is the store being down: say so, rather than spend forty tries (and forty
+       timeouts) finding out. A failed read is never written over: there is no
+       document in hand to write. */
+    let data, etag, sealed;
+    try { ({ data, etag, sealed } = await readDoc(key, fallback())); unread = 0; }
+    catch (e) { if (++unread >= 2 || i === tries - 1) throw e; await pause(); continue; }
     /* Fails CLOSED: a document that exists but cannot be opened is never written
        over with a fresh one — it is kept, whole, for the day the key comes back. */
     if (sealed) throw new Error('sealed');
@@ -347,10 +390,11 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
 
     if (!w || w.modified !== false) {
       if (!verify) return { ok: true, data, result: out };
-      const check = await readDoc(key, fallback());
-      if (verify(check.data)) return { ok: true, data: check.data, result: out };
+      // a read-back that fails has verified nothing: go round again
+      const check = await readDoc(key, fallback()).catch(() => null);
+      if (check && verify(check.data)) return { ok: true, data: check.data, result: out };
     }
-    await new Promise((r) => setTimeout(r, Math.min(200, 15 + i * 10) + Math.random() * 70));
+    await pause();
   }
   throw new Error('busy');
 }
@@ -1373,16 +1417,19 @@ export async function publicArtist(req) {
      resolves and checks the deletion mark from the SAME single read that
      artistBySlug would have done on its own. */
   if (!slug) return DEFAULT_ARTIST;
-  const { readArtists, cleanSlug } = await import('./_auth.mjs');
-  const reg = await readArtists();
+  const { readArtistsPublic, cleanSlug } = await import('./_auth.mjs');
   const want = cleanSlug(slug);
   /* Own properties only: `?a=constructor` used to resolve to Object's constructor,
      a truthy function, and the endpoints then worked on a phantom room keyed by its
      source text instead of answering "unknown artist" (found 2026-09-28). */
-  const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
-  if (!aid) return null;
-  if ((own(reg.byId, aid) || {}).del) return null;
-  return aid;
+  const find = (reg) => {
+    const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
+    return aid && !(own(reg.byId, aid) || {}).del ? aid : null;
+  };
+  /* The instance's copy, up to a minute old, answers a YES (decision 0141). A NO is
+     asked of the store itself — so on a warm instance a room's polls cost no
+     registry read at all, and a page made a moment ago still opens at once. */
+  return find(await readArtistsPublic()) || find(await readArtistsPublic({ fresh: true }));
 }
 /** Is this account on its way out? The Studio needs to know; the public does not. */
 export async function deletionOf(aid) {

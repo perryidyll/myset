@@ -63,7 +63,7 @@ function sampleRoute(p,o){
    the first time it is wanted — and asked for again next time if the network lost it. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=503961fa';
+  const j=document.createElement('script'); j.src='/sample.js?v=cd4e99b0';
   j.onload=()=>r(window.Sample||null); j.onerror=()=>{ SAMPLEJS=null; r(null); }; document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
@@ -1567,13 +1567,17 @@ function openMenu(){
 /* ─────────────────────────────────────────────────────────────────────────────
    TIP DECKS ON EVERY TAB (decision 0102). /tips.js holds the carousel and the words;
    this decides when. A tab's deck plays once, the first time the tab is opened, for
-   a page made in this Studio (the flag its signup sets) and for a sample; an
-   established venue is never interrupted and has the ? in the header, which plays
-   the current tab's deck any time. Food & drink and Settings sit behind the bar's
-   Menu button but keep a deck each.
+   a page made in this Studio (the flag its signup sets); an established venue is
+   never interrupted and has the ? in the header, which plays the current tab's deck
+   any time. A SAMPLE replays them on every visit (decision 0171): the welcome each
+   time its Studio opens, then each tab's deck the first time that tab is opened in
+   the visit. Food & drink and Settings sit behind the bar's Menu button but keep a
+   deck each.
    ───────────────────────────────────────────────────────────────────────────── */
 const DECKOF={page:'v-page',shows:'v-shows',numbers:'v-numbers',merch:'v-merch',menu:'v-menu',settings:'v-settings'};
 function tipScope(){ return SAMPLE?'vsample-'+SAMPLE.slug:'v_'+((V&&V.venueId)||'venue'); }
+const VISIT=new Set();   // a sample's decks played in this visit (0171); a reload is a new visit
+const tipOnce=(id,o)=>{ if(!SAMPLE) return Tips.first(id,o); if(VISIT.has(id)) return Promise.resolve(false); VISIT.add(id); return Tips.open(id,o); };
 function autoTips(){
   if(SAMPLE) return true;
   try{ return localStorage.getItem('myset.vtipsauto')==='1'; }catch(e){ return false; }
@@ -1586,8 +1590,8 @@ function maybeTips(){
     try{
       if(!window.Tips||!V||Tips.isOpen()||PWSOON||document.getElementById('boot')||DECKOF[TAB]!==deck)return;
       if($('#sheet').classList.contains('on')||$('#qrbig').classList.contains('on')||document.querySelector('.scl'))return;
-      if(SAMPLE&&(Date.now()-CLAIMAT<1500||!Tips.seen('v-sample-studio',tipScope())))return;   // the claim sheet, or the welcome, goes first
-      Tips.first(deck,{scope:tipScope()});
+      if(SAMPLE&&(Date.now()-CLAIMAT<1500||!VISIT.has('v-sample-studio')))return;   // the claim sheet, or the welcome, goes first
+      tipOnce(deck,{scope:tipScope()});
     }catch(e){}
   },450);
 }
@@ -1611,7 +1615,7 @@ function sampleBoot(){
   const go=()=>{
     if((!V||document.getElementById('boot'))&&tries++<40){ setTimeout(go,300); return; }
     if(!window.Tips||!V)return;
-    Tips.first('v-sample-studio',{scope:tipScope(),cta:{label:'Show me',go:maybeTips},
+    tipOnce('v-sample-studio',{scope:tipScope(),cta:{label:'Show me',go:maybeTips},
       onDone:(done)=>{ if(!done) maybeTips(); }}).then((shown)=>{ if(!shown) maybeTips(); });
   };
   setTimeout(go,500);

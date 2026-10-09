@@ -67,6 +67,7 @@ body.sampled{padding-top:var(--sbh,112px)}
 .sbx-note{margin:26px 18px 6px;padding:16px 18px;border-radius:18px;background:var(--surface,#fff);box-shadow:var(--sh-1,0 1px 2px rgba(0,0,0,.05));
   font-size:13.5px;line-height:1.5;color:var(--muted,#6E6E73)}
 .sbx-note b{color:var(--ink,#1D1D1F)}
+.sbx-eg{margin:14px 18px 28px;width:auto;text-decoration:none;text-align:center;padding:0 16px;font-size:15.5px}
 .sbx-gone{padding:56px 26px;text-align:center}
 .sbx-gone b{display:block;font-size:20px;color:var(--ink,#1D1D1F);margin-bottom:8px}
 .sbx-gone p{color:var(--muted,#6E6E73);margin:0 0 20px}
@@ -222,9 +223,10 @@ body.sampled{padding-top:var(--sbh,112px)}
     requestAnimationFrame(() => el.classList.add('on'));
   }
 
+  const FOUNDER = 'perryidyll';   // the founder's artist page, the live example a sample points to
   /* ---------- the page ---------- */
   function days(n) { return n === 1 ? '1 day' : `${n} days`; }
-  function words(list) { return list.length <= 1 ? (list[0] || 'public pages') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`; }
+  function words(list) { return list.length <= 1 ? (list[0] || 'pages') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`; }   // "your public pages", never "public public" (0168)
 
   function page(P) {
     try {
@@ -255,8 +257,10 @@ body.sampled{padding-top:var(--sbh,112px)}
       decorate(P);
       new MutationObserver(() => decorate(P)).observe($('#app') || document.body, { childList: true });
 
-      /* the welcome, once per sample on this phone */
-      tips().then((T) => { if (T) T.first(venue ? 'v-welcome' : 'welcome', { scope: 'sample-' + S.slug,
+      /* the welcome, every time the link itself is opened (the founder's call); a
+         visit without the label (the stored key, a tap on the logo) does not repeat it */
+      const viaLink = /[#?&]sample-profile(?![\w-])/.test(location.hash + '&' + location.search);
+      tips().then((T) => { if (T) T[viaLink ? 'open' : 'first'](venue ? 'v-welcome' : 'welcome', { scope: 'sample-' + S.slug,
         /* "Hey Tide Lines", not "Hey The Tide Lines": a band is greeted the way people say its name */
         vars: { first: String(S.first || S.name).replace(/^the\s+/i, ''), days: days(S.days), sources: words((S.sources || []).map((x) => x.label)) },   // tips.js escapes the whole line
         cta: { label: 'Show me' } }); });
@@ -267,13 +271,21 @@ body.sampled{padding-top:var(--sbh,112px)}
   function decorate(P) {
     const S = P.sample;
     const app = $('#app'); if (!app) return;
-    app.querySelectorAll('.pacts, .fab, #joinBtn, .rsvpcol, .tourbtn, .calbtn, .vcomm, .vshare, .playcard, .vunv, .vbadge.no').forEach((x) => { x.style.display = 'none'; });
+    app.querySelectorAll('.pacts, .fab, #joinBtn, .rsvpcol, .tourbtn, .calbtn, .vshare, .playcard, .vunv, .vbadge.no').forEach((x) => { x.style.display = 'none'; });
     if (app.querySelector('.sbx-note')) return;
     const until = new Date(Number(S.exp) || Date.now()).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
     const note = document.createElement('div');
     note.className = 'sbx-note';
     note.innerHTML = `<b>A preview, made for you by MySet</b> from your public ${esc(words((S.sources || []).map((x) => x.label)))}. It isn’t published: only your link opens it, and search engines can’t see it. It comes down on <b>${esc(until)}</b> unless you claim it; we keep a private copy for up to six months in case you want it back. <b>Don’t want it?</b> Let us know, with a reply to the message that brought you here, and we’ll delete this preview forever – no harm, no foul!`;
     app.appendChild(note);
+    /* An artist sample ends with a real page to compare it to: the founder's own,
+       live and in use (decision 0162). Venue samples have no venue example yet. */
+    if (S.kind !== 'venue') {
+      const eg = document.createElement('a');
+      eg.className = 'sbx-claim sbx-eg'; eg.href = `/${FOUNDER}`;
+      eg.textContent = 'View the founder’s profile as a live example';
+      app.appendChild(eg);
+    }
   }
   /* The link no longer opens a preview: claimed (perhaps on another device), deleted,
      or its thirty days ran out. Forget it, and if the page is public now — it was

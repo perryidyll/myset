@@ -374,13 +374,18 @@ eq('the new address alone is not enough',
 /* Brute-force the six digits the way the test can and an attacker cannot: the
    real door burns the code after five wrong guesses. */
 const guess = async (email, realm) => {
+  /* The stored code is read ONCE and the six digits are tried against it in memory.
+     Reading the store on every guess made this up to a million reads; on a slow CI
+     runner, with every read on a clock since decision 0142, that outlasted the
+     code's ten minutes and the move then failed for a reason no person can meet. */
+  const { createHash, createHmac } = await import('node:crypto');
+  const d = (await readDoc(`authc_${realm}_${createHash('sha256').update(email).digest('hex').slice(0, 32)}`, null)).data;
+  if (!d) return null;
+  const { authSecret } = await import('../netlify/functions/_auth.mjs');
+  const key = await authSecret();
   for (let i = 0; i < 1000000; i++) {
     const c = String(i).padStart(6, '0');
-    const d = (await readDoc(`authc_${realm}_${(await import('node:crypto')).createHash('sha256').update(email).digest('hex').slice(0, 32)}`, null)).data;
-    if (!d) return null;
-    const { createHmac } = await import('node:crypto');
-    const { authSecret } = await import('../netlify/functions/_auth.mjs');
-    if (createHmac('sha256', await authSecret()).update(c).digest('hex') === d.hash) return c;
+    if (createHmac('sha256', key).update(c).digest('hex') === d.hash) return c;
   }
   return null;
 };

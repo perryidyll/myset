@@ -1,12 +1,12 @@
 ---
 canvas: Tools (entities and attributes)
-puzzle_entity_ids: 4843–4890
+puzzle_entity_ids: 4843–4890, 5186–5187
 sources:
   - MYSET-MASTER-OVERVIEW.md §5.2 Storage (the key families), §1.4 (the credit ledger)
   - netlify/functions/_lib.mjs (defaultShow, KEY, mutateFan, emptyMeta), _account.mjs (the one place a new per-artist key must be added), and the module that owns each family — named per entity below
   - INVARIANTS.md 1, 2, 5c, 5d, 0ae, 0bu, 0ci, 9d6
 status: loaded
-loaded: 2026-09-12 (create_data_model in six batches; link_to_steps type=attribute — the first attribute of every entity is linked to the steps that write or read it)
+loaded: 2026-09-12 (create_data_model in six batches; link_to_steps type=attribute — the first attribute of every entity is linked to the steps that write or read it); 2026-10-03 entities 5186 `payowed` and 5187 `watch` (create_data_model; read from _pay.mjs and _watch.mjs on `main` after 0387145 and b7444c4)
 verified: code read 2026-09-12 for the shapes quoted; the canvas in a browser is the founder's
 ---
 
@@ -525,6 +525,31 @@ Linked steps: 369844, 369845, 369846, 369847, 369850, 369854
 | `list[].owner / id / at` (46160) | Single-line text | which owner's clip, queued when |
 
 Linked steps: 370145
+
+### Payments still owed (payowed) — entity 5186
+
+`payowed` · One global document of paid Stripe sessions whose grant failed, so the bell can retry them within minutes instead of waiting on Stripe's hours-long redelivery (decision 0138; Money 02 w12, The gig 06 s13). `{v: 1, rows: {sid: {aid, acct, at, tries, lastAt}}}`. **A pointer, never a payment**: the session is read back from Stripe on every try, so nothing here can grant what Stripe does not say was paid. Bounded by `OWED_MAX` rows (oldest `at` dropped first) and `OWED_KEEP_MS` per row. Written only on a failure, so its cost tracks failures; read once a ring. `src: _pay.mjs OWED, noteOwed, redeliverOwed; autocron.mjs; _watch.mjs look; health.mjs`
+
+| attribute | type | what it holds |
+| --- | --- | --- |
+| `rows[sid].aid / acct` (48471) | Single-line text | whose payment, and the connected Stripe account the session lives on (blank for the platform); keyed by the Checkout Session id. Written by `noteOwed` from the webhook; a session already in the list is left alone |
+| `rows[sid].at` (48472) | Date picker | when the grant first failed; past `OWED_KEEP_MS` the bell drops the row without asking Stripe (the Studio's sweep still recovers it) |
+| `rows[sid].tries / lastAt` (48473) | Number | failed retries and when the last was; `redeliverOwed` tries the least recently tried first, at most ten a ring, and deletes a row once delivered or already delivered |
+| `v` (48474) | Number | shape version |
+
+Linked steps: 397309, 397314, 397311, 397312
+
+### The watch's memory (watch) — entity 5187
+
+`watch` · What the watch has told the founder and when, so it speaks on change, not every ten minutes (decision 0157; Reliability 01 i09, 02 u09–u10). `{v: 1, told: {kind: at}, lastAt}`. Read and written by `watch` every ten minutes (`watchcron`); `/api/health` reads `lastAt` only. A failed read still tells; a failed write is retried on the next run. `src: _watch.mjs WATCH, watch, AGAIN_MS; watchcron.mjs; health.mjs`
+
+| attribute | type | what it holds |
+| --- | --- | --- |
+| `told[kind]` (48475) | Date picker | per problem told (`bell`, `owed`, `errors`, `store`): when; told again after `AGAIN_MS` while it stays wrong, and the key is removed — with one *"MySet is back to normal"* — when it is right again |
+| `lastAt` (48476) | Date picker | when the inside watch last ran; `/api/health` reports it as `watchAgeSec` and answers 503 `why: watch` past thirty minutes |
+| `v` (48477) | Number | shape version |
+
+Linked steps: 370083, 397311, 397312
 
 ### Venue-owned documents (v_ prefix) — entity 4884
 

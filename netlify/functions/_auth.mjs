@@ -126,11 +126,36 @@ export async function readArtists() {
   a.byId ||= {}; a.bySlug ||= {}; a.byEmail ||= {}; a.rev ||= 1;
   return a;
 }
+/* THE AUDIENCE'S COPY, UP TO A MINUTE OLD (decision 0141). Every poll, vote and
+   page load for a slug address asks one question of this document — "which artist
+   is this, and are they still here?" — and asked the store each time: the whole
+   registry, read and parsed, thousands of times a second in a big room, growing
+   with every sign-up. Netlify keeps a function instance warm between requests, so
+   one read a minute per instance answers all of them (the flags document has
+   always worked this way, _flags.mjs).
+
+   ONLY FOR THE PUBLIC "WHO IS THIS SLUG" QUESTION. A sign-in check never uses it:
+   signing out has to take effect on the next request, not within a minute (0dd).
+   Nor does a plan lookup that prices a payment. `publicArtist` is the one caller,
+   and it trusts this copy only for a YES — a slug the copy does not know, or an
+   account it shows as leaving, is asked of the store itself, so a page made a
+   second ago opens at once and an undone deletion comes back at once. What can be
+   stale is a page that left in the last minute still answering on a warm instance.
+   A write from this instance clears it. */
+const PUBLIC_TTL = 60e3;
+let pubReg = null, pubAt = 0;
+export const __flushArtists = () => { pubReg = null; pubAt = 0; };
+export async function readArtistsPublic({ fresh = false } = {}) {
+  if (!fresh && pubReg && Date.now() - pubAt < PUBLIC_TTL) return pubReg;
+  const a = await readArtists();
+  pubReg = a; pubAt = Date.now();
+  return a;
+}
 export const mutateArtists = (fn) =>
   casDoc('artists', emptyRegistry, (a) => {
     a.v ||= 2; a.rev ||= 1; a.byId ||= {}; a.bySlug ||= {}; a.byEmail ||= {};
     return fn(a);
-  });
+  }).finally(__flushArtists);        // this instance sees its own write immediately
 
 /** Slugs live in public URLs, so they get the strictest cleaning of anything. */
 export const cleanSlug = (v) =>

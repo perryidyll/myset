@@ -107,7 +107,7 @@ export async function ring() {
   if (!ks) return null;
   const kek = kidOf(ks.sign);
   if (RING && RING.kek === kek && (!RING.fail || Date.now() - RING.at < RETRY_MS)) return RING;
-  const { casDoc } = await import('./_lib.mjs');
+  const { casDoc, isStoreError } = await import('./_lib.mjs');
   let out = null;
   try {
     await casDoc(RING_KEY, () => ({ [ABSENT]: true }), (d) => {
@@ -151,7 +151,13 @@ export async function ring() {
       out = { kek, fail: 'unknown-secret', at: now };
       return false;
     }, null, 8);
-  } catch { out = { kek, fail: 'unreadable', at: Date.now() }; }
+  } catch (e) {
+    /* The store not answering is not a ring that cannot be opened (decision 0142):
+       nothing is remembered, and the caller gets the StoreError — guard() answers
+       503 "busy", and the next request reads the ring again. */
+    if (isStoreError(e)) throw e;
+    out = { kek, fail: 'unreadable', at: Date.now() };
+  }
   if (!out) out = { kek, fail: 'unreadable', at: Date.now() };
   if (out.fail) sayOnce(`the sealing keyring could not be opened (${out.fail}) — sealed records read as missing, nothing sealed is written`);
   else if (out.rewrapped) console.log('the sealing keyring was wrapped under the new MYSET_SECRET; MYSET_SECRET_PREVIOUS may now be removed');

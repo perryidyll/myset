@@ -10,9 +10,171 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
-### 2026-10-01 13:26 — 1e46a1f — myset@claude/myset-encryption-security-460mph (44 files since origin/main)
-**tl;dr:** Slice C (still not live) is up to date with today's main and can be switched on with one command: tools/serversecret.mjs sets MYSET_SECRET from the founder's Mac without ever showing it. The Show log stays open the day it lands, and the Studios' suggestions box is sealed too
-**Other sessions:** PR #150 merged main at e56a4af. _showlock.mjs verifies slk under signingKeys().verify like _hqlock. 'suggest' is sealed (_seal.mjs EXACT): read it through readDoc only. FINMODEL_CODE no longer blocks the merge (0130, PER-018 cancelled). MYSET_SECRET goes in Production, Deploy Previews and Branch deploys only, never Local development (Netlify never hides those); Netlify never shows a secret again, so the founder's Keychain copy is the only one
+### 2026-10-07 14:56 — fa9c189 — sample-cover@ux/sample-decks-every-visit (8 files since origin/main)
+**tl;dr:** A sample's Studio (artist and venue) now shows its welcome every time it opens, and each tab's tip deck the first time that tab is opened in the visit — no longer once per phone.
+**Other sessions:** studio.js / venue-studio.js: tipOnce + VISIT (in-memory Set) replace Tips.first for samples only; real accounts unchanged (once per phone); practice-round pr-* decks still once per phone. Decision 0171.
+
+### 2026-10-07 14:34 — 21e21b3 — sample-cover@fix/bar-classics (9 files since origin/main)
+**tl;dr:** CRM's Generate now suggests ten world bar classics (All of Me, Wonderwall, Wagon Wheel…) plus ten of the act's country; the American ten when the country is the US or unknown. No more genre guesses.
+**Other sessions:** _fai.mjs WORLD_BAR_SONGS / US_BAR_SONGS are fixed lists; suggestSongs returns {country, songs} with groups theirs/world/home (genre/near and main/near1/near2 are gone); no model call for US/unknown without notes. 0167 superseded by 0170.
+
+### 2026-10-05 00:33 — f4e7dab — sample-cover@docs/0169-commits (0 files since origin/main)
+**tl;dr:** Decision 0169 now names the commits that shipped it (057bec0, f4e7dab).
+**Other sessions:** Docs only. Linktree links for generated profiles are gathered by hand in the founder's Chrome, never by the generator (robots.txt).
+
+### 2026-10-05 00:17 — 057bec0 — sample-cover@ux/generate-scroll-top (0 files since origin/main)
+**tl;dr:** CRM: after Generate profile, and again when it finishes, the page goes back to the top where the build card is.
+**Other sessions:** crm.html toTop() in startBuild('n') (desktop too, was phone-only) and bcState done for PJ. Generator does NOT read Linktree: linktr.ee robots.txt is Disallow / for unnamed bots; gather those links by hand.
+
+### 2026-10-04 23:27 — 1486fad — sample-cover@feat/generator-notes (10 files since origin/main)
+**tl;dr:** CRM's Generate form has a 'Notes for the generator' box: paste an artist's setlist and their songs go first on the page's song list, ahead of the 20 suggestions.
+**Other sessions:** hq generate takes body.notes -> seed.notes; NOTES_MAX 2000 lives in _fai.mjs (crm.html mirrors it); songs call returns theirs[] -> group 'theirs' first; SAMPLE_SONGS_MAX 40; notes alone trigger the songs call (theirs only when suggestions are off).
+
+### 2026-10-04 17:14 — 5346d28 — sample-cover@fix/sample-welcome-public (7 files since origin/main)
+**tl;dr:** A sample page's welcome no longer says 'your public public pages'.
+**Other sessions:** sample.js words() falls back to 'pages' (callers prefix 'public'); restamped.
+
+### 2026-10-04 17:08 — f610365 — sample-cover@fix/sample-cover-thai-tab (15 files since origin/main)
+**tl;dr:** A sample artist's page always gets a cover when it has photos of the act; with no genre known, the suggested songs lead with the country's hits; CRM opens a sample in a new tab, not a pop-up.
+**Other sessions:** coverChoices has an artist fallback (best sharp act shot, coverOk first, wide>square>tall); reviewCover no longer accepts 'none' (0159 amended). openTab() in crm.html/factory.html — never pass a 3rd arg to window.open. Decision 0168; 0163–0167 commits filled.
+
+### 2026-10-04 15:54 — 62b22f2 — sample-songs@ux/sample-photos-songs (0 files since origin/main)
+**tl;dr:** CRM's Generate form takes photos uploaded from your phone or computer (six in all, the generator looks at yours first), and an artist's page now starts with 20 suggested songs on its setlist — a switch, on by default (0166, 0167)
+**Other sessions:** New hq action stagePhoto {data} -> {url} (an s… unguessable /api/img address); seed.songs (hq generate sets it for artists unless body.songs===false; rebuild carries it); _fai.suggestSongs (smart model, 10+5+5, SONG_GROUPS); createSample writes payload.songs into show.songs and keeps them on sample_<owner>.songs for revive; choosePhotos now judges the founder's photos FIRST (f, y, w). PHOTO_MAX=6 in _crm.mjs.
+
+### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
+**tl;dr:** Docs: scale-audit week one recorded as live
+**Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
+
+### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
+**tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
+**Other sessions:** netlify.toml: two [redirects.rate_limit] blocks — /api/auth (300/min/IP, its own redirect ABOVE /api/*) and /api/* (60,000/min/IP). test/roomsize.mjs fails if a poll floor or the cap changes so that a 10,000-phone room on one address no longer fits: widen the cap before lowering pollFloorFor.
+
+### 2026-10-03 00:11 — b9a674c — scale-week1@fix/studio-two-dead-buttons (53 files since origin/main)
+**tl;dr:** Two Studio buttons that did nothing now work: 'Copy them' under the recovery codes, and 'Move my account' at the end of changing your sign-in email
+**Other sessions:** studio.js: JSON inside an inline handler goes through esc() — onclick="f(${esc(JSON.stringify(x))})". test/structure.mjs now fails on a raw ${JSON.stringify( inside a quoted on*= attribute. Found by the page review during the scale audit; no other page had the pattern.
+
+### 2026-10-02 23:50 — 0a927c3 — scale-week1@ops/watch (52 files since origin/main)
+**tl;dr:** MySet now tells the founder when something breaks: a push to the Studio when the scheduler stalls, a payment stays undelivered or errors pile up, plus a check from outside every five minutes that opens an alert if the site stops answering (0157)
+**Other sessions:** New: _watch.mjs (look/watch), watchcron.mjs (*/10), health.mjs (/api/health, uncached, 503 with why[] when unwell), .github/workflows/watch.yml (opens/closes an issue labelled uptime; optional secret NTFY_TOPIC). New global doc 'watch' — the mirror's GLOBALS and backup.py need it, with 'payowed'. Decision 0157 is this session's (cdfdf5), outside the 0145–0156 block c8fc2f holds.
+
+### 2026-10-03 02:51 — 359e746 — scale-week1@fix/failed-read-is-an-error (32 files since origin/main)
+**tl;dr:** No change for people: a test that brute-forces a six-digit code now reads it once, so a slow test machine can't outlast the code
+**Other sessions:** test/accounts.mjs guess(): read the authc_ doc once, HMAC in memory. Tests that loop over readDoc pay READ_TIMEOUT_MS's timer per call since 0142 — keep store reads out of hot test loops.
+
+### 2026-10-02 23:50 — 8fb5115 — scale-week1@fix/failed-read-is-an-error (46 files since origin/main)
+**tl;dr:** When MySet's storage hiccups, pages now say 'busy' and keep what they had instead of showing wrong numbers or signing the artist out; the vote page slows down when it cannot reach the room, never hangs on a request, and re-sends a vote the server was too busy for (0142, 0143)
+**Other sessions:** readDoc THROWS on a real read failure or after READ_TIMEOUT_MS (4000, env MYSET_READ_TIMEOUT_MS): class StoreError, e.name 'StoreError', e.code 'store-read', e.message 'store-unavailable', e.key; isStoreError(e) from _lib.mjs. A missing doc is still the fallback. casDoc retries ONE failed read then throws the StoreError (not 'busy'); never writes after a failed read. guard() answers StoreError with 503 {ok:false,error:'busy'} + retry-after, and neither guard nor logErr writes it to the error log. All request handlers are now behind guard() (16 gained it) — a new one must be too. test/blobs-fake.mjs: __failReads(re,{hang}) . studio.js api(): a 5xx reply gets offline:true. vote.html: timed()/within() on every fetch, FAILS backoff in schedule(), TICKING guard, vote() loops up to 4 sends on 'busy' with one cast id (test/finality.mjs pins the new shape).
+
+### 2026-10-02 23:50 — ae7ea42 — scale-week1@fix/scheduler-under-load (20 files since origin/main)
+**tl;dr:** Shows keep starting and ending themselves as MySet grows: the scheduler now does shows first and its daily housekeeping on a time limit, and a room's phones no longer make the server re-read the whole artist list on every poll (0140, 0141)
+**Other sessions:** _auto.mjs: heal({deadline}) works in HEAL_CHUNK=10 calendars per write and saves healCursor per chunk; sweep/sweepIdle take {deadline}, rotate via sched.sweepAfter / sched.idleAfter, run SWEEP_POOL=5 at once; autoTick returns settled, and an index entry may carry on:<k> (keep skip AND on when rewriting an entry for the same night; reindexSched keeps skip, drops on). live[aid] is now 'last known sign of life', not the start time. autocron.mjs: RING_BUDGET_MS=7000, order = sweep, idle, owed payments, notes, THEN heal/purge/clips. _auth.mjs: readArtistsPublic() (60 s per-instance copy) + __flushArtists; publicArtist uses it and re-asks the store for any no. Never use the copy for sign-in or pricing (INVARIANT 0hp).
+
+### 2026-10-03 02:25 — b32291a — sample-og@ux/sample-share-card (0 files since origin/main)
+**tl;dr:** A sample link pasted into Instagram/WhatsApp/iMessage now shows that artist's photo and name on its preview card, like a real artist's
+**Other sessions:** 0165: artistpage.mjs sampleCard() — only when the URL carries ?sample-profile and the slug is no account; bare address unchanged (0101). Venue pages still have no share card.
+
+### 2026-10-02 23:19 — e01e16b — scale-week1@fix/stripe-grant-retry (12 files since origin/main)
+**tl;dr:** A fan's payment that could not be delivered is now retried: Stripe is told it failed (so Stripe sends it again) and MySet's own scheduler retries it within minutes. And MySet no longer refunds part of its own fee to artists on foreign cards — that correction is for venues only (0138, 0139)
+**Other sessions:** webhook.mjs: a throw from redeemSession or handleBillingEvent now reaches guard() → 500; never add a catch that falls through to the 200 (INVARIANT 0hm). New global doc 'payowed' (_pay.mjs noteOwed/redeliverOwed, read once per autocron ring) — the mirror's GLOBALS and backup.py need it (phase-two session c8fc2f holds those files). _connect.mjs exports sharesStripeFee(owner); settleSplit returns {ok:true, give:0} before any Stripe call unless the plan row has splitFee (0hn). Scale audit week one (cdfdf5) next: _auto.mjs/autocron.mjs scheduler order, artist-list cache in _lib.mjs/_auth.mjs, readDoc throwing.
+
+### 2026-10-03 02:18 — e4b23a5 — tagline-voice@HEAD (0 files since origin/main)
+**tl;dr:** New sample pages get a tagline in the same magazine voice as the About (the one-liner under the name)
+**Other sessions:** 0163: _fai.mjs COPY_SYSTEM + VENUE_COPY_SYSTEM tagline lines; style line stays plain; 120-char cap and facts-only unchanged.
+
+### 2026-10-03 02:18 — 95f09a6 — sample-link@fix/sample-link-query (0 files since origin/main)
+**tl;dr:** Sample links now end in ?sample-profile, so they open from Instagram DMs (Instagram dropped the #, and the page said 'No page here')
+**Other sessions:** 0164: _sample.mjs linkFor + _crm.mjs build ?sample-profile; preview is ?pv=1&sample-profile (factory.mjs, hq.mjs). Pages read both forms; links sent before today still end in #.
+
+### 2026-10-03 02:07 — bb11de5 — founder-example@docs/founder-example-0162-live (2 files since origin/main)
+**tl;dr:** Docs: decision 0162 (founder's page as a live example) recorded as live as dae1080
+**Other sessions:** dae1080's subject says #218 but the PR is #220. Puzzle changelog for 0162 added. Next free decision: 0163.
+
+### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
+**tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
+**Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+
+### 2026-10-03 01:54 — 1e58aeb — about-voice@docs/about-voice-0161-live (3 files since origin/main)
+**tl;dr:** Docs: decision 0161 (magazine-voice About) recorded as live as 72dbe98
+**Other sessions:** Puzzle changelog 2708 (0161). Andrew's sample was re-picked by hand on 2026-10-03: the cover is his current IG portrait and the avatar is a B&W tagged photo; don't rebuild it with Keep unticked.
+
+### 2026-10-03 01:53 — 33740d5 — about-voice@ux/about-magazine-voice (5 files since origin/main)
+**tl;dr:** New sample pages get a fun, magazine-style About instead of a plain one (0161)
+**Other sessions:** Only the copy prompts in _fai.mjs changed: bio and venue about ask for a magazine voice with one wink of humour; facts-only, src, no-hype and two-sentence rules unchanged; tagline/style stay plain. Decision 0161 (0160 is cdfdf5's rate rules, still in #210).
+
+### 2026-10-03 00:18 — 4dc1301 — photo-roles@docs/about-cover-0158-0159-live (0 files since origin/main)
+**tl;dr:** Docs: decisions 0158 and 0159 recorded as live (cb2272f, 1a4456b), session note, status header [skip ci]
+**Other sessions:** Puzzle changelog 2694 (0158), 2695 (0159). Andrew's sample is fixed by hand (cover = Pinch live at The Hollow); don't rebuild it with Keep unticked or the hand-picked photos go.
+
+### 2026-10-02 23:49 — 54d8ec3 — escape-management@ops/ci-and-watch (6 files since origin/main)
+**tl;dr:** The test check on pull requests takes about six minutes; its first run passed
+**Other sessions:** Nothing new beyond the entry below: 0144's record now quotes the first run of the suite check (5 m 40 s, Node 22, ubuntu).
+
+### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
+**tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
+**Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
+
+
+
+### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
+**tl;dr:** Sample page builds: the cover is now chosen twice: the best four candidates go back to the model side by side and it picks the one the act would be proudest of; live videos beyond the top three now give frames too (0159)
+**Other sessions:** _fai.mjs: coverChoices(), reviewCover() (COVER_SYSTEM, call 'cover'), pickPhotos({cover}) picks the rest around a given cover. _factory.mjs: LIVE_TITLE, up to 2 live-titled videos past the top 3; choosePhotos runs the review unless late, a failure keeps the picker's choice (errors.cover). 0158 commits set to cb2272f.
+
+### 2026-10-02 23:49 — d8a3e56 — photo-roles@ux/about-two-sentences (0 files since origin/main)
+**tl;dr:** Artist and venue pages: the About is two sentences with a space between them, no line; the generator now writes exactly two (0158). Andrew's sample has a new cover (him singing live at The Hollow) and three small photos; his and Sand & Tan's Abouts rewritten to two sentences
+**Other sessions:** app.css .aline: 1em gap + rise, no hairline (stamped into nine pages). _fai.mjs tidyCopy: most 2, cap 400, an overflowing sentence is skipped, not a stop. Andrew's photos and both Abouts were CRM data edits (addPhoto by i.ytimg URL, edit bio), not code. Decision 0158; 0138-0157 belong to the scale-audit sessions.
+
+### 2026-10-02 23:07 — cd6851a — escape-management@fix/escape-management-name (1 files since origin/main)
+**tl;dr:** Artist page: a label or management name is now shown as plain text, so markup typed into it can no longer run on the public page
+**Other sessions:** artist.html only: esc(P.management) in the links pill. Scale audit week one (session cdfdf5) has more coming: webhook.mjs, _feesplit.mjs, _auto.mjs, _lib.mjs readDoc/publicArtist, vote.html — see the sessions board row before touching those.
+
+### 2026-10-02 13:24 — 5bc54d8 — photo-roles@docs/sample-0135-0137-live (5 files since origin/main)
+**tl;dr:** Docs: decisions 0135, 0136, 0137 recorded as live (5c0f812), session note, status header [skip ci]
+**Other sessions:** Puzzle changelog 2662 (0135) completed, 2669 (0136), 2670 (0137). Andrew's live sample still has the music-video cover: swap in CRM or rebuild with Keep unticked. #199 closed, folded into #201.
+
+### 2026-10-02 13:20 — 5d883f1 — photo-roles@ux/sample-photo-roles (30 files since origin/main)
+**tl;dr:** Sample pages: the 'Hey …' welcome opens every time the link is clicked (artists and venues), an artist's cover must show them playing or be a proper band photo (never a music-video scene), three small photos with the strip straight when fewer; also carries #199 (About one line per sentence, cover crop) (0135, 0137)
+**Other sessions:** sample.js: Tips.open when the address has the sample-profile label, Tips.first otherwise. _fai.mjs: PHOTO_KINDS gains video-scene; pickPhotos(judged,{kind,again}) — artist cover kinds performing/group/portrait, three extras with a second-frame pass; _factory.mjs enough() wants 3 extras counted without that pass. artist.html: the strip nudge is .pth:first-child:nth-last-child(3). #199 is folded in here and will be closed.
+
+### 2026-10-02 01:48 — 09041ca — photo-roles@ux/sample-photo-roles (12 files since origin/main)
+**tl;dr:** CRM's page tab shows a sample's photos where the page shows them (Cover, Main/Profile shot, Small top/middle/bottom), drag or 'Swap with' to rearrange, a Generator notes box the next rebuild reads, and Rebuild now keeps the photos, hours, menu link and rating unless unticked (0136)
+**Other sessions:** factory.mjs: new actions arrange {order} and notes {notes}; addPhoto places by role (ROLES/rolesOf/writeRoles in _sample.mjs) and stores under an unused slot name; rebuild takes keep (default true) → job.keep → createSample keptOf/eraseData(spare). sampleDetail profile.roles is the one order. Seed.notes ≠ the contact's private note. Decision 0135 is on #199: whichever merges second regenerates overview + decisions README.
+
+### 2026-10-02 01:37 — 682f9fc — wt4@dash/headings (1 files since origin/main)
+**tl;dr:** Master dash: Show log window heading 'Every stat from every show'; Media Dash heading reads 'N views | N followers' (7-day views, today's followers)
+**Other sessions:** dash.html only; #mdF holds followers, counted up beside #mdN.
+
+### 2026-10-02 01:06 — f7f9aaf — sample-about@ux/sample-about-cover (14 files since origin/main)
+**tl;dr:** Venue pages and sample artist pages: the About reads one sentence a line with a hairline between, and a cover with no focus point crops to the busiest part of the photo
+**Other sessions:** fan.js gains aboutLines() and coverFocus() (never redeclare them); app.css .aline (stamped). Artist pages split only when window.__sample.
+
+### 2026-10-02 00:55 — a6caa6d — wt4@dash-crm-heading (1 files since origin/main)
+**tl;dr:** The master dashboard's CRM window now has the heading 'Automatic profile generator and contact list'
+**Other sessions:** dash.html only; reuses the .stat.goal style from the money window.
+
+### 2026-10-01 21:11 — 86b8384 — wt4@dash-money-goal (1 files since origin/main)
+**tl;dr:** The master dashboard's money model window is headed '2027 Q2 Goal: $10,000/Month Profit', and revenue, costs and profit all start from zero
+**Other sessions:** dash.html only: the goal heading is always shown (no longer the real-nights count-up); the real-nights count moved into the small line under it when live.json answers. A [0,0,0] point is prepended to the lines.
+
+### 2026-10-01 20:46 — 6fa3630 — venue-hero@docs/venue-0131-0134-live (0 files since origin/main)
+**tl;dr:** Docs: decisions 0131 and 0134 recorded as live (db02acf), session note, status header [skip ci]
+**Other sessions:** Sand & Tan's hours, menu link and Google rating (4.5/1,079) were filled through CRM's edit action on production; do not refill. Not rebuilt.
+
+### 2026-10-01 20:09 — 8b3ed35 — wt4@dash-followers-line (25 files since origin/main)
+**tl;dr:** Money model window: revenue, costs and profit amounts now sit in a small key along the bottom instead of beside the line ends
+**Other sessions:** dash.html only; .triKey legend, end dots stay on the lines. Profit ink darker in light mode.
+
+### 2026-10-01 20:06 — af47cfd — wt4@dash-followers-line (3 files since origin/main)
+**tl;dr:** The master dashboard's money model window now draws three lines, revenue, costs and profit, growing from no artists to the default scenario's month, then fades and draws again
+**Other sessions:** Amounts never leave the passcode: model.html dashPeek() writes localStorage myset.dash.money (25 points, one month at each size, P0 + live actuals as the page lays them); /dash reads it, else draws unlabelled shapes. Old single green curve removed.
+
+### 2026-10-01 19:55 — 5defe78 — wt4@dash-followers-line (1 files since origin/main)
+**tl;dr:** The master dashboard's Media Dash window now has a blue followers line that draws itself through the views bars, lands on today's count, fades and starts again
+**Other sessions:** dash.html only: line points are followers at each post's publish time (last account reading at or before it), plus today's count at the right edge; own y-scale, no axis. Reduced motion shows it still.
+
+### 2026-10-01 20:02 — d812fc7 — venue-hero@ux/venue-hero (23 files since origin/main)
+**tl;dr:** Venue pages: a Google rating pill under the address (stars, review count, 'as of Oct 2026') that opens their Google reviews; a sample's hours, menu link and rating can be filled from Google in CRM → Edit profile → Details; a sample with no hours found no longer shows a made-up 5 pm–1 am
+**Other sessions:** Decision 0134 on #182. _factory.mjs humanHours(text) → parseHours (one reader). Venue profile gains rating {stars,count,at}; factory 'edit' takes hours/menuUrl/rating for venues; sampleDetail returns hours/menuUrl/rating. createSample closes every day when no hours were found and the template is untouched.
 
 ### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
 **tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
@@ -38,6 +200,9 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Show log: the intro, both table notes and the seven 'How these numbers are made' cards are now short coloured bullet points
 **Other sessions:** ul.pts / ul.lede in finance/shows.html mirror the money model's; text only, no math or columns changed.
 
+### 2026-10-01 13:26 — 1e46a1f — myset@claude/myset-encryption-security-460mph (44 files since origin/main)
+**tl;dr:** Slice C (still not live) is up to date with today's main and can be switched on with one command: tools/serversecret.mjs sets MYSET_SECRET from the founder's Mac without ever showing it. The Show log stays open the day it lands, and the Studios' suggestions box is sealed too
+**Other sessions:** PR #150 merged main at e56a4af. _showlock.mjs verifies slk under signingKeys().verify like _hqlock. 'suggest' is sealed (_seal.mjs EXACT): read it through readDoc only. FINMODEL_CODE no longer blocks the merge (0130, PER-018 cancelled). MYSET_SECRET goes in Production, Deploy Previews and Branch deploys only, never Local development (Netlify never hides those); Netlify never shows a secret again, so the founder's Keychain copy is the only one
 ### 2026-10-01 13:20 — 6aa5158 — wt4@model-bullets (1 files since origin/main)
 **tl;dr:** Money model: the dials column folds away (remembered per browser); every long explainer is now short coloured bullets; the size table is '4 core show categories' with its dial group 'Core show sizes'
 **Other sessions:** ul.pts is the bullet style in finance/model.html; dial groups are details.grp inside #dialsList. Text only otherwise — no math changed.
@@ -77,6 +242,14 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-01 00:54 — 5349286 — wt3@ux/dash-hero (1 files since origin/main)
 **tl;dr:** /dash: the g in the greeting is no longer cut off; the line under it now reads 'What is tracked can be measured, and what is measured can be improved.'
 **Other sessions:** Copy and one CSS line in public/dash.html.
+
+### 2026-10-01 01:48 — e0f67aa — venue-hero@ux/venue-hero (18 files since origin/main)
+**tl;dr:** No change for people: re-pushed so Netlify builds the #182 preview (its first build could not find the PR)
+**Other sessions:** Same tree as the previous push.
+
+### 2026-10-01 01:31 — 1aa42bc — venue-hero@ux/venue-hero (17 files since origin/main)
+**tl;dr:** Venue pages: never an empty cover (last photo stands in; the generator takes a venue's best wide photo); Menu / Events / What guests say / Directions as a 2x2 beside the square; links right under the tagline; extra photos swipe in the lightbox instead of a stray rail
+**Other sessions:** Decision 0131. venue.html: GALLERY + lbStep (swipeable lightbox), jump(id) to #vmenu/#vevents, .vdoors; prail and the Find them section are gone; sample.js no longer hides .vcomm (gone). parsePage(html,base,'venue').menu -> readSite.menu -> payload.menuUrl -> sample p.menu.url. pickPhotos: venue cover fallback >=800px wide.
 
 ### 2026-09-30 14:27 — 45f6ed6 — wt3@ux/dash-and-locks (9 files since origin/main)
 **tl;dr:** New myset.vip/dash (four windows: Show log, Media Dash, CRM, money model); the money model needs no passcode now; the Show log opens with the CRM's passcode on the CRM's lock screen
@@ -201,6 +374,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-28 09:05 — a80e3ff — myset@claude/myset-encryption-security-460mph (31 files since origin/main)
 **tl;dr:** Slice B of the security pass: sign-in codes, checkout, RSVPs, ratings and bug reports now count the network as well as the phone, so a script inventing device ids is stopped; every limit is sized so a packed bar on one wifi never meets it
 **Other sessions:** Decision 0111, INVARIANT 0gx. New helpers: codeSendAllowed (_auth.mjs), payAllowed (_pay.mjs); new keys authnet_<hash> and paylim_<owner> (never mirrored or backed up; paylim_ is on both delete lists). saveBug/saveFeedback/toggleRsvp take the caller's ip as a last argument. Slice A is live as 539c2a4. Slice C (0112/0113) waits on MYSET_SECRET and FINMODEL_CODE.
+
 ### 2026-09-28 16:13 — 785a02a — untrack-node-modules@config/dependabot-security-only (2 files since origin/main)
 **tl;dr:** Nothing on the site changes: Dependabot now opens a pull request only for a security fix in stripe or @netlify/blobs, no more routine major upgrades
 **Other sessions:** Dependabot alerts + security updates switched ON in the GitHub repo settings (2026-09-28); .github/dependabot.yml limit 0 stops version bumps. #140/#141 (stripe 22, blobs 11) closed unmerged. A security-fix PR from Dependabot changes package-lock.json: after it merges, npm ci in ~/Docs/MySet (after its reset) or worktrees keep testing the old version.
@@ -568,6 +742,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-14 20:25 — 0f12226 — wt@model/credit-breakdown (9 files since origin/main)
 **tl;dr:** Netlify's own per-category credit split is now on file (finance/credits.json, read 14 Sep): deploys 1,290 of 1,340 credits this period (96%); everything the rooms did 50 credits. The money model's 'Two bills' note quotes it.
 **Other sessions:** finance/credits.json is append-only, read by hand from Usage & billing › Credit usage breakdown (the API cannot give it) — add a reading, never edit one. tools/actuals.py carries readings[-1] into actuals.json as shipping.dashboard / traffic.dashboard. A no-gig day is ~3 credits compute + ~1 requests of background (scheduler, warm-door pings, mirror); a gig adds 1–2.
+
 ### 2026-09-14 20:21 — 493d32b — wt3@fix/no-default-profile-images (13 files since origin/main)
 **tl;dr:** A new artist page no longer opens with the founder's band photo as its cover and portrait — no photo means a pink-orange cover box and the band's initial (decision 0078, INVARIANT 0fy); the Studio's Save profile button is centred
 **Other sessions:** _profile.mjs DEFAULTS photo is '' and normProfile never fills it; artist.html .pcover.blank / .pav.blank, community + shop .av.blank draw the initial; og:image on artist.html is the MySet icon. The founder's page stores /img/band.jpg by path and is unchanged — do not remove the two stock files. .big.mid centres a one-word big button. Next free invariant: 0fz; decision: 0079.
@@ -627,6 +802,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-14 10:53 — 943a8d8 — wt@studio/small-things (70 files since origin/main)
 **tl;dr:** Artist Studio: Log a show closes on a drag down; Settings has a gear icon; the tab bar is a little smaller (both Studios); setlist song cards are as tall as their words with edit/hide as outlined icons above the delete ✕; Up next shows ten songs before it scrolls
 **Other sessions:** lock.css .tabbar icon 19px / label 11.5px (the Venue Studio shares it). .queue-window max-height is now set by studio.js render() at the eleventh row — do not put a pixel value back in the CSS. attachDrag: .bizro counts as a grab zone and the editor no longer refuses a body drag.
+
 ### 2026-09-14 10:46 — 6fceff3 — wt11@metrics/cli-stdout (1 files since origin/main)
 **tl;dr:** tools/metrics.mjs read zero artists on its first live run — 'blobs:get -O -' writes a file named '-'; it now reads stdout and refuses an empty registry out loud
 **Other sessions:** One-line tool fix, no page, no function. Rebuilt the Current Show Stats page from production after: 19 nights, 7 real.
@@ -642,6 +818,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-14 10:24 — c030535 — wt@merch/size-quantities (31 files since origin/main)
 **tl;dr:** A count per size: optional number fields under each size chip in both Studios (blank = as many as you like while the size is in stock, live as the sizes are typed); the shop strikes a size at zero, says Only N left in L once picked and stops the stepper there (UX-046, decision 0064)
 **Other sessions:** variants[] now carry stock (null = uncounted) — normVariants keeps it. pay.mjs pickVariant refuses stock 0 as 'That size is sold out' and variantShort gives 409 'Only N left in <label>'; stockRefusal uses merchSoldOut (every size gone = item sold out). takeStock(list,id,qty,variant) takes the size's count first, else the item's; redeemSession passes orderRow.variant. Studio: mcVarQtyRows/mcSyncSizes (vm* in the Venue Studio); the item-level count field hides while sizes exist. Stamped.
+
 ### 2026-09-14 10:21 — bb28f55 — wt9@auth/password-door (18 files since origin/main)
 **tl;dr:** Artists and venues sign in with email + password on the screen the founder specified (Welcome back · Email · Password · Sign in; New here? Join the MySet family · Create account; the Studio code in a small window off the foot); once in by a code, Settings → Password → Create; Forgot your password? = a fresh six-digit code (ACC-001, decision 0070, INVARIANT 0fu, ACCOUNTS.md §11)
 **Other sessions:** NEW netlify/functions/_cred.mjs (scrypt per email row, cred_<owner>_<hash>; per-address lockout lock_pw_*). auth.mjs + venueauth.mjs: passwordSignIn (public), passwordSet {password, current|code}, passwordClear; list carries pw per email + (venue) email/me. keysFor/keysForVenue name the cred records. studio.js gate() rewritten — modes start/join/forgot/code/name/recover; sendCode(from); openStudioCode() → #pop; PW_PROMPT opens the password sheet once after a code sign-in; venue-studio.js the same. After editing either script run node tools/stamp.mjs. The Studio code door is UNCHANGED on purpose (0fu says why). Founder's standing rule: 'orange' = the brand pink-orange --accent-2.

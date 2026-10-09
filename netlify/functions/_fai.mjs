@@ -243,19 +243,20 @@ export async function extractFacts(texts, ctx, { kind = 'artist', name = '' } = 
 }
 
 /* ---------- photos ---------- */
-const PHOTO_KINDS = ['performing', 'portrait', 'group', 'venue-inside', 'venue-outside', 'artwork', 'logo', 'text-heavy', 'other'];
+const PHOTO_KINDS = ['performing', 'portrait', 'group', 'video-scene', 'venue-inside', 'venue-outside', 'artwork', 'logo', 'text-heavy', 'other'];
 const PHOTOS_SYSTEM = `MYSET FACTORY · PHOTOS
 
 You judge candidate pictures for ONE live-music act's (or venue's) sample page on MySet. Each image comes after a line naming its id. Judge EVERY image and answer with ONE JSON object and nothing else:
 {"photos":[{"id":"y1","isAct":true,"people":2,"kind":"performing","quality":0.8,"textOverlay":0.1,"focus":"48% 32%","coverOk":true,"avatarOk":false,"dup":"","why":"both members on stage, sharp, warm light"}]}
 
-- isAct: it shows THIS act (the artist, the band); for a venue, the venue itself. Not a crowd, another act, a poster or a line-up.
+- isAct: it shows THIS act (the artist, the band); for a venue, the venue itself. Not a crowd, another act, a poster or a line-up. A music video often casts actors: a person counts as the act only when they are plainly the same person as in the act's other pictures here, or are the one playing or singing.
+- kind "video-scene": a frame from a music video's story (actors, a couple, a scene acted out) rather than the act playing or posing. Use it whenever nobody in the frame is playing or singing and it is not a portrait of the act.
 - people: how many people are clearly visible.
 - kind: ${PHOTO_KINDS.join(', ')}.
 - quality 0..1: sharp, well lit, well framed; would a stranger think it looks professional? Blurry, dark, tiny or smeared by compression is low.
 - textOverlay 0..1: how much of it is covered by titles, captions, watermarks or logos (0 none, 1 all text).
 - focus "x% y%": the point to keep when the picture is cropped. A person: between the eyes. A group: the middle of the faces. Otherwise the subject.
-- coverOk: works as a wide header across a page: landscape, the act clearly shown, little or no text.
+- coverOk: works as a wide header across a page: landscape, little or no text, and the act clearly PERFORMING, or a proper band or promo photo of the act. Never a video-scene, never a frame with black bars across the top and bottom or blurred panels down the sides.
 - avatarOk: works cropped to a square around focus: a face, or the act clearly.
 - dup: the id of an EARLIER image here that is essentially the same shot, else "".
 - why: at most twelve words.
@@ -284,10 +285,37 @@ function checkPhotos(o, ids) {
    Nothing that is not the act, nothing with text across it, never the same shot twice
    (one frame per video, and whatever the judge marked a duplicate). */
 const FROM_RANK = { youtube: 0, website: 1, instagram: 2, founder: 2 };
-export function pickPhotos(judged, { kind = 'artist' } = {}) {
-  const J = (judged || []).filter((j) => j && j.isAct && !j.dup && j.textOverlay < 0.3);
-  const rank = (a, b) => (FROM_RANK[a.from] ?? 3) - (FROM_RANK[b.from] ?? 3) || b.quality - a.quality;
-  const cover = J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && j.width >= j.height * 1.2).sort(rank)[0] || null;
+const usable = (judged) => (judged || []).filter((j) => j && j.isAct && !j.dup && j.textOverlay < 0.3);
+const rankFrom = (a, b) => (FROM_RANK[a.from] ?? 3) - (FROM_RANK[b.from] ?? 3) || b.quality - a.quality;
+/** Every picture that could be the cover, best first — the picker takes the first,
+ *  the cover review (decision 0159) looks at the first four side by side. */
+export function coverChoices(judged, { kind = 'artist' } = {}) {
+  const J = usable(judged), rank = rankFrom, wide = (j) => j.width >= j.height * 1.2;
+  /* A venue's site rarely has a 1000-px hero the judge calls a cover, and a venue page
+     without one opened on an empty gradient (Sand & Tan, 2026-10-01). So a venue takes
+     the best wide photo it has, down to 800 px, before it goes without. */
+  /* An artist's cover is the act playing, or a proper band or promo photo — never a
+     music video's story frame (Andrew's first page, 2026-10-02: two actors on a
+     dock). Playing beats posing; then the founder's source order. */
+  const tier = (j) => (j.kind === 'performing' || j.kind === 'group' ? 0 : 1);
+  const good = kind === 'venue' ? J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)
+    : J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j) && ['performing', 'group', 'portrait'].includes(j.kind)).sort((a, b) => tier(a) - tier(b) || rank(a, b));
+  if (good.length) return good;
+  if (kind === 'venue') return J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank);
+  /* An artist with pictures always gets a cover (decision 0168). Phone photos are
+     square or tall and rarely 1000 px wide, so Jay's five uploads (2026-10-04) all
+     missed the bar above and his page opened on a gradient. The cover crops to the
+     busy rows (coverFocus), so any sharp shot of the act will do: the judge's covers
+     first, then the rest; wide before square before tall; playing before posing. */
+  const shape = (j) => (wide(j) ? 0 : j.width >= j.height * 0.9 ? 1 : 2);
+  return J.filter((j) => j.quality >= 0.5 && Math.min(j.width, j.height) >= 400 && ['performing', 'group', 'portrait'].includes(j.kind))
+    .sort((a, b) => (b.coverOk ? 1 : 0) - (a.coverOk ? 1 : 0) || tier(a) - tier(b) || shape(a) - shape(b) || rank(a, b));
+}
+/** `cover`, when given, is the cover already chosen (a judged picture, or null for none):
+ *  the cover review's answer, so the portrait and the small photos are picked around it. */
+export function pickPhotos(judged, { kind = 'artist', again = true, cover: chosen } = {}) {
+  const J = usable(judged), rank = rankFrom;
+  const cover = chosen !== undefined ? chosen : coverChoices(judged, { kind })[0] || null;
   let avatar = null;
   if (kind !== 'venue') {                                   // a venue page has no portrait
     const ok = J.filter((j) => j !== cover && j.avatarOk && j.quality >= 0.6 && j.people >= 1 && Math.min(j.width, j.height) >= 400
@@ -296,20 +324,61 @@ export function pickPhotos(judged, { kind = 'artist' } = {}) {
     avatar = other && (!same || other.quality >= same.quality - 0.15) ? other : same || other || null;
   }
   const used = new Set([cover, avatar].filter(Boolean).map((j) => j.group)), extras = [], kinds = new Set();
-  const pool = J.filter((j) => j !== cover && j !== avatar && j.quality >= 0.6 && Math.min(j.width, j.height) >= 400).sort(rank);
-  for (const varied of [true, false]) for (const j of pool) {
-    if (extras.length >= (kind === 'venue' ? 5 : 3) || extras.includes(j) || used.has(j.group) || (varied && kinds.has(j.kind))) continue;
+  const pool = J.filter((j) => j !== cover && j !== avatar && j.kind !== 'video-scene' && j.quality >= 0.6 && Math.min(j.width, j.height) >= 400).sort(rank);
+  /* Three small photos, every time there are three to be had: the page's strip is
+     drawn for three (decision 0137). One per source first, varied kinds first; then a
+     second frame from a video or site already used — a different moment, never a
+     shot the judge marked a duplicate. `again: false` leaves that last pass out, so
+     the factory asks the next source before settling for a second frame. */
+  for (const pass of again ? ['varied', 'any', 'again'] : ['varied', 'any']) for (const j of pool) {
+    if (extras.length >= (kind === 'venue' ? 5 : 3) || extras.includes(j) || (pass !== 'again' && used.has(j.group)) || (pass === 'varied' && kinds.has(j.kind))) continue;
     extras.push(j); used.add(j.group); kinds.add(j.kind);
   }
   return { cover, avatar, extras };
 }
+/* THE COVER REVIEW (decision 0159). The judge scores each picture on its own; the
+   cover is the one picture the act sees first, so the best few are looked at again,
+   side by side, and the one that would make the act proudest at the top of their own
+   page wins. It always picks one (decision 0168: the founder wants no sample page
+   without a cover); coverChoices already left out anything not plainly the act. */
+const COVER_SYSTEM = `MYSET FACTORY · COVER
+
+You pick the cover photo for ONE live-music act's (or venue's) sample page on MySet: the wide picture across the top, the first thing they see when they open the page built for them. The pictures follow, each after a line naming its id; every one already passed a first check.
+Answer with ONE JSON object and nothing else:
+{"best":"y2","why":"singing on stage, face sharp, warm light"}
+
+- best: the id of the picture that would make them proudest to see at the top of their own page. For an act: the act clearly playing live, or a proper band or promo photo; their face visible and in focus; good light; a clean frame that still works cropped wide. For a venue: the place at its most inviting: the room, the stage or the view.
+- A real live moment beats a posed shot. A sharp, well-lit photo beats a dramatic but murky one. A person who is not plainly the act (an actor in a music video) never wins.
+- Always pick one: a page with pictures of the act never opens without a cover (decision 0168).
+- why: at most twelve words.`;
+/** `choices` from coverChoices. Returns the picture to use as the cover. */
+export async function reviewCover(choices, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
+  const top = (choices || []).slice(0, 4);
+  if (top.length < 2) return top[0] || null;
+  const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${top.length} candidate covers follow.${notesBlock(notes)}` }];
+  for (const c of top) {
+    content.push({ type: 'text', text: `Image id=${c.id} · from ${c.from} · ${c.width}x${c.height}${c.note ? ' · ' + c.note : ''}` });
+    content.push({ type: 'image', source: { type: 'base64', media_type: c.type, data: Buffer.from(c.bytes).toString('base64') } });
+  }
+  const ids = top.map((c) => c.id);
+  const got = await askJSON({ call: 'cover', model: modelSmart(ctx), system: COVER_SYSTEM, content, maxTokens: 400, ctx,
+    check: (o) => (isObj(o) && ids.includes(String(o.best)) ? { ok: true, value: String(o.best) } : { ok: false, why: [`"best" must be one of ${ids.join(', ')}`] }) });
+  return top.find((c) => c.id === got);
+}
 /** `cands`: [{id, from, group, bytes, type, width, height, src, note}]. Ten a call.
  *  Returns { judged: cands with the verdict merged in, picks }. */
-export async function judgePhotos(cands, ctx, { kind = 'artist', name = '' } = {}) {
+/* THE FOUNDER'S NOTES (decision 0136) ride into the photo judge and the copy as wishes,
+   never as licence: what they ask is followed where the facts and the pictures allow,
+   and a fact the notes state reaches the copy only through the founder's note source,
+   cited like any other. */
+/* 2,000 characters: room for a pasted setlist (decision 0169). */
+export const NOTES_MAX = 2000;
+const notesBlock = (notes) => (notes ? `\n\nTHE FOUNDER'S NOTES FOR THIS PAGE (follow them where the facts allow; never invent anything to satisfy one):\n${clean(notes, NOTES_MAX)}` : '');
+export async function judgePhotos(cands, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
   const judged = [];
   for (let i = 0; i < (cands || []).length; i += 10) {
     const batch = cands.slice(i, i + 10), ids = batch.map((c) => c.id);
-    const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${batch.length} image(s) follow; judge every one.` }];
+    const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${batch.length} image(s) follow; judge every one.${notesBlock(notes)}` }];
     for (const c of batch) {
       content.push({ type: 'text', text: `Image id=${c.id} · from ${c.from} · ${c.width}x${c.height}${c.note ? ' · ' + c.note : ''}` });
       content.push({ type: 'image', source: { type: 'base64', media_type: c.type, data: Buffer.from(c.bytes).toString('base64') } });
@@ -324,26 +393,26 @@ export async function judgePhotos(cands, ctx, { kind = 'artist', name = '' } = {
 const NO_HYPE = 'No hype: never electrifying, unforgettable, mesmerising, legendary, world-class, iconic, epic, incredible, amazing, captivating, breathtaking, stunning, magical.';
 const COPY_SYSTEM = `MYSET FACTORY · COPY
 
-You write the short copy for ONE live-music act's sample page on MySet, from the numbered FACTS only. Plain, specific, warm and true: the lines a friend who has seen them play would write.
+You write the short copy for ONE live-music act's sample page on MySet, from the numbered FACTS only. Specific and true: the style plain, the tagline and the bio with a magazine's personality.
 Answer with ONE JSON object and nothing else:
 {"tagline":{"text":"","src":[]},"style":{"text":"","src":[]},"bio":[{"s":"","src":[]}],"hook":{"text":"","src":[]}}
 
 - src: the numbers of the FACTS each line rests on. Every line needs at least one.
-- tagline: at most 120 characters. What they play and where, concretely.
+- tagline: at most 120 characters, in the same magazine voice as the bio: what they play and where, concretely, with a little colour, like "Porch-light folk from Brooklyn, with a banjo, a harmonica and a weakness for key changes." (the voice, never the words). The colour comes from a fact, never an invented one.
 - style: at most 60 characters, two or three short genre or format words joined by " · ", like "Acoustic covers · indie folk".
-- bio: two to four sentences, at most 700 characters in all, third person, warm and concrete.
+- bio: exactly two sentences, at most 360 characters in all, third person, in the voice of a music magazine featuring them: lively, a little playful, with one wink of humour, built on concrete facts. The first says who they are and what they play, with some colour; the second, where they play or one specific thing they are known for, and it may land as a playful invitation. The voice, never the words or the shape (vary both from page to page): "Maya Ruiz writes porch-light folk for anyone who has ever cried at a wedding: a Brooklyn songwriter armed with a banjo, a harmonica and a weakness for key changes. Thursdays at The Low Road end in a singalong, whether the room planned on one or not." The humour is in how a fact is said, never an invented fact.
 - hook: ONE sentence the founder could open a direct message with, true and specific to them, like a named cover they posted or a venue they play. "" if the facts hold nothing specific.
 - Only what the facts say: no invented venues, releases, awards, members, years, numbers or quotes. If the facts are thin, write less.
 - ${NO_HYPE}`;
 const VENUE_COPY_SYSTEM = `MYSET FACTORY · COPY
 
-You write the short copy for ONE venue's sample page on MySet, from the numbered FACTS only. Plain, specific, warm and true.
+You write the short copy for ONE venue's sample page on MySet, from the numbered FACTS only. Specific and true: the tagline and the about with a magazine's personality.
 Answer with ONE JSON object and nothing else:
 {"tagline":{"text":"","src":[]},"about":[{"s":"","src":[]}],"hook":{"text":"","src":[]}}
 
 - src: the numbers of the FACTS each line rests on. Every line needs at least one.
-- tagline: at most 120 characters: what kind of place, where, and what goes on there.
-- about: two to five sentences, at most 900 characters in all, warm and concrete: the place, the music, what to expect.
+- tagline: at most 120 characters, in the same magazine voice as the about: what kind of place, where, and what goes on there, with a little colour from a fact, never an invented one.
+- about: exactly two sentences, at most 360 characters in all, in the voice of a magazine's going-out pick: lively, a little playful, with one wink of humour, built on concrete facts. The first says what the place is and where, with some colour; the second, the music and what to expect, and it may land as a playful invitation. The humour is in how a fact is said, never an invented fact.
 - hook: ONE sentence the founder could open a message with, true and specific (a music night they run, something they are known for). "" if nothing specific.
 - Only what the facts say: no invented events, prices, awards, dates, numbers or quotes. If the facts are thin, write less.
 - ${NO_HYPE}`;
@@ -379,8 +448,11 @@ export function tidyCopy(o, facts, venue) {
     // never cut a sentence short: one too long for a short bio is dropped whole
     if (t && t.length <= 400 && grounded(t, f)) sentences.push({ s: /[.!?…]["”’)]?$/.test(t) ? t : `${t}.`, f, src: srcOf(f) });
   }
-  const cap = venue ? 900 : 700, most = venue ? 5 : 4, kept = [];
-  for (const s of sentences) { if (kept.length >= most || [...kept, s].map((x) => x.s).join(' ').length > cap) break; kept.push(s); }
+  /* Two sentences, a space between them on the page (decision 0158). One that would
+     take the About past the cap is passed over, so a long first line still leaves
+     room for a short second one. */
+  const cap = 400, most = 2, kept = [];
+  for (const s of sentences) { if (kept.length >= most) break; if ([...kept, s].map((x) => x.s).join(' ').length <= cap) kept.push(s); }
   const one = (x, max) => { const t = clean(x && x.text, 400), f = fIdx(x && x.src); return t && grounded(t, f) ? { text: cutWords(t, max), f, src: srcOf(f) } : { text: '', f: [], src: [] }; };
   const out = { tagline: one(o.tagline, 120), hook: one(o.hook, 240), sentences: kept, text: kept.map((x) => x.s).join(' ') };
   if (!venue) {
@@ -393,12 +465,70 @@ export function tidyCopy(o, facts, venue) {
 /** `facts` [{k, v, src}], `sources` [{url, kind, title}]. Returns { tagline, style?, hook,
  *  sentences:[{s, f, src}], text } — `f` the fact numbers a line rests on, `src` the
  *  sources those facts came from. */
-export async function writeCopy(facts, sources, kind, ctx, { name = '' } = {}) {
+export async function writeCopy(facts, sources, kind, ctx, { name = '', notes = '' } = {}) {
   const venue = kind === 'venue';
   if (!facts || !facts.length) return tidyCopy({ tagline: {}, hook: {}, style: {}, bio: [], about: [] }, [], venue);
   const content = `${venue ? 'VENUE' : 'ACT'}: ${name || '(no name)'}\n\nFACTS (cite these numbers in src):\n${facts.map((f, i) => `[${i}] ${f.k}: ${f.v}`).join('\n')}`
-    + `\n\nWHERE THE FACTS CAME FROM (for your information only):\n${(sources || []).map((s, i) => `(${i}) ${s.kind} · ${s.title || s.url || ''}`).join('\n')}`;
+    + `\n\nWHERE THE FACTS CAME FROM (for your information only):\n${(sources || []).map((s, i) => `(${i}) ${s.kind} · ${s.title || s.url || ''}`).join('\n')}` + notesBlock(notes);
   const o = await askJSON({ call: 'copy', model: modelSmart(ctx), system: venue ? VENUE_COPY_SYSTEM : COPY_SYSTEM, content,
                             check: (x) => checkCopy(x, venue), maxTokens: 16000, ctx });
   return tidyCopy(o, facts, venue);
+}
+
+/* ---------- songs (decisions 0167, 0170) ----------
+   TWENTY SUGGESTED SONGS for a sample artist's song list, so the page a stranger opens
+   already shows a setlist the room could vote on. Not facts about the act and not a guess
+   at its genre (0170: a genre guess put a trance anthem on a Thai singer-songwriter's
+   page): ten bar classics the whole world sings along to, then ten of the act's own
+   country — the ten American ones when the country is the US or cannot be told. The
+   artist edits the list once the page is theirs. */
+export const WORLD_BAR_SONGS = [
+  ['All of Me', 'John Legend'], ['Perfect', 'Ed Sheeran'], ['Iris', 'Goo Goo Dolls'], ['Wonderwall', 'Oasis'],
+  ['Wagon Wheel', 'Darius Rucker'], ['Hallelujah', 'Jeff Buckley'], ['Sweet Caroline', 'Neil Diamond'],
+  ['Brown Eyed Girl', 'Van Morrison'], ['Hotel California', 'Eagles'], ['Mr. Brightside', 'The Killers']];
+export const US_BAR_SONGS = [
+  ["Don't Stop Believin'", 'Journey'], ['Take Me Home, Country Roads', 'John Denver'], ['Sweet Home Alabama', 'Lynyrd Skynyrd'],
+  ['Piano Man', 'Billy Joel'], ["Free Fallin'", 'Tom Petty'], ['Tennessee Whiskey', 'Chris Stapleton'],
+  ['Friends in Low Places', 'Garth Brooks'], ["Livin' on a Prayer", 'Bon Jovi'], ['Fast Car', 'Tracy Chapman'], ['Jolene', 'Dolly Parton']];
+export const HOME_SONGS = 10;
+const isUS = (c) => /^(us|usa|u\.s\.a?\.?|united states( of america)?|america)$/i.test(String(c || '').trim());
+const SONGS_SYSTEM = `MYSET FACTORY · SONGS
+
+You read the place and the setlist of ONE live-music act for its sample page on MySet, where the audience votes on what the act plays next. Answer with ONE JSON object and nothing else:
+{"country":"","theirs":[{"title":"","artist":""}],"home":[{"title":"","artist":""}]}
+
+- country: the country the act is based in, in English ("Thailand"), from the PLACE or the FACTS. "" when neither says it — never guess one from a name or a language.
+- theirs: every song the FOUNDER'S NOTES say the act plays (a pasted setlist), in the notes' order, at most 20, each with its best-known performer (the act's own name for a song of their own). [] when the notes list no songs. Never guess songs into it.
+- home: when country is "" or the United States, []. Otherwise exactly ${HOME_SONGS}: the most classic bar songs of THAT country — the ones every bar crowd there sings along to and a solo singer with a guitar or a covers band plays there every night, in the language they are sung in there. Each a real, well-known song with its best-known performer. Not the act's genre, not dance or club music, none by the act itself, none of theirs again, no song twice.
+- Titles and performers exactly as they are commonly written, with no notes, years or quotes.`;
+const sig = (s) => `${clean(s.title).toLowerCase()}|${clean(s.artist).toLowerCase()}`;
+function checkSongs(o) {
+  const why = [];
+  const list = (x) => Array.isArray(x) && x.every((s) => isObj(s) && typeof s.title === 'string' && s.title.trim() && typeof s.artist === 'string');
+  if (typeof o.country !== 'string') why.push('"country" must be a string, "" when unknown');
+  if (o.theirs != null && (!list(o.theirs) || o.theirs.length > 20)) why.push('"theirs" must be an array of at most 20 {"title","artist"}');
+  if (!list(o.home) || o.home.some((s) => !s.artist.trim())) why.push('"home" must be an array of {"title","artist"}');
+  if (why.length) return { ok: false, why };
+  const want = (!o.country.trim() || isUS(o.country)) ? 0 : HOME_SONGS;
+  if (o.home.length !== want) why.push(want ? `"home" must hold exactly ${want} songs of ${o.country}, not ${o.home.length}` : '"home" must be [] when the country is unknown or the United States');
+  if (new Set(o.home.map(sig)).size !== o.home.length) why.push('no song twice');
+  return why.length ? { ok: false, why } : { ok: true, value: o };
+}
+/** Returns { country, songs:[{title, artist, group}] } — the act's own setlist from the
+ *  notes first (group "theirs", 0169), then the world's bar classics ("world"), then ten of
+ *  the act's country ("home"; the American ten when that country is the US or unknown). */
+export async function suggestSongs(facts, ctx, { name = '', city = '', country = '', notes = '' } = {}) {
+  const use = (facts || []).filter((f) => ['based_in', 'origin'].includes(f.k));
+  let o = { country: isUS(country) ? 'United States' : '', theirs: [], home: [] };
+  if (notes || (!isUS(country) && (country || use.length))) {
+    const content = `ACT: ${name || '(no name)'}${[city, country].filter(Boolean).length ? `\nPLACE: ${[city, country].filter(Boolean).join(', ')}` : ''}`
+      + `\n\nFACTS:\n${use.map((f) => `- ${f.k}: ${f.v}`).join('\n') || '- (none beyond the place)'}` + notesBlock(notes);
+    o = await askJSON({ call: 'songs', model: modelSmart(ctx), system: SONGS_SYSTEM, content, check: checkSongs, maxTokens: 4000, ctx });
+  }
+  const home = o.home.length ? o.home : US_BAR_SONGS.map(([title, artist]) => ({ title, artist }));
+  const theirs = (o.theirs || []).map((s) => ({ title: clean(s.title, 80), artist: clean(s.artist, 60) || clean(name, 60), group: 'theirs' }));
+  const seen = new Set(theirs.map((s) => clean(s.title).toLowerCase()));
+  const add = (group) => (s) => { const t = clean(s.title, 80), k = t.toLowerCase(); if (seen.has(k)) return null; seen.add(k); return { title: t, artist: clean(s.artist, 60), group }; };
+  return { country: clean(o.home.length ? o.country : 'United States', 60),
+    songs: [...theirs, ...WORLD_BAR_SONGS.map(([title, artist]) => add('world')({ title, artist })), ...home.map(add('home'))].filter(Boolean) };
 }

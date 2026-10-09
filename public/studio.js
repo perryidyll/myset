@@ -382,7 +382,14 @@ async function api(p,o={}){
   if(!o.quiet) busy(true);
   try{
     const r=await (early||fetch(API+p,{...o,headers:h}));
-    return await r.json();
+    const j=await r.json();
+    /* A SERVER IN TROUBLE IS NOT A SIGN-OUT EITHER (decision 0142). When the store
+       does not answer, every door now says 503 "busy" instead of acting on an empty
+       document — and load() sent anything that was not ok to the sign-in screen,
+       stopping the refresh timer with it. A 5xx is marked the way a dropped
+       connection is, so the last good screen stays and the next poll tries again. */
+    if(r.status>=500&&j&&j.ok===false) j.offline=true;
+    return j;
   // `offline` distinguishes "the network failed" from "the server said no".
   // load() used to treat both as an auth failure and throw the artist out to the
   // sign-in screen mid-gig, killing the refresh timer with it. INVARIANT 16.
@@ -393,11 +400,15 @@ async function api(p,o={}){
    TIP DECKS ON EVERY TAB (decision 0102). /tips.js holds the carousel and the words;
    this decides when. A tab's deck plays once, the first time an account opens it,
    for a new account (a first night still ahead, or the flag a signup or a claim
-   sets) and for a sample; an established artist is never interrupted and has the ?
-   in the header, which plays the current tab's deck any time.
+   sets); an established artist is never interrupted and has the ? in the header,
+   which plays the current tab's deck any time. A SAMPLE replays them on every visit
+   (decision 0171): the welcome each time its Studio opens, then each tab's deck the
+   first time that tab is opened in the visit — the founder walks it before sending.
    ───────────────────────────────────────────────────────────────────────────── */
 const DECKOF={live:'live',setlist:'setlist',gigs:'gigs',money:'money',profile:'profile',merch:'merch',diary:'diary',messages:'messages',settings:'settings'};
 function tipScope(){ return SAMPLE?'sample-'+SAMPLE.slug:((D&&D.show&&D.show.artistId)||'artist'); }
+const VISIT=new Set();   // a sample's decks played in this visit (0171); a reload is a new visit
+const tipOnce=(id,o)=>{ if(!SAMPLE) return Tips.first(id,o); if(VISIT.has(id)) return Promise.resolve(false); VISIT.add(id); return Tips.open(id,o); };
 function autoTips(){
   if(SAMPLE) return true;
   try{ if(localStorage.getItem('myset.tipsauto')==='1') return true; }catch(e){}
@@ -411,8 +422,8 @@ function maybeTips(){
     try{
       if(!window.Tips||PRACTICE||Tips.isOpen()||isNew()||document.getElementById('boot')||DECKOF[TAB]!==deck)return;
       if($('#sheet').classList.contains('on')||$('#tipburst'))return;
-      if(SAMPLE&&!Tips.seen('sample-studio',tipScope()))return;       // the welcome goes first
-      Tips.first(deck,{scope:tipScope(),vars:tipVars(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
+      if(SAMPLE&&!VISIT.has('sample-studio'))return;                   // the welcome goes first
+      tipOnce(deck,{scope:tipScope(),vars:tipVars(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
     }catch(e){}
   },450);
 }
@@ -440,7 +451,7 @@ function sampleBoot(){
   const go=()=>{
     if((!D||document.getElementById('boot'))&&tries++<40){ setTimeout(go,300); return; }
     if(!window.Tips)return;
-    Tips.first('sample-studio',{scope:tipScope(),cta:{label:'Show me',go:()=>{ if(TAB!=='live') setTab('live'); else maybeTips(); }},
+    tipOnce('sample-studio',{scope:tipScope(),cta:{label:'Show me',go:()=>{ if(TAB!=='live') setTab('live'); else maybeTips(); }},
       onDone:(done)=>{ if(!done) maybeTips(); }}).then((shown)=>{ if(!shown) maybeTips(); });
   };
   setTimeout(go,500);
@@ -649,7 +660,7 @@ function sampleRoute(p,o){
    the first time it is wanted. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=503961fa'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
+  const j=document.createElement('script'); j.src='/sample.js?v=cd4e99b0'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
   CLAIMAT=Date.now(); closeSheet();
@@ -5583,7 +5594,7 @@ async function makeRecovery(){
   openSheet(`<h3>Your recovery codes</h3>
     <p class="lede">This is the only time we can show you these. Write them down, or copy them somewhere safe.</p>
     <div class="list"><div class="row"><div class="m"><div class="t mono" style="line-height:1.9;white-space:pre">${esc(list)}</div></div></div></div>
-    <button class="big" style="margin-top:14px" onclick="copyText(${JSON.stringify(list)})">Copy them</button>
+    <button class="big" style="margin-top:14px" onclick="copyText(${esc(JSON.stringify(list))})">Copy them</button>
     <p class="fine">Each one works once. Use one to sign in at myset.vip/studio if you ever lose your email.</p>`);
   REC=null; loadRecovery(true);
 }
@@ -5605,7 +5616,7 @@ async function emailChangeStart(){
     <p class="lede">One to <b>${esc(to)}</b>, one to <b>${esc((PLAN&&PLAN.email)||'')}</b>. Both boxes, then it moves.</p>
     <div class="field"><label>Code sent to the new address</label><input class="inp mono" id="ecA" inputmode="numeric" maxlength="6" placeholder="000000"></div>
     <div class="field"><label>Code sent to ${esc((PLAN&&PLAN.email)||'your current address')} — or a recovery code</label><input class="inp mono" id="ecB" placeholder="000000"></div>
-    <button class="big" style="margin-top:14px" onclick="emailChangeFinish(${JSON.stringify(to)})">Move my account</button>`);
+    <button class="big" style="margin-top:14px" onclick="emailChangeFinish(${esc(JSON.stringify(to))})">Move my account</button>`);
 }
 async function emailChangeFinish(to){
   const a=(($('#ecA')||{}).value||'').trim(), b=(($('#ecB')||{}).value||'').trim();

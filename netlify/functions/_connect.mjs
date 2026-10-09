@@ -354,6 +354,12 @@ export async function mirrorToShow(owner, c) {
   }).catch(() => {});
 }
 
+/** Does this owner's plan share Stripe's card fee? Only a plan row that says
+ *  `splitFee` had half the estimate taken off at checkout (feeCents), so only
+ *  such a row has a correction coming afterwards (_feesplit.mjs). */
+export const sharesStripeFee = async (owner) =>
+  !!planRow(await planOfOwner(owner), isVenueOwner(owner) ? 'venue' : 'artist').splitFee;
+
 /** Everything the Studio needs to draw the Get-paid card, including the honest
  *  note about who pays Stripe's own fee. */
 export async function connectStatus(aid) {

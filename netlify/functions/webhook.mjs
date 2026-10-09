@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, DEFAULT_ARTIST } from './_lib.mjs';
-import { redeemSession, cleanOwnerId } from './_pay.mjs';
+import { redeemSession, cleanOwnerId, noteOwed } from './_pay.mjs';
 import { artistForAccount, mutateConnect, mirrorToShow, readConnect } from './_connect.mjs';
 
 /* The safety net. /api/confirm only runs if the buyer's browser makes it back to
@@ -90,7 +90,12 @@ const main = async (req) => {
       || event.type === 'invoice.payment_failed'
       || (event.type === 'checkout.session.completed' && (event.data.object || {}).mode === 'subscription')) {
     const { handleBillingEvent } = await import('./_billing.mjs');
-    try { await handleBillingEvent(event); } catch { /* Stripe will retry */ }
+    /* Not caught (decision 0138): a throw reaches guard(), which logs it and answers
+       500 — the only answer that makes Stripe send the event again. This used to
+       be swallowed under a comment that said "Stripe will retry", and then answered
+       200, so it never did. The handler only re-reads the subscription from Stripe,
+       so a redelivery is safe. */
+    await handleBillingEvent(event);
     return json({ received: true });
   }
 
@@ -133,9 +138,19 @@ const main = async (req) => {
       const aid = cleanOwnerId((session.metadata || {}).artist)
                   || (event.account ? await artistForAccount(event.account) : '')
                   || DEFAULT_ARTIST;
-      try { await redeemSession(aid, session); } catch { /* Stripe will retry */ }
+      /* A GRANT THAT FAILED IS STILL OWED (decision 0138). This caught the failure
+         and fell through to the 200 below, so Stripe was told "received" for a
+         payment whose votes never landed and did not come back. Now the session is
+         written down for the bell to retry within minutes (noteOwed), and the throw
+         goes on to guard(), which logs it and answers 500 so Stripe redelivers too.
+         Both are safe to race: redeemSession claims the session before it grants. */
+      try { await redeemSession(aid, session); }
+      catch (e) {
+        await noteOwed(aid, session.id, event.account || '').catch(() => {});
+        throw e;
+      }
     }
   }
-  return json({ received: true });       // 200 so Stripe stops retrying
+  return json({ received: true });       // 200: handled, or not ours to handle
 };
 export default guard('webhook', main);

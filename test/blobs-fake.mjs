@@ -29,10 +29,21 @@ const note = (kind, key) => { if (ops) ops.push(kind + ' ' + String(key)); };
 let readDelay = 0;
 export const __slowReads = (ms) => { readDelay = Math.max(0, Number(ms) || 0); };
 
+/* Make reads of matching keys THROW, the way the real client does when the store
+   errors or throttles — so a test can prove a failed read is treated as a failure
+   and never as "this document is empty" (decision 0142). `hang: true` makes them
+   never answer instead, which is what a throttled read looks like from outside. */
+let failReadRe = null, failReadHang = false;
+export const __failReads = (re, { hang = false } = {}) => { failReadRe = re; failReadHang = !!hang; };
+
 export function getStore() {
   return {
     async getWithMetadata(key, opts = {}) {
       note('get', key);
+      if (failReadRe && failReadRe.test(key)) {
+        if (failReadHang) await new Promise(() => {});
+        throw new Error('BlobsInternalError: Netlify Blobs has generated an internal error (500 status code)');
+      }
       if (readDelay) await new Promise((r) => setTimeout(r, readDelay));
       const e = mem.get(key);
       if (!e) return null;

@@ -338,3 +338,50 @@ function menuDoors(tab){
   if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
   document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
 }
+
+/* AN ABOUT, ONE SENTENCE AT A TIME (decisions 0135, 0158). A generated About is one
+   block of prose; the founder asked for each sentence on its own, a space between them
+   (a hairline at first; 0158 took it out). The
+   writer's own line breaks are kept as breaks; a full stop after a short abbreviation
+   (St., Dr., Mt.) or before a lower-case word does not end a sentence. Returns HTML. */
+function aboutLines(text){
+  const out=[];
+  String(text||'').split(/\n+/).forEach(par=>{
+    const bits=par.split(/(?<=[.!?…]["”’)]?)\s+/); let cur='';
+    bits.forEach((bit,j)=>{
+      cur=cur?cur+' '+bit:bit;
+      const nx=bits[j+1];
+      if(nx&&(/\b(?:St|Dr|Mt|Mr|Mrs|Ms|No|vs|Jr|Sr|ft|approx|e\.g|i\.e)\.$/i.test(cur)||/^[a-z]/.test(nx))) return;
+      out.push(cur.trim()); cur='';
+    });
+  });
+  return out.filter(Boolean).map((s,i)=>`<span class="aline" style="--i:${i}">${esc(s)}</span>`).join('');
+}
+
+/* THE COVER'S CROP (decision 0135). A cover is shown 16:10; a portrait photo used as one
+   lost its subject to a fixed window (Sand & Tan: a strip of sky over the tables). With
+   no focus point stored, read a 48-px copy of the photo and slide the 16:10 window to
+   the rows with the most detail. Same-origin images only (the canvas must stay clean);
+   anything that fails keeps the stylesheet's crop. */
+function coverFocus(img){
+  if(!img||img.style.objectPosition) return;
+  /* the blurred placeholder behind the cover is already a 48-px copy, cached: read that,
+     so the crop is chosen before the full photo paints and nothing jumps */
+  const m=/url\(["']?([^"')]+)/.exec((img.parentElement&&img.parentElement.style.backgroundImage)||'');
+  const p=new Image(); p.src=m?m[1]:img.currentSrc||img.src;
+  const run=()=>{ try{
+    const w=48, h=Math.round(w*p.naturalHeight/p.naturalWidth), win=Math.round(w*10/16);
+    if(!h||h-win<3) return;
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(p,0,0,w,h);
+    const d=x.getImageData(0,0,w,h).data, L=i=>d[i]*.3+d[i+1]*.59+d[i+2]*.11, row=new Array(h).fill(0);
+    for(let y=1;y<h;y++) for(let k=1;k<w;k++){ const i=(y*w+k)*4; row[y]+=Math.abs(L(i)-L(i-4))+Math.abs(L(i)-L(i-w*4)); }
+    /* the cover's foot sits under the fade and the photo tiles: count a row most when it
+       lands just above the window's middle */
+    let best=-1, top=0;
+    for(let t=0;t<=h-win;t++){ let s=0; for(let y=0;y<win;y++) s+=row[t+y]*Math.max(.3,1-Math.abs(y/win-.4)*1.4); if(s>best){ best=s; top=t; } }
+    const at=`50% ${Math.round(top/(h-win)*100)}%`;
+    img.style.objectPosition=at; img.parentElement.style.backgroundPosition=at;
+  }catch(e){} };
+  if(p.complete&&p.naturalWidth) run(); else p.addEventListener('load',run,{once:true});
+}

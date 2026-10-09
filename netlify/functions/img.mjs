@@ -1,10 +1,11 @@
+import { guard } from './_errlog.mjs';
 import { bad, cleanArtistId } from './_lib.mjs';
 import { getImage, isSlot } from './_img.mjs';
 import { artistBySlug } from './_auth.mjs';
 
 /* Public. Serves an artist's uploaded photo. The URL carries a ?v= stamp that
    changes on every upload, so it can be cached hard and still update instantly. */
-export default async (req) => {
+const main = async (req) => {
   const q = new URL(req.url).searchParams;
   const slot = q.get('s') || '';
   if (!isSlot(slot)) return bad('unknown photo', 404);
@@ -50,3 +51,5 @@ const photo = (img) => new Response(img.bytes, {
     ...(img.type === 'application/pdf' ? { 'content-disposition': 'inline; filename="tour-dates.pdf"' } : {}),
   },
 });
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('img', main);

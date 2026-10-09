@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, jsonCached, publicArtist } from './_lib.mjs';
 import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf } from './_events.mjs';
 import { readRsvp, rsvpCounts, occKey, HORIZON_DAYS } from './_rsvp.mjs';
@@ -17,7 +18,7 @@ const MAX_WINDOW_DAYS = 28;   // `days=` on the city feed may widen the window t
    nobody has) — read from the owner's one rsvp document in the same hop as their
    events, never a read per row (_rsvp.mjs).
 */
-export default async (req) => {
+const main = async (req) => {
   const url = new URL(req.url);
 
   /* ---- the picker ---- */
@@ -217,3 +218,5 @@ async function countUpcoming(ids) {
   }
   return n;
 }
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('events', main);

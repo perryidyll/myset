@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, requireArtist, getShow, readFans, voteCounts } from './_lib.mjs';
 import { planForArtist, reportsAllowed } from './_plan.mjs';
 import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMoney, healHistory, placeShows, renameShow, hideShow } from './_history.mjs';
@@ -5,7 +6,7 @@ import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMo
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
    a single show. The show currently running is included as a live preview so the
    artist can see tonight's numbers before he ends it. */
-export default async (req) => {
+const main = async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
   /* The book of nights is the Money tab's (decision 0105): reading it is Money view;
@@ -128,3 +129,5 @@ export default async (req) => {
   if (!reports) return json({ ok: true, live, locked: 'plus', nights: shows.length, shows: [] });
   return json({ ok: true, live, shows });
 };
+/* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
+export default guard('history', main);

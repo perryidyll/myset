@@ -1,0 +1,86 @@
+# The outside check (decision 0157).
+#
+# MySet's own watch (netlify/functions/_watch.mjs) runs on Netlify, so it cannot
+# report Netlify being down or its own schedule having stopped. This asks from
+# GitHub's machines, every five minutes:
+#   - https://myset.vip/api/health  — never cached; 200 only when the scheduler is
+#     ringing, no payment is long owed, the error log is quiet and the inside watch
+#     itself ran in the last half hour
+#   - https://myset.vip/            — the front door, by content, not by status
+# Three tries, forty seconds apart, before it calls anything down.
+#
+# It speaks only when the answer CHANGES. Down: it opens an issue labelled `uptime`,
+# assigned to the repository's owner, which GitHub sends to their email and phone.
+# Up again: it closes that issue with the time. While the issue is open it says
+# nothing more. If the repository has a secret named NTFY_TOPIC, the same two
+# messages also go to https://ntfy.sh/<topic> as a phone push.
+#
+# GitHub starts scheduled workflows late when it is busy — five to thirty minutes
+# is normal — so this is a backstop, not a stopwatch.
+name: watch
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: watch
+  cancel-in-progress: false
+jobs:
+  ask:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Ask MySet how it is
+        id: ask
+        run: |
+          code=000; home=000
+          probe() {
+            code=$(curl -sS -m 20 -o health.json -w '%{http_code}' 'https://myset.vip/api/health' 2>/dev/null) || code=000
+            home=$(curl -sS -m 20 -o home.html -w '%{http_code}' 'https://myset.vip/' 2>/dev/null) || home=000
+            grep -q 'MySet' home.html 2>/dev/null || home="$home (not the front page)"
+            [ "$code" = "200" ] && [ "$home" = "200" ]
+          }
+          ok=no
+          for i in 1 2 3; do
+            if probe; then ok=yes; break; fi
+            [ "$i" = 3 ] || sleep 40
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          {
+            echo 'detail<<MYSET_EOF'
+            echo "Front page: HTTP $home"
+            echo "Health: HTTP $code"
+            head -c 700 health.json 2>/dev/null | tr -d '`' || true
+            echo
+            echo 'MYSET_EOF'
+          } >> "$GITHUB_OUTPUT"
+          echo "ok=$ok front=$home health=$code"
+      - name: Tell the founder when the answer changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          OK: ${{ steps.ask.outputs.ok }}
+          DETAIL: ${{ steps.ask.outputs.detail }}
+        run: |
+          gh label create uptime -R "$GITHUB_REPOSITORY" --color B60205 \
+            --description 'Opened and closed by the outside uptime check' 2>/dev/null || true
+          open=$(gh issue list -R "$GITHUB_REPOSITORY" --label uptime --state open --json number -q '.[0].number // empty')
+          now=$(date -u '+%Y-%m-%d %H:%M UTC')
+          push() {
+            [ -n "$NTFY_TOPIC" ] || return 0
+            curl -sS -m 15 -H "Title: $1" -H "Priority: $2" -d "$3" "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
+          }
+          if [ "$OK" = "no" ] && [ -z "$open" ]; then
+            printf 'The outside check could not get a healthy answer from myset.vip at %s, three tries in a row.\n\n```\n%s\n```\n\nThis issue closes by itself when the check passes again. What each `why` means is in `netlify/functions/_watch.mjs`.\n' "$now" "$DETAIL" > body.md
+            gh issue create -R "$GITHUB_REPOSITORY" --title 'MySet is not answering' --label uptime \
+              --assignee "$GITHUB_REPOSITORY_OWNER" --body-file body.md
+            push 'MySet is not answering' urgent "The outside check failed three times at $now."
+          elif [ "$OK" = "yes" ] && [ -n "$open" ]; then
+            gh issue close "$open" -R "$GITHUB_REPOSITORY" --comment "Healthy again at $now."
+            push 'MySet is back' default "The outside check passed at $now."
+          else
+            echo "no change (ok=$OK, open issue: ${open:-none})"
+          fi

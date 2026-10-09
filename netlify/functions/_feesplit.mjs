@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { casDoc, readDoc, KEY, emptyMeta } from './_lib.mjs';
-import { stripeFor, stripeFeeEstimate } from './_connect.mjs';
+import { stripeFor, stripeFeeEstimate, sharesStripeFee } from './_connect.mjs';
 
 /* THE EXACT HALF OF STRIPE'S CARD FEE.
 
@@ -55,6 +55,14 @@ const idem = (chargeId) => 'fs-' + createHash('sha256').update('myset-feesplit|'
 export async function settleSplit(owner, acct, ch) {
   const cid = ch && ch.id;
   if (!cid || !acct) return { ok: false, why: 'no charge' };
+  /* ONLY WHERE THE ESTIMATE WAS TAKEN OFF (decision 0139). The correction below is
+     "real half minus estimated half", which is only owed when checkout subtracted
+     the estimated half — and feeCents does that for a plan row with `splitFee`
+     alone. This ran for every connected account, so an artist (no such row) was
+     handed back real-minus-estimate of a deduction that never happened: MySet's own
+     fee, refunded, on every foreign card. Asked before Stripe is, so a charge that
+     is owed nothing costs no API call and writes no row. */
+  if (!(await sharesStripeFee(owner))) return { ok: true, give: 0, why: 'this plan does not share the fee' };
   const { stripe, opts } = await stripeFor(owner);
   if (!stripe) return { ok: false, why: 'no stripe' };
 
