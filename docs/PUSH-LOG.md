@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 15:20 — 7f7c7c4 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (90 files since origin/main)
+**tl;dr:** The three restored Crystal Day nights now carry $60, on the artist's word — decision 0198 and the session note say so
+**Other sessions:** Doc-only follow-up on the same branch as the pruneRules fix. The repaired nights are 69→74 records plus pay=6000 on gimj34ujp@2026-09-15/-09-29/-10-06; that $60 is the artist's decision, NOT a restoration — no snapshot holds the deleted rule's pay. Live book now has no record with a blank pay.
+
 ### 2026-10-03 03:24 — 0c76c92 — scale-abuse@fix/abuse-ceilings (47 files since origin/main)
 **tl;dr:** No change for people: two rule numbers renamed to avoid a clash
 **Other sessions:** #230's INVARIANTS are now 0iw (clips, 0189) and 0ix (promo tries, 0190); 0ii–0iv belong to c8fc2f.
