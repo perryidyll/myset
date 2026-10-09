@@ -184,7 +184,10 @@ async function handlePlan(aid, action, body, req, me) {
     return json({ ok: true, ...(await freeSlug(aid)) });
   }
 
-  if (action === 'promoRedeem') return json(await redeemPromo(aid, body.code));
+  if (action === 'promoRedeem') {
+    const r = await redeemPromo(aid, body.code, req);   // five tries an hour (0190)
+    return r.limited ? bad(r.error, 429) : json(r);
+  }
 
   /* A venue seeing how many people turned up to a show IN THEIR OWN ROOM is the
      single biggest reason a venue signs up — and it is still the artist's data.

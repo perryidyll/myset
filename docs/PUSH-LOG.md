@@ -14,6 +14,22 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Brought up to today's main a second time (28ff11b: refunds and chargebacks heard, merch held while the buyer pays 0177/0178; money net of refunds, stock net of checkouts 0194/0195); suite 6,630 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork) is still NOT docs only: merge without [skip ci]. Main is moving every few minutes; the push log is the one collision each time, resolved by keeping every entry from both sides, newest first.
 
+### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
+**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
+**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
+
+### 2026-10-03 03:24 — 0c76c92 — scale-abuse@fix/abuse-ceilings (47 files since origin/main)
+**tl;dr:** No change for people: two rule numbers renamed to avoid a clash
+**Other sessions:** #230's INVARIANTS are now 0iw (clips, 0189) and 0ix (promo tries, 0190); 0ii–0iv belong to c8fc2f.
+
+### 2026-10-03 03:22 — 6ea0f6b — scale-songlist@fix/vote-song-list (47 files since origin/main)
+**tl;dr:** In a big room every song stays votable: the vote page fetches the song list once and then polls only the tallies (when the server supports it; otherwise exactly today's page) (0192)
+**Other sessions:** NOT MERGED. Stacked on #228; pairs with c8fc2f's #226 (0150). vote.html: detection = board carries songsV; lean=1 polls only while the held list matches songsV; fromList() rebuilds a today-shaped board from tally+list; falls back to the full board on list failure/5 s/version mismatch/unknown song. INVARIANT 0ig.
+
+### 2026-10-03 03:04 — dcdf9aa — scale-abuse@fix/abuse-ceilings (18 files since origin/main)
+**tl;dr:** Abuse ceilings: anonymous clip uploads have one door and a cap per network, trimmed pending clips are deleted, promo codes get five guesses an hour, and a junk QR address answers 404 instead of crashing (0189, 0190)
+**Other sessions:** NOT MERGED — waits on the founder's word. community.mjs legacy 'clip' action REMOVED (no page sent it; use /api/clipup). New key families cliplim_<owner> (clipBeginAllowed, fails open) and global promolim (promoTryAllowed, fails CLOSED); both in _mirror SKIP, keysFor, venue delete list, backup.py skip. Promo errors are one message now. When #218 replaces SKIP with FAMILIES, carry these two.
+
 ### 2026-10-09 15:52 — ac8b93e — scale-p2-money@fix/refunds-and-stock (36 files since origin/main)
 **tl;dr:** Nothing new for a person: the refunds-and-merch-hold change (#238) now sits on today's main, ready to merge
 **Other sessions:** Restacked onto main e996865 (#227 b2dbfec + #150). money/02: refunds are w14, expired checkouts w15 (week one's w12/w13 kept); mhold in FAMILIES owner regex + keysFor/keysForVenue; moneyForShow keeps 0153's resume AND 0177's lostOf. Suite 6,466 ✓ exit 0.

@@ -111,7 +111,7 @@ KEEP_MONTHLY_DAYS = 365
 # everyone out once (they sign back in with a password or a code); a year of copies
 # each holding the key that mints any session is the worse trade.
 SKIP_KEYS = ('authsecret',)
-SKIP_PREFIX = ('sess_', 'lock_', 'authc_', 'authnet_', 'paylim_')   # the last two: a limiter's hour (0111)
+SKIP_PREFIX = ('sess_', 'lock_', 'authc_', 'authnet_', 'paylim_', 'cliplim_', 'promolim')   # authnet_ on: a limiter's hour (0111, 0189, 0190)
 SKIP_SUFFIX = ('_idcheck',)
 
 

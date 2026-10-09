@@ -33,11 +33,9 @@ export async function pickableNights(aid, now = Date.now()) {
   return [...byDate.values()].sort((a, b) => b.at - a.at).slice(0, 40);
 }
 import { h10, readPosts, readLikes, shapePosts, addPost, likePost, reportPost, editPost,
-         removeOwnPost, PER_DEVICE_PER_DAY, DAY, EDIT_WINDOW } from './_community.mjs';
-import { decodeVideoDataUrl, putClip, notePending, newClipId,
-         MAX_SECONDS, MAX_VIDEO_BYTES } from './_video.mjs';
+         removeOwnPost, PER_DEVICE_PER_DAY, EDIT_WINDOW } from './_community.mjs';
+import { MAX_SECONDS, MAX_VIDEO_BYTES } from './_video.mjs';
 import { addWish, MAX_WISH } from './_wishes.mjs';
-import { decodeDataUrl, putImage } from './_img.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
 
@@ -180,39 +178,14 @@ const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
-  if (ownArtistPage && ['post', 'clip', 'wish'].includes(body.action))
+  if (ownArtistPage && ['post', 'wish'].includes(body.action))
     return bad('Artists can’t post on their own community page.', 403);
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
 
-  /* A CLIP GOES UP ON ITS OWN, BEFORE THE POST — see _video.mjs for why.
-     The daily limit is checked HERE as well as in addPost, because this is the
-     expensive door: without it a device that will never post could upload 3MB
-     as often as it liked. It is a read-only check of the same counter addPost
-     enforces inside its CAS, so the two can disagree only by being generous. */
-  if (body.action === 'clip') {
-    const posts = await readPosts(o.owner);
-    const now = Date.now();
-    const { sha } = await import('./_lib.mjs');
-    const me = sha(String(fan)).slice(0, 10);
-    const mine = (posts.recent || []).filter((r) => r && now - r.at < DAY && r.f === me);
-    if (mine.length >= PER_DEVICE_PER_DAY)
-      return bad('That’s three posts today from this phone — come back tomorrow.', 429);
-
-    const dec = decodeVideoDataUrl(body.data);
-    if (dec.error) return bad(dec.error, 400);
-    const clip = newClipId();
-    await putClip(o.owner, clip, dec.bytes, dec.type);
-    /* The poster frame, grabbed on the phone. Optional: a clip with no poster
-       still plays, it just shows a dark box until it is tapped. */
-    if (body.poster) {
-      const pd = decodeDataUrl(body.poster);
-      if (!pd.error) await putImage(o.owner, clip, pd.bytes, pd.type);
-    }
-    await notePending(o.owner, clip);
-    return json({ ok: true, clip, seconds: dec.seconds, bytes: dec.bytes.length });
-  }
-
+  /* A CLIP GOES UP ON ITS OWN, BEFORE THE POST, through /api/clipup — the only door
+     for one. The old `clip` action here (a whole clip as base64 in this body) had no
+     page sending it and no network ceiling, so it is gone (decision 0189). */
   if (body.action === 'post') {
     /* WHERE THEY SAW THEM: either a night off the artist's own list (show id →
        its label, and one post per night per phone), or a name the fan typed

@@ -151,6 +151,8 @@ export const FAMILIES = [
   [/^authsecret$/, 'skip', 'the key that mints every session (0110)'],
   [/_idcheck$/, 'skip', 'the ID photo is deleted the moment the owner decides (0bk); a copy would outlive that'],
   [/^paylim_/, 'skip', "a limiter's hour, never worth a copy (0111)"],
+  [/^cliplim_/, 'skip', "a network's clip-upload hour (0189): a limiter, never worth a copy"],
+  [/^promolim$/, 'skip', 'promo-code guesses per network per hour (0190): a limiter, never worth a copy'],
   [/^(hqlock|showlock|fmgate)$/, 'skip', 'wrong-passcode counts for the CRM, Show log and money-model doors (0108, 0112): minutes of state'],
   [/^f\d+_/, 'skip', "the room's fan files: device records for tonight, never exported (0bu)"],
   [/^vid_/, 'skip', 'clip bytes already live on R2 under the same key (0dq)'],

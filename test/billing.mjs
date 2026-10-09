@@ -104,6 +104,40 @@ await AS(TB, 'planCheckout', { plan: 'pro' });
 created = lastCall('checkout.sessions.create');
 ok('the checkout carries a 50% coupon', !!(created.args.discounts && created.args.discounts[0].coupon === 'myset_promo_50'), created.args.discounts);
 
+console.log('\nA PROMO CODE CANNOT BE GUESSED  (decision 0190)');
+{
+  const { mutatePromos, readPromos, PROMO_TRIES } = await import('../netlify/functions/_plan.mjs');
+  await mutatePromos((d) => {
+    d.codes.GUESSME50 = { pct: 50, plan: 'plus', months: 3, usedBy: [] };
+    d.codes.TURNEDOFF = { pct: 100, plan: 'pro', months: 12, revoked: true, usedBy: [] };
+    d.codes.ALLGONE = { pct: 100, plan: 'pro', months: 12, maxUses: 1, usedBy: ['somebody'] };
+    return true;
+  });
+  const cy = await createArtist({ email: 'cy@example.com', name: 'Cy Guesser', slug: 'cy-guesser' });
+  const TC = await signToken('cy@example.com', revOf(await readArtists(), cy.artistId));
+  const dee = await createArtist({ email: 'honest@example.com', name: 'Dee Honest', slug: 'dee-honest' });   // not dee@: 0184's section below signs her up
+  const TD = await signToken('honest@example.com', revOf(await readArtists(), dee.artistId));
+  const RD = (tok, code, ip) => hit(admin, 'https://x/api/admin', { action: 'promoRedeem', code }, tok, { 'x-nf-client-connection-ip': ip });
+
+  const unknown = await RD(TC, 'NOSUCHCODE', '203.0.113.50');
+  const off = await RD(TC, 'TURNEDOFF', '203.0.113.50');
+  const gone = await RD(TC, 'ALLGONE', '203.0.113.50');
+  ok('unknown, turned off and used up all get the SAME answer',
+    !unknown.ok && unknown.error && unknown.error === off.error && off.error === gone.error, [unknown.error, off.error, gone.error]);
+  for (let i = 3; i < PROMO_TRIES; i++) await RD(TC, 'GUESS' + i, '203.0.113.50');
+  const promosBefore = JSON.stringify(await readPromos());
+  const rowBefore = JSON.stringify((await readArtists()).byId[cy.artistId]);
+  const sixth = await RD(TC, 'GUESSME50', '203.0.113.50');
+  eq(`the try after ${PROMO_TRIES} in an hour is refused, even with a real code`, sixth.status, 429);
+  ok('the refused try wrote nothing to the codes or the account',
+    JSON.stringify(await readPromos()) === promosBefore && JSON.stringify((await readArtists()).byId[cy.artistId]) === rowBefore);
+  eq('the account is held to five from ANY network', (await RD(TC, 'GUESSME50', '198.51.100.60')).status, 429);
+  eq('and the network is held to five for ANY account', (await RD(TD, 'GUESSME50', '203.0.113.50')).status, 429);
+  const real = await RD(TD, 'GUESSME50', '192.0.2.70');
+  ok('an honest artist on another network redeems first time', real.ok === true && real.pct === 50, real);
+  eq('and the discount is on her account', (await readArtists()).byId[dee.artistId].discountPct, 50);
+}
+
 console.log('\nCHANGING  up is immediate, leaving keeps the paid month');
 r = await AS(TA, 'planChange', { plan: 'pro' });
 ok('Plus → Pro', r.ok && r.plan === 'pro', r);

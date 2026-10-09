@@ -55,7 +55,7 @@ export async function keysForVenue(vid, namers = null) {
   const named = (...ks) => { if (namers) for (const k of ks) if (k) namers.add(k); };
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
     `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `rec_${o}`,
-    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`,   // paylim_: the checkout limiter (0111)
+    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`, `cliplim_${o}`,   // paylim_: the checkout limiter (0111); cliplim_: clip uploads (0189)
     /* Three a venue grew after this list was written, so none had a second home and
        each outlived the venue (0146): the pitches it was sent (0123), its alert
        devices (0124), and its answers to shows listed at its place (0128). */
