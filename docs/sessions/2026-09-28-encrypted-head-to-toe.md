@@ -307,8 +307,10 @@ read by content fifteen seconds later: `studio.html` serves `studio.js?v=c3a8e6a
 `venue-studio.html` serves `venue-studio.js?v=70103e05`, both carry `x-myset-token`;
 `/api/health` 200, `ok: true`, `seal: { secret: true, ring: 'absent' }`, `errorsLastHour:
 0`. The keyring appears at the first protected write (a sign-in, a note, the mirror's
-five-minute ring), and `seal.ring` reads `ours` from then on. **Not checked:** a sign-in
-on the new build — the founder's next Studio open is the proof; the first wrap.
+five-minute ring), and `seal.ring` reads `ours` from then on — which it did at 08:47:04Z:
+`seal: { secret: true, ring: 'ours' }`, `ok: true`, `errorsLastHour: 0`. The keyring exists,
+wrapped by the secret; sealing is live. **Not checked:** a sign-in on the new build — the
+founder's next Studio open is the proof.
 
 Paperwork: decisions 0112, 0113, 0199, 0200 carry the commit; SEC-003–SEC-005 live in
 the ledger; Puzzle changelog 2474 and 2475 completed, 2973/2974 (titled 0172/0173)
