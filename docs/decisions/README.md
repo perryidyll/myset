@@ -213,6 +213,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0201](0201-every-studio-call-has-a-clock-and-the-live-tab-polls-one-at-a-time.md) | Every Studio call has a clock, and the Live tab polls one at a time | 2026-10-09 | ui | decided | claude |
 | [0202](0202-a-declined-requests-votes-owed-back-are-written-down-in-the-decline.md) | A declined request's votes owed back are written down in the decline, and given back once | 2026-10-09 | voting | decided | claude |
 | [0203](0203-no-short-field-a-page-draws-holds-markup.md) | No short field a page draws holds markup | 2026-10-09 | auth | decided | claude |
+| [0204](0204-a-sample-page-is-erased-leaves-first-and-its-row-goes-last.md) | A sample page is erased leaves first, and its register row goes only when nothing it names is left | 2026-10-09 | storage | decided | claude |
 | [0207](0207-a-paying-referrer-s-free-month.md) | The referral month is a month of Bar Star for a Hobbyist — a referrer who already pays is owed nothing, and the Studio says so | 2026-10-09 | money | decided | perry-confirmed |
 
 ## By area
@@ -253,7 +254,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
-**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0113](0113-the-records-that-hold-a-person-are-sealed-under-a-keyring-the-secret-wraps.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) · [0173](0173-background-jobs-keep-up.md) · [0174](0174-the-city-index-carries-its-gigs.md) · [0175](0175-dated-copies-on-r2-for-ninety-days.md) · [0200](0200-the-activity-log-is-complete-append-only-in-parts.md)
+**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0113](0113-the-records-that-hold-a-person-are-sealed-under-a-keyring-the-secret-wraps.md) · [0142](0142-a-read-that-failed-is-an-error-never-an-empty-docu.md) · [0146](0146-every-kind-of-document-has-a-second-home-or-a-reason.md) · [0173](0173-background-jobs-keep-up.md) · [0174](0174-the-city-index-carries-its-gigs.md) · [0175](0175-dated-copies-on-r2-for-ninety-days.md) · [0200](0200-the-activity-log-is-complete-append-only-in-parts.md) · [0204](0204-a-sample-page-is-erased-leaves-first-and-its-row-goes-last.md)
 
 **studio, money** — [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md)
 
