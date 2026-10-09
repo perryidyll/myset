@@ -316,6 +316,20 @@ Paperwork: decisions 0112, 0113, 0199, 0200 carry the commit; SEC-003–SEC-005 
 the ledger; Puzzle changelog 2474 and 2475 completed, 2973/2974 (titled 0172/0173)
 replaced by 2983 and 2984 (0199/0200), steps t02/t04/t09/t10 re-noted; the founder's
 dashboard in Notion now asks for `ADMIN_CODE` and 2FA instead of the secret. The branch
-was restarted from `main` for this note. **Left for a hand with the suite:** 0176's
-deferred line — `setCode` in `admin.mjs` reads the page's name through `artistById`, a
-small copy since 0176, which wanted `readArtists()` there once #150 landed.
+was restarted from `main` for this note, which went up as PR #257 on the founder's word
+(*open the docs PR too*).
+
+### The same afternoon — 0176's deferred line, on the founder's word (*Do this task here*)
+
+`setCode` in `admin.mjs` read the page's name through `artistById`, the artist's small
+copy since 0176, which wanted `readArtists()` there once #150 landed: a rename whose copy
+write was lost would have let the new name through as a code until the heal. One line
+now reads the list — `own((await readArtists()).byId, aid)` — and `artistById` leaves
+`admin.mjs`'s static imports (its two other uses import it where they stand). The proof
+is a section in `test/studiocode.mjs`: a fourth artist is renamed on the list with the
+copies' writes made to fail, her row copy is shown still carrying the old name, and the
+new name is refused as a code (400) while a real code lands — 42 ✓, 0 ✗; with HEAD's
+line put back, that one assertion is red (41 ✓ / 1 ✗). `lookups` 75 ✓, `cost` 33 ✓.
+It rides PR #257 with this paperwork, so that merge needs a production build: no
+`[skip ci]`. Puzzle: nothing to update — no step, rule or number changed; the record
+0176, INVARIANT 0ip and SCL-013 now say the line is on the list.

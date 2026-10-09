@@ -5,14 +5,14 @@ import { COUNTDOWN_MS, getShow, mutateShow, readFans, liveFans, consumePlayedVot
          normPacks, normAsk,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, DEFAULT_ARTIST,
-         DEFAULT_FREE_CREDITS, readDoc, KEY, TAPS_KEPT } from './_lib.mjs';
+         DEFAULT_FREE_CREDITS, readDoc, KEY, TAPS_KEPT, own } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, MAX_CHART } from './_chart.mjs';
 import { genresFor, MAP_SIZE } from './_genremap.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong,
          completeSongRequests, settleOwedRefund } from './_requests.mjs';
-import { readArtists, mutateArtists, artistById } from './_auth.mjs';
+import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { saveSub, dropSub, devicesOf, notify } from './_push.mjs';
@@ -2075,8 +2075,10 @@ const main = async (req) => {
   const prevShow = NEEDS_BEFORE.has(action) ? (showBefore || await getShow(aid)) : null;
   /* setCode's deny-list refuses the page's own name, which is a registry read and
      so is taken before the CAS. `show.slug` was never a field, so that refusal
-     silently never fired until 2026-09-28 (0110). */
-  const pageSlug = action === 'setCode' ? ((await artistById(aid)) || {}).slug || '' : '';
+     silently never fired until 2026-09-28 (0110). The list itself, not the artist's
+     small copy (0176): a rename whose copy write was lost would otherwise let the
+     new name through as a code until the heal. */
+  const pageSlug = action === 'setCode' ? (own((await readArtists()).byId, aid) || {}).slug || '' : '';
   /* …and its hash is a slow one (scrypt, decision 0112), made before the CAS because
      the callback cannot wait — and only for a code that will be accepted. */
   const newCodeHash = action === 'setCode' && !weakCode(String(body.code || ''), pageSlug)
