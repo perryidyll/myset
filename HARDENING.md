@@ -26,7 +26,7 @@ login`) — the one `tools/prod.py` and `tools/hqpass.mjs` use.
 `MYSET_SECRET` on the founder's word on 2026-09-28 (Production, Deploy Previews and
 Branch deploys, marked secret), with a Keychain copy under the account name `mysetvip`;
 the tool then refuses, which is right — and on 2026-10-09 the deploy preview of PR #150
-confirmed it by content: `seal: { secret: true, ring: 'absent' }`. `/api/health` says by content whether a deploy
+confirmed it by content: `seal: { secret: true, ring: 'absent' }` — and production said the same at 08:41 UTC, fifteen seconds after the merge (`e996865`). `/api/health` says by content whether a deploy
 holds a secret (`seal.secret`) and whether the keyring opens under it (`seal.ring`:
 `absent` before the first sealed write, then `ours`; `other` means the value is not the
 one that wrapped the ring, and the watch tells the founder). The rotation below reads

@@ -41,15 +41,16 @@ never an address. Every number was sized for the worst real night — two hundre
 phones on one bar's wifi, all acting at once — and the test suite runs that night.
 The numbers are in §2.1 of the master overview.
 
-**Slice C (decisions `0112`, `0113`), ready, not merged.** The signing key comes from
+**Slice C (decisions `0112`, `0113`), live as `e996865` (#150, 2026-10-09).** The signing key comes from
 `MYSET_SECRET` instead of a document in the store, and nobody is signed out by the
 move. The money model's passcode is a real door: required on Netlify, a keyed cookie,
 a lockout. Recovery codes and Studio codes become slow salted hashes that depend on
 no key. The records that hold a person — the booker inbox, passwords, recovery codes,
 sessions, the activity and error logs, push subscriptions, the ID queue and photos,
 HQ's contacts and Gmail — are sealed at rest under a keyring the secret wraps, so a
-later change of secret re-wraps one document and strands nothing. It merges once
-`MYSET_SECRET` and `FINMODEL_CODE` are set (the list at the end; HARDENING.md §0).
+later change of secret re-wraps one document and strands nothing. `MYSET_SECRET` was
+already set (2026-09-28); `FINMODEL_CODE` is not needed since decision 0130. `/api/health`
+reports the seal by content (`seal.secret`, `seal.ring`); HARDENING.md §0 holds the rotation.
 
 **What did not change:** the front end is still public and still fine to be public;
 `script-src` still needs `'unsafe-inline'` (see below); the repository is still public
