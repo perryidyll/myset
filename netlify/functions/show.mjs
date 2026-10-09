@@ -1,6 +1,6 @@
 import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, publicArtist, json, bad, cleanFanId, markPresence,
-         roomHash, clientIp } from './_lib.mjs';
+         roomHash, clientIp, presenceCurrent, freeVerdict, freeView } from './_lib.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 import { readFlags, flagsFor } from './_flags.mjs';
 import { buildBoard, buildMe, mergeForOne } from './_board.mjs';
@@ -35,11 +35,14 @@ const main = async (req) => {
      42ms, and a whole poll bills ~155ms. So this removes ~27% of the billed duration
      of ~99.9% of all polls, which is the largest saving per line of code in the app.
      Presence is best-effort by design (INVARIANT 0af) so a miss is harmless. */
+  const net = roomHash(aid, clientIp(req));
   if (inRoom && fanId) {
     const me0 = fans[fanId];
-    const already = me0 && me0.seenShow === show.showId
-      && me0.ipH === roomHash(aid, clientIp(req));
-    if (!already) await markPresence(aid, fanId, show, req);
+    // the same tests as /api/me, decision 0149: a stamp falls due; a held-out phone with no record writes nothing
+    if (!presenceCurrent(me0, show, fanId) && (me0 || freeVerdict(fans, fanId, show, net) === 'in')) {
+      const wrote = await markPresence(aid, fanId, show, req);
+      if (wrote) fans[fanId] = wrote;
+    }
   }
   // one more read, only for an artist showing the room tonight's tips (0079)
   const meta = (show.status === 'live' && show.crowd && show.crowd.tips) ? await readMeta(aid).catch(() => null) : null;
@@ -49,7 +52,7 @@ const main = async (req) => {
   const asking = show.requests.on || show.birthdays.on;
   const myAsks = asking && fanId
     ? myRequests(await readRequests(aid), fanId, show) : [];
-  const personal = buildMe({ show, fanId, me: fans[fanId] || null, myAsks });
+  const personal = buildMe({ show, fanId, me: fanId ? freeView(fans, fanId, show, net) : null, myAsks });
   return json(mergeForOne(board, personal));
 };
 export default guard('show', main);

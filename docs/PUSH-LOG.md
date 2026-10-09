@@ -48,6 +48,9 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 04:09 — eba38db — scale-p2@test/contention-sim (54 files since origin/main)
 **tl;dr:** No change for a person: the crowded-room test no longer runs slower on GitHub's machine than on a Mac
 **Other sessions:** tools/roomsim.mjs registers test/hooks.mjs's redirect() through module.registerHooks when present (Node >= 22.15), falling back to register(); test/hooks.mjs exports redirect(spec).
+### 2026-10-03 03:05 — b9c9680 — scale-p2-fans@perf/fan-files (60 files since origin/main)
+**tl;dr:** Votes in a packed room write about a quarter fewer bytes; one network can bring about 200 new phones into a show with free votes (the founder's number still pending); the room's head count is who is still here (0148, 0149)
+**Other sessions:** STACKED on #226. RULE (0149): anything that marks a phone present (seenShow) goes through settleFree. markPresence body rewritten (optional now, returns record|null; week one's PRESENCE_TRIES goes in as mutateFan's 5th arg). New _lib exports NEW_DEVICES_PER_NETWORK=200, NET_QUOTA, settleFree, freeView, freeVerdict, presenceCurrent, PRESENCE_WINDOW_MS (30 min), RECEIPTS_KEPT 20, RECEIPT_MS 30 min. No new blob keys. Known gap: _requests.mjs does not apply the cap.
 
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
