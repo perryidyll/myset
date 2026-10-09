@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 09:13 — 2895729 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** setCode reads the page's name from the artist list, not its small copy — the line decision 0176 deferred until #150; on PR #257 beside the slice C paperwork, brought up to today's main (e52d6f5)
+**Other sessions:** NOT docs only any more: #257's merge needs a production build (no [skip ci] in the subject). admin.mjs: pageSlug = own((await readArtists()).byId, aid); artistById is no longer statically imported there. test/studiocode.mjs +4 (42 ✓). Suite 6,441 ✓ / 0 ✗ on the merged tree (4b8fe5e). The push log was the one merge collision: every entry from both sides kept, newest first.
+
 ### 2026-10-09 08:47 — 6345ec3 — myset@claude/myset-encryption-security-460mph (10 files since origin/main)
 **tl;dr:** Sealing is live on production: /api/health reads seal.ring ours at 08:47 UTC (the keyring sealkeys exists, wrapped by MYSET_SECRET); docs only
 **Other sessions:** Nothing to do; the ring is 'ours'. If it ever reads 'other' the watch tells the founder (HARDENING.md §0).
