@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 15:05 — 8cc30bb — song-cost@ux/song-cost-free-votes (27 files since origin/main)
+**tl;dr:** Artists can set how many votes a song costs (Settings → Votes per song, default 1); a fresh phone now gets 1 free vote, not 3; each setlist row has one '…' that opens the Edit/Hide/Delete sheet.
+**Other sessions:** Decision 0172. show.songCost (1–20) gated like replayCost; costOf() returns it for unplayed songs. DEFAULT_FREE_CREDITS=1, VOTE_DEFAULTS_VERSION=3 migrates stored 3 (and v1's 5) to 1. vote.html: isReplay() reads played[], never cost>1. Any test that casts more than one vote must set freeCredits itself. Setlist row: .songmore + hidden .rowacts; window.rowMenu(btn) opens holdSheet.
+
 ### 2026-10-09 14:58 — 6b1b7ee — quizzical-haslett-6f8f8b@docs/pending-passcode-row (1 files since origin/main)
 **tl;dr:** Nothing a person sees: the passcode box fix (8f9bde6) is now listed as owing a decision record
 **Other sessions:** PENDING.md row for 8f9bde6 (_passgate.mjs); clear it with ./tools/decide.sh if anyone writes 0115-style record for the passcode door
