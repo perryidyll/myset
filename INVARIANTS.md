@@ -74,6 +74,10 @@ If you are about to violate one, stop and say so rather than working around it.
     2026-09-14 (`docs/sessions/2026-09-14-data-foundations.md`). Open: a hard
     delete on request does not yet reach the R2 copy. Decision `0069`.
 
+0hs. **No kind of document without a second home, or a stated reason.** `FAMILIES` in `_mirror.mjs` has one line for every kind of key the app writes: an owner's (named by `keysFor()` / `keysForVenue()`), a global (in `GLOBALS`, or named by `globalKeys()` off an index document — a CRM contact off `crm`, a sample's snapshot off `samplearc`, a thumbnail off the media dashboard's posts, a city's featured slots off the city index, the error log's last 48 hours off the clock), or never copied, with the reason on the line. Sample pages are owners too: the walk reads `samplereg` beside the two registries. A new kind of document gets its line in the same change, and an owner's document its place in the key list — `test/keyfamilies.mjs` reads every key the whole suite wrote and fails on one no line matches. The copy on R2 can be read back (`tools/backup.py --from-r2`, into the folder `--restore` reads), and `tools/backup.py --coverage` names every key in the store the mirror has never copied. Found 2026-10-02: a dozen kinds — the CRM, every sample page, the costs book — had been written for weeks with no copy off Netlify, and nothing said so. Decision `0146`.
+
+0ht. **A change to `casDoc`, the fan files or the vote path is run through a traffic jam.** `test/contention.mjs` drives the real handlers through `tools/roomsim.mjs` on a virtual clock, against a store where a write is judged when it lands: a vote the fan was told landed is on the board, a vote that could not land was refused and never dropped, and nobody waits past the function limit at 5,000 phones and 75 votes a second. The times are a model (42 ms reads, 80 ms writes — the real write time is unmeasured, P3-005); the shape is not. A seeded run repeats to the byte. Decision `0145`.
+
 ## Money
 
 5b. **Stripe's `success_url` must point at a page that calls `/api/confirm`.**

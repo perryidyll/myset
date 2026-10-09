@@ -45,6 +45,9 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 03:15 — 831cf9c — scale-docs@docs/scale-week-one (28 files since origin/main)
 **tl;dr:** Docs: scale-audit week one recorded as live
 **Other sessions:** Sheets, decisions 0138-0144/0157/0160 (commits filled; 0144: no bypass actors, suite not required), Puzzle steps/changelog 2696-2701/2703/2704 flipped to live, DATA-MODEL gains payowed (5186) and watch (5187) — neither is in _mirror.mjs GLOBALS yet; tests.yml timeout-minutes 15 -> 25.
+### 2026-10-03 04:09 — eba38db — scale-p2@test/contention-sim (54 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test no longer runs slower on GitHub's machine than on a Mac
+**Other sessions:** tools/roomsim.mjs registers test/hooks.mjs's redirect() through module.registerHooks when present (Node >= 22.15), falling back to register(); test/hooks.mjs exports redirect(spec).
 
 ### 2026-10-03 00:01 — a053560 — scale-week1@config/rate-rules (10 files since origin/main)
 **tl;dr:** One machine can no longer flood MySet's server without limit: Netlify now refuses an address that sends more than 1,000 requests a second, and sign-in attempts are capped per address (0160)
@@ -93,6 +96,21 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 02:05 — 0e8beca — founder-example@ux/sample-founder-example (10 files since origin/main)
 **tl;dr:** Artist sample pages end with a 'View the founder's profile as a live example' button to /perryidyll (0162)
 **Other sessions:** sample.js decorate() adds a.sbx-claim.sbx-eg after .sbx-note (artist samples only; FOUNDER const). sample.js re-stamped (v=…) in 6 pages. Andrew's tagline hand-edited in CRM to the magazine voice. 0162 claimed on the board; next free 0163.
+### 2026-10-03 02:49 — df20945 — scale-p2@test/contention-sim (64 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test passes on GitHub's runner
+**Other sessions:** test/contention.mjs: byte-identical repeat only on Node >= 24; on 20/22 it compares status counts + votes landed/lost. roomsim preloads every netlify/functions/*.mjs before the virtual clock.
+
+### 2026-10-03 02:40 — fc9d1d8 — scale-p2@test/contention-sim (64 files since origin/main)
+**tl;dr:** No change for a person: the crowded-room test now gives the same result twice on GitHub's runner too
+**Other sessions:** tools/roomsim.mjs flush() turns the event loop until test/blobs-fake.mjs stats.calls stops moving (max 64 turns a virtual ms); the fake counts every get/set in stats.calls. Seeded runs failed to repeat on Node 22 (CI) while they did on Node 26 (Mac).
+
+### 2026-10-03 02:15 — 61229d0 — scale-p2@test/contention-sim (36 files since origin/main)
+**tl;dr:** No change for a person: the test run's temporary key log now starts on GitHub's Linux runner as well as on a Mac
+**Other sessions:** #218's suite check failed in 8 s on 'mktemp: too few X's'; test/run.sh now uses mktemp "${TMPDIR:-/tmp}/myset-keys.XXXXXX".
+
+### 2026-10-03 02:02 — 3ff2f52 — scale-p2@test/contention-sim (26 files since origin/main)
+**tl;dr:** The test suite now runs a crowded room on every pull request, and every kind of saved document now has an off-site copy or a stated reason it has none; the off-site copy was read back and restored in a rehearsal (0145, 0146)
+**Other sessions:** NEW RULE once merged: a new kind of blob key needs a line in _mirror.mjs FAMILIES or the suite's last step (test/keyfamilies.mjs) fails; test/run.sh exports MYSET_KEYLOG. test/blobs-fake.mjs gains __latency (keep it beside week one's __failReads when rebasing). keysFor gains bugs_; keysForVenue gains vpitch_, push_v_, gigok_ (now deleted with their account). PR for 0147 (Play is one write) is stacked on this branch.
 
 ### 2026-10-03 01:54 — 1e58aeb — about-voice@docs/about-voice-0161-live (3 files since origin/main)
 **tl;dr:** Docs: decision 0161 (magazine-voice About) recorded as live as 72dbe98

@@ -3,7 +3,18 @@
    conditional write can never succeed after the first, and every second call
    returns "busy". This is test scaffolding only — nothing imports it in prod. */
 import { createHash } from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 const mem = new Map();                       // key -> { body: string|Buffer, etag, metadata }
+
+/* EVERY KEY THE SUITE EVER WROTE. test/run.sh names a file in MYSET_KEYLOG; each
+   test process appends the keys it wrote as it exits, and the last step of the run
+   (test/keyfamilies.mjs) reads them all and asks one question of each: does the
+   off-site copy take this kind of document, or does somebody say why not. A new
+   kind of document nobody classified fails the suite — that is the point. */
+const wrote = new Set();
+if (process.env.MYSET_KEYLOG) process.on('exit', () => {
+  try { if (wrote.size) appendFileSync(process.env.MYSET_KEYLOG, [...wrote].join('\n') + '\n'); } catch {}
+});
 const tag = (b) => '"' + createHash('sha1').update(b).digest('hex').slice(0, 16) + '"';
 
 export const __reset = () => { mem.clear(); failRe = null; };
@@ -36,16 +47,37 @@ export const __slowReads = (ms) => { readDelay = Math.max(0, Number(ms) || 0); }
 let failReadRe = null, failReadHang = false;
 export const __failReads = (re, { hang = false } = {}) => { failReadRe = re; failReadHang = !!hang; };
 
+/* A TRAFFIC JAM. `__slowReads` waits BEFORE the lookup, so a read and the write that
+   follows it are still one atomic step and no test ever sees two writers race. With
+   `__latency` on, a read takes time and a write is judged against the etag when it
+   LANDS, after its own delay — how a real conditional PUT behaves, and the only way
+   casDoc's retry loop and "busy" run under contention. (A read answers with what is
+   there as it returns: the kind end of the truth, and the one the 2026-10-02 audit's
+   numbers were measured with.)
+   Times are base + per-megabyte, with jitter from `rand` (pass a seeded one and a run
+   repeats exactly). `stats` counts what the store was asked to do. Used by
+   tools/roomsim.mjs on a virtual clock; every other test leaves it off. */
+let lat = null;
+export const stats = { calls: 0, gets: 0, sets: 0, setFail: 0, bytesR: 0, bytesW: 0 };
+export const __latency = (cfg) => {
+  lat = cfg ? { r: 42, rPerMB: 20, w: 80, wPerMB: 40, jitter: 0.15, rand: Math.random, ...cfg } : null;
+  Object.assign(stats, { calls: 0, gets: 0, sets: 0, setFail: 0, bytesR: 0, bytesW: 0 });
+};
+const pause = (base, perMB, bytes) =>
+  new Promise((r) => setTimeout(r, Math.max(0, Math.round(base + perMB * bytes / 1e6 + (lat.rand() * 2 - 1) * lat.jitter * base))));
+
 export function getStore() {
   return {
     async getWithMetadata(key, opts = {}) {
+      stats.calls++;
       note('get', key);
       if (failReadRe && failReadRe.test(key)) {
         if (failReadHang) await new Promise(() => {});
         throw new Error('BlobsInternalError: Netlify Blobs has generated an internal error (500 status code)');
       }
       if (readDelay) await new Promise((r) => setTimeout(r, readDelay));
-      const e = mem.get(key);
+      let e = mem.get(key);
+      if (lat) { await pause(lat.r, lat.rPerMB, e ? e.body.length : 0); e = mem.get(key); stats.gets++; stats.bytesR += e ? e.body.length : 0; }
       if (!e) return null;
       let data = e.body;
       if (opts.type === 'json') { try { data = JSON.parse(e.body); } catch { return null; } }
@@ -57,13 +89,19 @@ export function getStore() {
       return r ? r.data : null;
     },
     async set(key, body, opts = {}) {
+      stats.calls++;
       note('set', key);
       if (failRe && failRe.test(key)) return { modified: false };   // acked, not stuck
+      if (lat) { await pause(lat.w, lat.wPerMB, body.length); stats.sets++; }
       const cur = mem.get(key);
-      if (opts.onlyIfNew && cur) return { modified: false };
-      if (opts.onlyIfMatch && (!cur || cur.etag !== opts.onlyIfMatch)) return { modified: false };
+      if ((opts.onlyIfNew && cur) || (opts.onlyIfMatch && (!cur || cur.etag !== opts.onlyIfMatch))) {
+        if (lat) stats.setFail++;
+        return { modified: false };
+      }
       const buf = typeof body === 'string' ? body : Buffer.from(body);
+      if (lat) stats.bytesW += buf.length;
       mem.set(key, { body: buf, etag: tag(buf), metadata: opts.metadata || {} });
+      wrote.add(String(key));
       return { modified: true };
     },
     async getMetadata(key) {
