@@ -1,6 +1,6 @@
-import { casDoc, readDoc } from './_lib.mjs';
+import { casDoc, readDoc, inTurn } from './_lib.mjs';
 import { casKeep } from './_versions.mjs';
-import { wallClockToMs, validTz, addDays, addMonths, daysBetween, utcToDate } from './_time.mjs';
+import { wallClockToMs, validTz, addDays, addMonths, daysBetween, utcToDate, localDate } from './_time.mjs';
 import { normPlace, mapLinks } from './_maps.mjs';
 
 /* Gigs are stored as RULES, not as materialised instances.
@@ -181,31 +181,148 @@ export async function readCityIndex() {
 const SEP = '\u001f';
 const placeKey = (country, city) => country + SEP + city;
 
-/** Put this artist in exactly the places they now have gigs, and nowhere else. */
-export async function reindexCities(aid, events) {
+/* THE CITY'S GIGS RIDE WITH THE INDEX — decision 0174, INVARIANT 0in.
+
+   The front door's picker counted each city's gigs by reading every owner's
+   calendar, one after another; a city's feed and a venue page read every owner in
+   the city. They run in the same function as the live rooms, and once a walk timed
+   out nothing was cached, so every visit walked again — the 2026-10-02 audit put
+   the end at about 130 to 240 artists.
+
+   So the write that puts an owner in a city keeps, beside the id, what every
+   reader needs to know about their gigs THERE: each rule's date, time, zone,
+   length, repeat, skipped nights and venue — `gigs[country][city][owner]`, with
+   the owner's own zone (`tz`, what "today" means for them) and when it was
+   written (`at`). Rules, not nights: a weekly residency never runs out, so nothing
+   has to come back to top it up, and a count is worked out at read time from the
+   clock. The picker reads one document; a feed and a venue page read the
+   calendars of only the owners with something on, or at that venue. An owner the
+   index has no rules for (written before this) is read the old way, so nothing
+   goes missing on the day it ships.
+
+   A LOST WRITE HEALS. A save does not wait on this write (`.catch`), as it never
+   did. `healCityIndex` re-points every owner from their own calendar once a day,
+   from `citycron` — never from a page. */
+export const RULE_DAYS_BACK = 2;    // a night older than this is never in anybody's window
+export const ownerTz = (events) => ((events.list || []).find((x) => x && x.tz) || {}).tz || 'UTC';
+
+/** Membership and rules for one owner, from their calendar: pure. */
+function placesOf(events, now) {
   const places = new Set();
   for (const e of events.list) {
     if (!e.country || !e.city) continue;
     if (e.repeat) { places.add(placeKey(e.country, e.city)); continue; }
     // a one-off that finished a week ago shouldn't keep an artist in a city
     const ms = wallClockToMs(e.date, e.time, e.tz);
-    if (ms != null && ms > Date.now() - 7 * 86400000) places.add(placeKey(e.country, e.city));
+    if (ms != null && ms > now - 7 * 86400000) places.add(placeKey(e.country, e.city));
   }
+  const cutoff = utcToDate(now - RULE_DAYS_BACK * 86400e3);
+  const rules = {};
+  for (const e of events.list) {
+    const k = placeKey(e.country, e.city);
+    if (!e.country || !e.city || !places.has(k) || !e.date) continue;
+    if (e.repeat ? (e.repeat.until && e.repeat.until < cutoff) : e.date < cutoff) continue;   // can never be on again
+    (rules[k] ||= []).push({ id: e.id, date: e.date, time: e.time, tz: e.tz, durationMin: e.durationMin, repeat: e.repeat || null,
+                             skip: (e.skip || []).filter((d) => d >= cutoff), venue: e.venue || '' });
+  }
+  return { places, rules };
+}
+
+/** Put one owner in exactly `places`, with their rules there, and nowhere else (pure, on the index). */
+function placeOwner(idx, owner, { places, rules }, tz, at) {
+  idx.countries ||= {};
+  idx.gigs ||= {};
+  for (const [country, cities] of Object.entries(idx.countries)) {
+    for (const [city, ids] of Object.entries(cities)) {
+      const keep = ids.filter((x) => x !== owner);
+      if (keep.length) cities[city] = keep; else delete cities[city];
+    }
+    if (!Object.keys(cities).length) delete idx.countries[country];
+  }
+  for (const [country, cities] of Object.entries(idx.gigs)) {
+    for (const [city, by] of Object.entries(cities)) { delete by[owner]; if (!Object.keys(by).length) delete cities[city]; }
+    if (!Object.keys(cities).length) delete idx.gigs[country];
+  }
+  for (const p of places) {
+    const [country, city] = p.split(SEP);
+    idx.countries[country] ||= {};
+    idx.countries[country][city] ||= [];
+    if (!idx.countries[country][city].includes(owner)) idx.countries[country][city].push(owner);
+    ((idx.gigs[country] ||= {})[city] ||= {})[owner] = { at, tz, r: rules[p] || [] };
+  }
+}
+
+/** Put this artist in exactly the places they now have gigs, and nowhere else. */
+export async function reindexCities(aid, events, now = Date.now()) {
+  const where = placesOf(events, now);
+  const tz = ownerTz(events);
+  await casDoc(CITY_INDEX, () => ({ v: 1, countries: {} }), (idx) => { placeOwner(idx, aid, where, tz, Date.now()); return true; }).catch(() => {});
+}
+
+/** What the index knows of one owner's gigs in one place — or null, when it was
+ *  written before it knew (read the calendar instead). */
+export const placeGigs = (idx, country, city, owner) => {
+  const e = ((((idx && idx.gigs) || {})[country] || {})[city] || {})[owner];
+  return e && Array.isArray(e.r) ? e : null;
+};
+/** Those rules' nights from the owner's own yesterday to `days` ahead, not yet over:
+ *  the same window the feed has always drawn. */
+export function upcomingAt(entry, country, city, now, days) {
+  const from = localDate(now, entry.tz || 'UTC');
+  return occurrencesFor({ list: entry.r.map((r) => ({ ...r, city, country })) }, addDays(from, -1), addDays(from, days))
+    .filter((o) => o.endsAt > now);
+}
+
+/* THE HEAL. Every owner on the two registries, a few calendars at a time, inside
+   the ring's budget, from where the last ring stopped (`heal.cursor` on the index).
+   One write a ring. An owner whose rules were written by a save AFTER this ring
+   read their calendar is left alone — the save is newer. An account on its way out
+   is taken out, never put back (0dh). Ids on the index that no registry names (a
+   sample page, a stray) are not touched. A pass a day; a ring after a finished
+   pass is one read. */
+export const HEAL_GAP_MS = 20 * 3600e3;
+export const HEAL_BUDGET_MS = () => Math.max(0, Number(process.env.MYSET_CITY_HEAL_BUDGET_MS ?? 5000));
+export async function healCityIndex({ now = Date.now(), budgetMs = HEAL_BUDGET_MS() } = {}) {
+  const deadline = Date.now() + budgetMs;
+  const h = (await readCityIndex()).heal || {};
+  if (!h.cursor && h.passAt && now - h.passAt < HEAL_GAP_MS) return { done: true, idle: true, passAt: h.passAt };
+  const [{ readArtists }, { readVenues }] = await Promise.all([import('./_auth.mjs'), import('./_venues.mjs')]);
+  const [ar, vr] = await Promise.all([readArtists(), readVenues()]);
+  const owners = [...Object.entries(ar.byId || {}).map(([id, a]) => [id, !!(a && a.del)]),
+                  ...Object.entries(vr.byId || {}).map(([vid, v]) => ['v_' + vid, !!(v && v.del)])].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  let i = Math.min(Number(h.cursor) || 0, owners.length);
+  const seen = [];
+  while (i < owners.length && (!seen.length || Date.now() < deadline)) {
+    const batch = owners.slice(i, i + 8);
+    i += batch.length;
+    seen.push(...await inTurn(batch, async ([o, gone]) => {
+      const readAt = Date.now();
+      return { o, readAt, events: gone ? emptyEvents() : await readEvents(o) };
+    }));
+  }
+  const finished = i >= owners.length;
+  let fixed = 0, kept = 0;
   await casDoc(CITY_INDEX, () => ({ v: 1, countries: {} }), (idx) => {
-    idx.countries ||= {};
-    for (const [country, cities] of Object.entries(idx.countries)) {
-      for (const [city, ids] of Object.entries(cities)) {
-        const keep = ids.filter((x) => x !== aid);
-        if (keep.length) cities[city] = keep; else delete cities[city];
-      }
-      if (!Object.keys(cities).length) delete idx.countries[country];
+    fixed = 0; kept = 0;
+    for (const { o, readAt, events } of seen) {
+      const was = ownerShape(idx, o);
+      if (was.at > readAt) { kept++; continue; }               // a save since this ring read it
+      placeOwner(idx, o, placesOf(events, now), ownerTz(events), now);
+      if (JSON.stringify(ownerShape(idx, o).shape) !== JSON.stringify(was.shape)) fixed++;
     }
-    for (const p of places) {
-      const [country, city] = p.split(SEP);
-      idx.countries[country] ||= {};
-      idx.countries[country][city] ||= [];
-      if (!idx.countries[country][city].includes(aid)) idx.countries[country][city].push(aid);
-    }
+    idx.heal = { cursor: finished ? 0 : i, passAt: finished ? now : (h.passAt || 0), at: now };
     return true;
-  }).catch(() => {});
+  });
+  return { done: finished, walked: seen.length, of: owners.length, fixed, kept };
+}
+/* One owner's places and rules on the index, without the stamps — what a heal compares. */
+function ownerShape(idx, owner) {
+  const shape = [];
+  let at = 0;
+  for (const [country, cities] of Object.entries(idx.countries || {})) for (const [city, ids] of Object.entries(cities)) if (ids.includes(owner)) {
+    const g = placeGigs(idx, country, city, owner);
+    if (g) at = Math.max(at, Number(g.at) || 0);
+    shape.push([country, city, g ? g.r : null]);
+  }
+  return { at, shape: shape.sort((a, b) => (a[0] + a[1] < b[0] + b[1] ? -1 : 1)) };
 }

@@ -312,20 +312,17 @@ export async function clipUrl(owner, clip, now = Date.now()) {
   catch (e) { await logR2('r2.head', e); return null; }
 }
 
-/** Every `vid_` key in a list, deleted from R2. Blobs deletion is the caller's
-    (deleteArtist / deleteVenue walk their key lists with `store().delete`); this
-    is the other half, so leaving MySet takes the clip bytes with it wherever they
-    are. Best effort, one owner at a time, never throws. */
-export async function dropClipKeys(keys) {
-  if (!r2Enabled()) return 0;
-  let gone = 0;
-  for (const k of keys) {
-    const m = VID_KEY.exec(k);
-    if (!m) continue;
-    try { await r2Delete(k); gone++; }
-    catch (e) { await logR2('r2.delete', e); await notePending(m[1], m[2]); }
-  }
-  return gone;
+/** One `vid_` key's bytes, deleted from R2. Blobs deletion is the caller's (the
+    purge's walk, `eraseKeys` in _account.mjs); this is the other half, so leaving
+    MySet takes the clip bytes with it wherever they are. THROWS when R2 refuses
+    (decision 0173): the walk then stops before it deletes the post or the pending
+    list that names the clip, and the next ring tries again — a refusal parked on a
+    pending list the same walk was about to delete would be forgotten. Any other
+    key, or R2 off, is a no-op that answers false. */
+export async function dropClipKey(k) {
+  if (!r2Enabled() || !VID_KEY.test(String(k))) return false;
+  try { await r2Delete(k); return true; }
+  catch (e) { await logR2('r2.delete', e); throw e; }
 }
 
 /** Returns false if the R2 half could not be done. A DELETE R2 refuses is not

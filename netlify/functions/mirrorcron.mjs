@@ -1,8 +1,12 @@
 import { runMirror } from './_mirror.mjs';
 
-/* THE NIGHTLY COPY — the bell for _mirror.mjs (decision 0069). Rings every twenty
+/* THE NIGHTLY COPY — the bell for _mirror.mjs (decision 0069). Rings every five
    minutes; a ring after a finished pass costs one read and returns, so the copy
    happens once a day and a pass too big for one ring carries on at the next.
+   Every twenty minutes until decision 0173: 72 rings of 5.5 s a day carried about
+   320 owners (the 2026-10-02 audit), and a pass past that took more than a day.
+   Four times the rings is about 216 more one-read returns a day once the pass is
+   done — a few thousand function calls a month, against a pass that keeps up.
    Same discipline as autocron and sheetcron: logged, never thrown (a thrown
    scheduled function is retried), the scheduler's marker logged, not enforced. */
 
@@ -43,4 +47,4 @@ export default async (req) => {
   }
 };
 
-export const config = { schedule: '*/20 * * * *' };
+export const config = { schedule: '*/5 * * * *' };

@@ -212,8 +212,17 @@ export const TAB_LIST = Object.values(TABS);
    halfway and leaves the sheet in a state nobody can reason about. When a cap
    bites, the sync SAYS SO in its result and in the Growth row — a silent
    truncation is how a spreadsheet starts lying. */
-const MAX_ARTISTS = 400;
+const MAX_ARTISTS = () => Math.max(1, Number(process.env.MYSET_SHEET_MAX_ARTISTS) || 400);
 const MAX_SHOWS_PER_ARTIST = 40;
+/* A RUN IS ALSO TIME-BOXED, AND THE NEXT ONE STARTS WHERE IT STOPPED (decision
+   0173). Each artist costs 25 to 430 reads, so the audit of 2 October 2026 put the
+   end of a run at 15 to 50 artists — a run killed there writes nothing at all. And
+   past MAX_ARTISTS it always read the same first 400, so the 401st artist's nights
+   never reached the sheet: a cap that DROPPED, against 0bw. Now the walk stops
+   taking artists after WALK_MS, leaving time for the writes, and `cursor` in the
+   sync state names the first artist it did not take; the next run starts there and
+   wraps round. A run that covers everyone clears it. */
+const WALK_MS = () => Math.max(0, Number(process.env.MYSET_SHEET_WALK_MS ?? 15000));
 const MAX_ROWS_PER_TAB = 5000;
 
 const day = (ms) => (ms ? new Date(Number(ms)).toISOString().slice(0, 10) : '');
@@ -695,8 +704,15 @@ export async function syncSheet({ dry = false } = {}) {
 async function runSync({ dry, startedAt, state }) {
   const reg = await readArtists();
   const ids = Object.keys(reg.byId || {});
-  const capped = ids.length > MAX_ARTISTS;
-  const use = ids.slice(0, MAX_ARTISTS);
+  /* where the last run stopped: by id, or by place if that artist has since left */
+  const cur = state.cursor || null;
+  let start = cur ? ids.indexOf(cur.id) : 0;
+  if (start < 0) start = Math.min(Number(cur.at) || 0, ids.length);
+  if (start >= ids.length) start = 0;
+  const order = ids.slice(start).concat(ids.slice(0, start));
+  const capped = ids.length > MAX_ARTISTS();
+  const use = order.slice(0, MAX_ARTISTS());
+  let taken = 0, outOfTime = false;
 
   /* byEmail is the only place an artist's address lives, and it is keyed the
      other way round. One pass rather than a scan per artist. */
@@ -724,6 +740,8 @@ async function runSync({ dry, startedAt, state }) {
     if (shows.length >= MAX_ROWS_PER_TAB || requests.length >= MAX_ROWS_PER_TAB
         || ratings.length >= MAX_ROWS_PER_TAB || songs.length >= MAX_ROWS_PER_TAB
         || artists.length >= MAX_ROWS_PER_TAB) { budgetSpent = true; break; }
+    if (taken && Date.now() - startedAt >= WALK_MS()) { outOfTime = true; break; }
+    taken++;
     const a = { ...(reg.byId[aid] || {}), email: emailOf[aid] || '', emails: emailsOf[aid] || [] };
     let r;
     try {
@@ -773,7 +791,7 @@ async function runSync({ dry, startedAt, state }) {
   }
   const venues = [];
   let paidVenues = 0;
-  for (const vid of vids.slice(0, MAX_ARTISTS)) {
+  for (const vid of vids.slice(0, MAX_ARTISTS())) {
     const v = vreg.byId[vid] || {};
     /* getVenueProfile, not a hand-built key: the key is `vprofile_` and a guess
        at `vprof_` read nothing at all and reported every venue as blank. */
@@ -810,7 +828,9 @@ async function runSync({ dry, startedAt, state }) {
   }
 
   const added = shows.length + requests.length + ratings.length;
-  const shortOfArtists = capped || budgetSpent;
+  const shortOfArtists = capped || budgetSpent || outOfTime;
+  // the first artist this run did not take, or nobody when it took them all
+  const nextCursor = taken < ids.length ? { id: order[taken], at: ids.indexOf(order[taken]) } : null;
   const anyCap = shortOfArtists || cappedShows;
 
   const growth = [[
@@ -902,6 +922,9 @@ async function runSync({ dry, startedAt, state }) {
   await casDoc(SYNC, emptySync, (d) => {
     d.lastRunAt = startedAt;
     d.runs = (d.runs || 0) + 1;
+    /* a run that failed a log tab starts in the same place next time, so the
+       artists whose rows did not land are the first ones taken again */
+    if (!failed) d.cursor = nextCursor;
     return true;
   }).catch(() => {});
 
@@ -915,8 +938,8 @@ async function runSync({ dry, startedAt, state }) {
     made, counts: countsOf(plan), broke,
     sheet,
     capped: anyCap,
-    note: capped
-      ? `Read the first ${MAX_ARTISTS} artists of ${ids.length}. The rest come next sync.`
+    note: capped || outOfTime
+      ? `Read ${taken} artists of ${ids.length}, starting where the last sync stopped. The rest come next sync.`
       : budgetSpent
         ? `Covered ${artists.length} artists before hitting this run's row budget. The rest come next sync.`
         : cappedShows
