@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 08:45 — 91c1a84 — myset@claude/myset-encryption-security-460mph (9 files since origin/main)
+**tl;dr:** Security slice C is LIVE as e996865 (#150, 08:41 UTC): MYSET_SECRET signs everything, the records that hold a person are sealed at rest from the first write on, a session lasts a week and renews itself (0199), the activity log is complete (0200); docs only on this branch — the records carry the commit
+**Other sessions:** Verified by content on myset.vip: /api/health seal.secret true, ring absent until the first protected write (then ours). Decisions 0199/0200 and INVARIANTS 0jb/0jc are on main. A new kind of document needs a FAMILIES line (sealkeys global, fmgate skip are in). Follow-up for whoever has the suite open: 0176's deferred line — setCode in admin.mjs should read the page's name through readArtists() now that #150 is in.
+
 ### 2026-10-09 08:35 — 92ad67a — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
 **tl;dr:** PR #150 (security slice C) is on main b2dbfec with five merges in and the founder's word to merge: the week-long session is decision 0199 (0jb) and the complete activity log 0200 (0jc) — 0172/0173 and 0hs/0ht were taken; fmgate joins the mirror's skip list; the rebuilt preview says MYSET_SECRET is already set (seal.secret true), so nothing is left for the founder to run
 **Other sessions:** Decisions 0199/0200 and INVARIANTS 0jb/0jc are taken on this branch, merging today. keysFor/keysForVenue: the activity log's head is read for its parts (logKeys) and is a namer, parts before head (0im). FAMILIES: sealkeys global, fmgate skip. After the merge every protected family is sealed on first write and the keyring sealkeys appears; readDoc/casDoc fail closed on a record that cannot be opened. x-myset-token rides back on no-store replies from guard(); both Studios' api() keep it.
