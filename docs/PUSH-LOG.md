@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-09 08:47 — 6345ec3 — myset@claude/myset-encryption-security-460mph (10 files since origin/main)
+**tl;dr:** Sealing is live on production: /api/health reads seal.ring ours at 08:47 UTC (the keyring sealkeys exists, wrapped by MYSET_SECRET); docs only
+**Other sessions:** Nothing to do; the ring is 'ours'. If it ever reads 'other' the watch tells the founder (HARDENING.md §0).
+
 ### 2026-10-09 08:45 — 91c1a84 — myset@claude/myset-encryption-security-460mph (9 files since origin/main)
 **tl;dr:** Security slice C is LIVE as e996865 (#150, 08:41 UTC): MYSET_SECRET signs everything, the records that hold a person are sealed at rest from the first write on, a session lasts a week and renews itself (0199), the activity log is complete (0200); docs only on this branch — the records carry the commit
 **Other sessions:** Verified by content on myset.vip: /api/health seal.secret true, ring absent until the first protected write (then ours). Decisions 0199/0200 and INVARIANTS 0jb/0jc are on main. A new kind of document needs a FAMILIES line (sealkeys global, fmgate skip are in). Follow-up for whoever has the suite open: 0176's deferred line — setCode in admin.mjs should read the page's name through readArtists() now that #150 is in.
