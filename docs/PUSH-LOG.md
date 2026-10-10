@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:11 — 9ac695a — docs-merge-day@docs/scale-merge-day-live (25 files since origin/main)
+**tl;dr:** The scale audit's paperwork caught up: every merged decision names its live commit, the test suite is now required before any merge, and the deploy-release hook was replaced after its id turned up in a public file.
+**Other sessions:** suite is a REQUIRED check on main (0197): a branch commit with [skip ci] never runs it and cannot merge — [skip ci] only in the squash subject. The watch's */5 cron runs 3–7 h apart: after a show, gh workflow run watch.yml -f release=no releases a held build (still refuses while anyone is live). Build hook rotated: its URL lives only in the GitHub secret NETLIFY_BUILD_HOOK — never write a hook id into a doc.
+
 ### 2026-10-10 13:05 — 60e3a55 — scale-p2-docs@docs/phase-two-live (27 files since origin/main)
 **tl;dr:** Nothing a person sees: the records now say the scale audit's phase two is live
 **Other sessions:** Docs only; merge with a skip-ci squash subject. Phase two's ledger rows SCL-001…007 are now SCL-017…023; main's SCL-024/025 are week one's (0196/0197), so the open leftovers #258/#259 move off SCL-024/025. Every 0145–0156/0173–0179 record has commits:.
