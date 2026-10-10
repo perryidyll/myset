@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 20:18 — 056f930 — sec006@sec006 (51 files since origin/main)
+**tl;dr:** Every page now runs only the code it ships with: a button names an action instead of carrying code, and each page lists its own scripts by fingerprint, so a script slipped into a page runs nothing (SEC-006)
+**Other sessions:** Decision 0209, INVARIANT 0jk. No onclick= (or any on*=) in public/ any more: write data-on-click="name" in HTML or ${ON.click('name', ...args)} in a script, and register the function with ON.add at the top of that page's script; test/csp.mjs refuses an attribute handler. public/on.js rides inline in all twenty pages; after ANY edit to an inline <script> or on.js run node tools/stamp.mjs (it writes each page's CSP meta). Needs a production build: no [skip ci]. Open PR #256 rewrites vote.html's Vote button: after main is merged in, write ${ON.click('openVote', s.id)} and stamp. Next free 0210/0jl.
+
 ### 2026-10-11 01:46 — c5fd14f — watch-clock@ops/watch-clock (13 files since origin/main)
 **tl;dr:** The outside watch now really runs every five minutes: a Cloudflare clock starts it, so an outage or a build held during a show is caught in minutes, not hours
 **Other sessions:** New cloudflare/clock: Worker myset-watch-clock (cron */5) dispatches watch.yml on main, no inputs (release=no), token in its secret GH_DISPATCH_TOKEN (fine-grained, this repo, Actions rw); redeploy only with npx -y wrangler@4.146.0 deploy from that folder. GitHub's */5 stays as backstop. Expect workflow_dispatch runs every 5 min in Actions. Decision 0208, SCL-031; next free 0209/0jk/SCL-032.

@@ -2,6 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-NTnUHepeD3N//SW8Z282jqK+Pel0uVk1iE7ZpCSFnhw=' 'sha256-zQuccuKP0/cxERF1gHTaykhwL2W293/G016oFZFQj5Q=' 'sha256-qi76WZXQdmr+QKWHA4lPHVs2X5KINNRtCcEMBsjTFK0=' 'sha256-FJVSLW9UvKgsYGkGov9eYmyljVNYvU1YIs5ysaHDNc4=' 'sha256-kQy3eOLVl6QcSs0cQJM5u4io2LHsSHA1SzH7r6X7a9Q=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Merch — MySet</title>
 <meta name="description" content="What's on the merch table, and how to take it home.">
@@ -679,12 +725,12 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
     <div class="pgrid" style="margin:0" aria-busy="true"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
   </div></div>
 </div>
-<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="bg" id="bg" data-on-click="closeSheet"></div>
 <!-- a dialog while open (the page behind is inert as well as frozen), inert itself while closed -->
 <!-- its drag zones (fan.js): not the lede — a scrolled sheet can still have the fulfilment line mid-screen, and a drag from there must scroll,
      not close; the size row, the More strip and the gallery scroll on their own (0f1) -->
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert data-handle=".grabzone,h3" data-scroller=".sizes,.more,.gal"></div>
-<div class="lb" id="lb" onclick="this.classList.remove('on')"><img id="lbimg" alt=""></div>
+<div class="lb" id="lb" data-on-click="lbOff"><img id="lbimg" alt=""></div>
 <div class="toast" id="toast" role="status"></div>
 <div id="paylive" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
 
@@ -692,8 +738,12 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=0831c190"></script>
+<script src="/fan.js?v=c8cb6b8b"></script>
 <script>
+/* THE ACTIONS THIS PAGE'S MARKUP MAY NAME (SEC-006, decision 0209) — every data-on-* below names
+   one of these, or one fan.js registers; the page's Content-Security-Policy refuses an onclick=.
+   Function declarations, so they exist before this line runs. */
+ON.add({ share });
 /* /<slug>/shop or /v/<slug>/shop — and the bare file with ?a=|?v= so tools/uicheck.mjs can open it */
 const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
 const VENUE=P[0]==='v'||((!P[0]||P[0]==='shop.html')&&!!qs.get('v'));
@@ -784,15 +834,15 @@ function paintSheet(){
       <button class="go" id="buyGo" aria-describedby="lede payFine"></button>
       <p class="total" id="total" hidden></p>
       <p class="fine" id="payFine"><span class="paidto">Paid to ${esc(d.name)} through Stripe</span> · Apple Pay, Google Pay or card · Prices in US dollars.</p>
-      <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
+      <button class="btn btn-text" data-on-click="closeSheet">Not yet</button>
     </div>`;
   }else if(out){
-    h+=`<div class="sticky-act"><button class="btn btn-grey btn-block" onclick="closeSheet()">Close</button></div>`;
+    h+=`<div class="sticky-act"><button class="btn btn-grey btn-block" data-on-click="closeSheet">Close</button></div>`;
   }else if(m.link){
     const hn=host(m.link);
-    h+=`<div class="sticky-act"><a class="go ext" href="${esc(m.link)}" target="_blank" rel="noopener noreferrer">Get it on ${esc(hn)} ↗</a><p class="fine">Opens ${esc(hn)} in a new tab.</p><button class="btn btn-text" onclick="closeSheet()">Not yet</button></div>`;
+    h+=`<div class="sticky-act"><a class="go ext" href="${esc(m.link)}" target="_blank" rel="noopener noreferrer">Get it on ${esc(hn)} ↗</a><p class="fine">Opens ${esc(hn)} in a new tab.</p><button class="btn btn-text" data-on-click="closeSheet">Not yet</button></div>`;
   }else{
-    h+=`<div class="sticky-act"><div class="askline">${VENUE?'Ask at the bar':'Ask at the show'}</div><button class="btn btn-text" onclick="closeSheet()">Close</button></div>`;
+    h+=`<div class="sticky-act"><div class="askline">${VENUE?'Ask at the bar':'Ask at the show'}</div><button class="btn btn-text" data-on-click="closeSheet">Close</button></div>`;
   }
   if(m.blurb) h+=`<p class="blurb">${esc(m.blurb)}</p>`;
   h+=`<div id="moreWrap">${moreBlock(m)}</div>`;
@@ -880,7 +930,7 @@ function openAsk(fromHistory){
     <div class="sticky-act">
       <button class="go" id="wishGo">Send to ${F}</button>
       <p class="fine">No account, no email — just the ask. ${F} sees it next time they open their Studio.</p>
-      <button class="btn btn-text" onclick="closeSheet()">Not now</button>
+      <button class="btn btn-text" data-on-click="closeSheet">Not now</button>
     </div>`);
   const ta=$('#wishText'), c=$('#wishCount'), go=$('#wishGo');
   const count=()=>{ if(!ta||!c) return; c.textContent=`${ta.value.length}/${max}`; c.classList.toggle('near',ta.value.length>=max-20); };
@@ -900,7 +950,7 @@ async function sendWish(){
     if(!d.ok){ toast(d.error||'Couldn’t send that just now — try again in a moment'); go.disabled=false; go.textContent=`Send to ${VENUE?D.name:firstName()}`; ASKING=false; if(r.status===429) closeSheet(); return; }
     const F=esc(VENUE?D.name:firstName()), sh=$('#sheet');
     sh.querySelector('.ask').outerHTML=`<div class="sent" role="status"><b>${tick()}Sent to ${F}</b><p>They’ll see it in their Studio. If it gets made, it shows up here.</p><q>${esc(text)}</q></div>`;
-    sh.querySelector('.sticky-act').innerHTML=`<button class="btn btn-grey btn-block" onclick="closeSheet()">Done</button>`;
+    sh.querySelector('.sticky-act').innerHTML=`<button class="btn btn-grey btn-block" data-on-click="closeSheet">Done</button>`;
     sh.querySelector('.lede').remove();
   }catch(e){ toast(navigator.onLine===false?'You’re offline — try again when the bar’s wifi wakes up.':'Couldn’t send that just now — try again in a moment'); go.disabled=false; go.textContent=`Send to ${VENUE?D.name:firstName()}`; }
   ASKING=false;
@@ -1011,7 +1061,7 @@ function render(){
     <div class="n"><div class="k">Merch</div>
       <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1>
       ${merch.length?`<p class="promise">${live?'<i class="dot"></i>':''}<span>${promise(d,merch)}</span></p>`:''}</div>
-    <button class="share" onclick="share()">Share</button>
+    <button class="share" data-on-click="share">Share</button>
   </div>`;
   h+=receiptBlock()+hintBlock();   // the fresh receipt (or the check) stays above the grid; earlier orders sit at the foot
   if(!merch.length){

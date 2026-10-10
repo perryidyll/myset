@@ -131,7 +131,7 @@ const { src } = await import('./_src.mjs');
 const read = (f) => src(new URL('../public/' + f, import.meta.url));
 {
   const studio = read('studio.html');
-  ok('the Studio has a Last call button', /onclick="lastCall\(\)"/.test(studio));
+  ok('the Studio has a Last call button', /data-on-click="lastCall"/.test(studio));
   ok('and it is only offered while a show is running',
      /s\.status==='live'\?`<div class="wrap"[^`]*lastcall/.test(studio.replace(/\n\s*/g, '')),
      'the button must be inside the status===live branch');
@@ -139,10 +139,10 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
 
   // UX-042: the current song has to be ended before another can start.
   ok('every ▶ in the Studio goes through startSong, never straight to play',
-     !/act\('play(Top)?'/.test(studio) && /startSong\('playTop'\)/.test(studio) && /startSong\('play',\{song:/.test(studio));
+     !/act\('play(Top)?'/.test(studio) && /ON\.click\('startSong','playTop'\)/.test(studio) && /ON\.click\('startSong','play',\{song:/.test(studio));
   ok('startSong opens "End current song?" while a song is playing, with Yes, end it and Keep playing',
      /function startSong\(/.test(studio) && /End current song\?/.test(studio)
-       && /class="big yes" id="askYes">Yes, end it</.test(studio) && /class="big keep" id="askNo" onclick="closeAsk\(\)">Keep playing</.test(studio)
+       && /class="big yes" id="askYes">Yes, end it</.test(studio) && /class="big keep" id="askNo" data-on-click="closeAsk">Keep playing</.test(studio)
        && /yes:'Yes, end it',no:'Keep playing'/.test(studio));
   ok('deleting a song asks in the same window, never the browser\u2019s confirm()',
      /title:'Delete this song\?'/.test(studio) && /yes:'Yes, delete it',no:'Keep it'/.test(studio) && !/confirm\('Remove “/.test(studio));

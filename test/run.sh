@@ -22,6 +22,9 @@ echo
 echo "── structure ──"
 node test/structure.mjs
 echo
+echo "── no page runs code it does not carry: the script policy and its actions (0209) ──"
+node --import ./test/register.mjs test/csp.mjs
+echo
 echo "── what the public reads ──"
 node test/copy.mjs
 node --import ./test/register.mjs test/nomarkup.mjs

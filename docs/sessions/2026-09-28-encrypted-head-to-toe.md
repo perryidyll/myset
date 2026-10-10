@@ -385,3 +385,77 @@ twins — slice C's own rows, carried in by its merges. They are gone; PER-010 i
 behind PER-018. HARDENING §2, SECURITY.md's founder list and the founder's-accounts sheet
 (y07) say *Pro first*. Puzzle: step y07 re-noted the same way.
 
+
+### 2026-10-10, evening — SEC-006: no page runs code it does not carry (decision 0209)
+
+The founder: *go ahead with the sec-006* — and *don't ask me for any more permissions, just
+go until the job is done*. SEC-006 had been measured on 2026-10-09 and deferred until the
+secret was live: 487 inline handlers, and a hash covers a `<script>` block, never an
+attribute.
+
+**What changed.** No markup holds code any more. A button names its action —
+`data-on-click="closeSheet"`, a JSON step or sequence, or `${ON.click('setTab', tab)}` in a
+script — and `public/on.js`, inlined in all twenty pages by `tools/stamp.mjs` (as app.css
+is), binds it on the element the first time an event of its kind passes, so it fires where
+its `onclick=` fired; delegation at `document` was rejected because the Studio's swipe tray
+swallows a tap with a capturing listener, and actions run late would have changed what a
+`stopPropagation()` blocks. Every script registers its actions at its top
+(`ON.add({…})`, function declarations; `frSet` and the media dash's two `window.*`
+functions through wrappers). Every page carries `<meta http-equiv="Content-Security-Policy">`
+after the charset naming each inline block by SHA-256 (`netlify/functions/_csp.mjs`), plus
+leave.js's speculation rules (now a written-out string with the same bytes) and the two map
+hosts; the passcode door, the Show log's lock, the money model and the Show log send theirs
+as a header (`cspFor(html)`) — the door's Show/Hide moved into a hashed script.
+
+**How.** A one-off codemod (TypeScript's parser from the global install, in the scratchpad,
+not committed) rewrote the 386 handlers that were a plain call with literal or render-time
+arguments — `'${esc(x)}'` became `String(x)`, `${JSON.stringify(v)}` became `v`, so the
+values arrive exactly instead of through two layers of quoting. The other 101 were written
+by hand: 30 custom actions in `studio.js`, 12 in `venue-studio.js`, three photo fallbacks and
+the lightbox in `fan.js`, a few per page. What it checked before writing: no registered
+function reads `this` (so the element as `this` changes nothing for them), every page's
+actions are declared exactly once among its scripts, and only seven old bodies used
+`return` — `…;return false` became the step `prevent`, and the venue page's
+`return jump(id)` became `jumpTo`, which prevents only when `jump` says so (the listener
+ignores return values, as an `onclick=` that called a function without `return` did).
+One latent bug went with the attributes: the media dash's `onclick="open('…')"` resolved
+`open` to `document.open` inside an inline handler's scope — checked in Chromium: a button
+with `onclick="open('abc')"` on a page that replaces `window.open` wiped the document and
+never called the replacement. The registration calls the page's own `window.open`
+replacement, as the code meant.
+
+**One hazard found and closed before it shipped.** sw.js shows a page stored in the last six
+hours at once, and a stamped script the phone never fetched is answered with the current
+file — so a page stored before this change can meet the new `fan.js` or `studio.js`, which
+would throw on `ON` and leave the page dead for that open. Each shared script now starts
+with a guard: no `ON` means an old page — reload once, network first, and never throw.
+Checked in Chromium with main's pages served against the new scripts: vote page, Studio,
+Venue Studio each reloaded once into the current page with no error; with the old page
+served every time, one reload and no loop.
+
+**Verified.** `test/csp.mjs` (new, 116 ✓): no handler, `setAttribute('on…')`, `javascript:`
+or string eval in `public/`; every page's policy and `on.js` copy current; every action
+registered, every shorthand registration a function declaration; `on.js` on a hand-made
+DOM; the four function-served pages. Each guard broken on purpose went red (an `onclick=` in
+a page and in `studio.js`, a stale policy, an unregistered action, a `const` registered as
+shorthand, a target-only bind, a swallowed error, the door's `onclick=`, a changed
+speculation rule). `copy`, `darkroom`, `password`, `seatstudio`, `tipdecks` and `ordernote`
+read the new markup. In a real Chromium (`tools/localhost.mjs`, the policy enforced): all 21
+addresses load with no violation, no script error and no unregistered action; a differential
+tap-everything run against `main` (both sides from the same seed, the same taps in the same
+order, the page compared after each, one level deeper inside the Studios' tabs and menus):
+121 taps over twelve pages, 8 differences — one a once-only tip that lands at four seconds on
+whichever side gets there first, seven a reseed my own concurrent check made on the new side
+mid-run (the Venue Studio replayed step by step stayed signed in on both sides with the same
+requests). Re-run on the two Studios: the Studio 77 taps, 0 differences; the Venue Studio 35
+taps, 8 differences, every one the same line — its Alerts panel read *Checking…* on main's
+side and *Not switched on yet* on the new. That panel waits up to four seconds for the
+phone's service worker before it asks the server, and the run loads the new side first, so
+the new side always got there first; with each page left to settle, the same 35 taps, 0
+differences. The vote page with a show on stage, every button and one level inside each: 76
+taps, 0 differences. **The map before the deploy:** the new pages and scripts
+served to one Chromium in place of production's (a route in the browser, nothing deployed),
+with `/api` and Google's map answered by the real site — reads only: on `/artists` and `/` the
+map loads (`google.maps`, tiles drawn) with no violation and no error. Production's own pages
+today show two blocked Google font stylesheets when the map opens (`style-src`, the header's,
+unchanged here) and no blocked script. **Not checked:** a real iPhone.

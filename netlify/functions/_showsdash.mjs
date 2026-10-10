@@ -59,5 +59,5 @@ export async function handleShows(req, url, { bundledPage, localised }) {
   let html;
   try { html = localised(bundledPage('finance/shows.html', 'moneymodel')); }
   catch (e) { return new Response('The dashboard is not in this deploy: ' + e.message, { status: 500, headers: baseHeaders('text/plain; charset=utf-8') }); }
-  return new Response(html, { status: 200, headers: baseHeaders() });
+  return new Response(html, { status: 200, headers: baseHeaders(undefined, html) });
 }

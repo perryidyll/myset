@@ -263,14 +263,15 @@
     # stylesheet — verified, not assumed — so this costs nothing and closes the
     # whole class of "an injected tag pulls code from somewhere else".
     #
-    # `script-src` still needs 'unsafe-inline': every page is one file with its
-    # script inline and its buttons wired with onclick, which is a deliberate
-    # choice (one request, no build step; since decision 0087 the fan pages also load
-    # the shared fan.js, same-origin under 'self') and not something to undo for a header.
-    # It is worth saying plainly what that costs: this policy does NOT stop an
-    # injected inline <script>. What it does stop is that script LOADING anything,
-    # or sending what it found anywhere — connect-src is 'self', so a stolen token
-    # has nowhere to go. Moving to hashes is in SECURITY.md as the next real step.
+    # `script-src` keeps 'unsafe-inline' HERE only as the floor. Since decision 0209
+    # (2026-10-10) every page in public/ carries its own policy — a <meta> right after
+    # the charset naming each of its inline blocks by hash (tools/stamp.mjs, from
+    # netlify/functions/_csp.mjs) — and no page wires a button with code: an onclick=
+    # runs nothing under it, and the buttons name their actions (public/on.js). A
+    # browser enforces every policy it is given, so the page's is what binds; this
+    # header cannot name the hashes itself without carrying every page's at once.
+    # What this header still stops on its own: any script, style, frame or connection
+    # from anywhere but the hosts below — connect-src 'self', so nothing can be sent away.
     #
     # `img-src` needs data: for the photo previews the phone draws before upload,
     # and `media-src` needs blob: for the clip preview in the composer.

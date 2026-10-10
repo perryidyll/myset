@@ -2,6 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-UUfphtcfYrrxRLu9GBg1FsVvKk2k7kilWJNSWMsCr9A=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MySet Media Dash</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
@@ -240,6 +286,11 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--hair2);borde
 <div class="drawer" id="drawer"></div>
 
 <script>
+/* THE ACTIONS THIS PAGE'S MARKUP MAY NAME (SEC-006, decision 0209) — every data-on-* below names
+   one of these; the page's Content-Security-Policy refuses an onclick=. */
+ON.add({ boostForm, boostSave, open: (...a) => open(...a), removeBoost: (...a) => removeBoost(...a) });   // the two are window.* assignments below
+function boostForm(){ $('#bform').classList.toggle('on'); $('#bform input').focus(); }
+function boostSave(id){ saveBoost(ON.event,id); }
 const $=(s,r=document)=>r.querySelector(s);
 const fmt=(n)=>n==null?'–':Math.abs(n)>=1e6?(n/1e6).toFixed(1)+'M':Math.abs(n)>=1e4?(n/1e3).toFixed(1)+'k':String(Math.round(n));
 const money=(n)=>n==null?'–':n<1000?'$'+n.toFixed(2).replace(/\.00$/,''):'$'+Math.round(n).toLocaleString();
@@ -344,7 +395,7 @@ function breakdowns(){
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   $('#breakdowns').innerHTML=[by('Format',p=>p.format),by('Job',p=>p.job,1),by('Planned slot',p=>p.time?p.time.replace(':','.')+' ET':null),by('Planned weekday',p=>wd[new Date(p.date+'T12:00:00').getDay()],1),by('Music',p=>p.music),by('Hook family',p=>p.hook,1),by('Franchise',p=>p.franchise&&p.franchise!=='NONE'?p.franchise:'none')].join('')||'<div class="empty">pull once to see what works</div>';
   const L=[['Most views','views',p=>p.latest.views],['Most reach','reach',p=>p.latest.reach],['Most liked','likes',p=>p.latest.likes],['Most sent','shares',p=>p.latest.shares],['Most saved','saved',p=>p.latest.saved],['Longest watched','watch',p=>p.latest.ig_reels_avg_watch_time,secs],['Most profile visits','pv',p=>p.latest.profile_visits],['Most talked about','comments',p=>p.latest.comments]];
-  $('#leaders').innerHTML=L.map(([l,k,g,f])=>{const top=live.map(p=>[p,g(p)]).filter(x=>x[1]!=null&&x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,3);if(!top.length)return'';const mx=top[0][1];return`<div class="card"><h3>${l}</h3>${top.map(([p,v],i)=>`<div class="row" style="cursor:pointer" onclick="open('${p.id}')"><span class="l">${i+1}. ${esc(p.name)}</span><span class="v">${(f||fmt)(v)}</span><span class="b ${i?'alt':''}" style="width:${100*v/mx}%;opacity:${1-i*.25}"></span></div>`).join('')}</div>`}).join('')||'<div class="empty">no signal yet</div>';
+  $('#leaders').innerHTML=L.map(([l,k,g,f])=>{const top=live.map(p=>[p,g(p)]).filter(x=>x[1]!=null&&x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,3);if(!top.length)return'';const mx=top[0][1];return`<div class="card"><h3>${l}</h3>${top.map(([p,v],i)=>`<div class="row" style="cursor:pointer" ${ON.click('open',String(p.id))}><span class="l">${i+1}. ${esc(p.name)}</span><span class="v">${(f||fmt)(v)}</span><span class="b ${i?'alt':''}" style="width:${100*v/mx}%;opacity:${1-i*.25}"></span></div>`).join('')}</div>`}).join('')||'<div class="empty">no signal yet</div>';
 }
 function boosted(){
   const B=D.boosts;const el=$('#boosted');
@@ -373,7 +424,7 @@ window.open=(id)=>{const p=D.posts.find(x=>x.id===id);if(!p)return;const l=p.lat
   if(c.length>1){const mx=Math.max(1,...c.map(x=>x.views||0));const pts=c.map((x,i)=>[8+i/(c.length-1)*(W-16),H-8-((x.views||0)/mx)*(H-16)]);const d=pts.map((q,i)=>(i?'L':'M')+q[0]+' '+q[1]).join(' ');svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:120px;display:block;margin-top:8px"><path d="${d} L${W-8} ${H-8} L8 ${H-8}Z" fill="rgba(var(--accent-rgb),.15)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="3" fill="var(--accent)"><title>${new Date(c[i].at).toLocaleString()} · ${c[i].views} views</title></circle>`).join('')}</svg><div class="legend"><span>views across ${c.length} pulls · first ${day(c[0].at)} · last ${rel(c[c.length-1].at)}</span></div>`}
   else svg=`<div class="empty" style="padding:18px">one pull so far — the curve starts on the second</div>`;
   const st=[['Views',l.views],['Reach',l.reach],['Likes',l.likes],['Comments',l.comments],['Saves',l.saved],['Sends',l.shares],['Interactions',l.total_interactions],['Eng. rate',l.reach?(100*(l.total_interactions||0)/l.reach).toFixed(0)+'%':null],p.format==='reel'?['Avg watch',secs(l.ig_reels_avg_watch_time)]:['Profile visits',l.profile_visits],p.format==='reel'?['Total watch',secs(l.ig_reels_video_view_total_time)]:['Follows',l.follows],['Sends / reach',pct(l.shares,l.reach)],['Saves / reach',pct(l.saved,l.reach)]];
-  $('#drawer').innerHTML=`<button class="btn x" id="close">✕</button><div class="eyebrow">${p.format} · ${p.job||''} · ${day(p.date)} ${p.time||''} ET${p.music?' · ♪ '+esc(p.music):''}</div><h2>${esc(p.name)}</h2>${p.cover?`<img src="${p.cover}">`:''}<div class="stats">${st.map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${typeof v==='string'?v:fmt(v)}</div></div>`).join('')}</div>${svg}${p.comments.length?`<h3 style="margin:22px 0 10px;font-size:14px">Comments</h3><div class="cm">${p.comments.map(c=>`<div class="c"><div class="av">${esc((c.by||'?')[0].toUpperCase())}</div><div><div class="t">${esc(c.text)}</div><div class="m">@${esc(c.by)} · ${rel(c.at)}</div></div></div>`).join('')}</div>`:''}${p.format==='reel'?`<div class="note">Instagram reports profile visits and follows only for stills. For a reel they show up in the boost sheet — log a boost below and they land here.</div>`:''}${p.boosts.map(b=>`<div class="boost"><div class="h"><span><b>Boosted</b> · ${b.start?day(b.start):''}${b.days?` · ${b.days} day${b.days>1?'s':''}`:''}${b.note?` · ${esc(b.note)}`:''}</span><a onclick="removeBoost('${b.boostId}','${p.id}')">remove</a></div><div class="stats" style="margin:0">${[['Spend',money(b.spend)],['Views',fmt(b.views)],['Reach',fmt(b.reach)],['Interactions',fmt(b.interactions)],['Profile visits',fmt(b.profile_visits)],['Follows',fmt(b.follows)],['Link clicks',fmt(b.link_clicks)],['$ / 1k views',b.views?money(1000*b.spend/b.views):'–'],['$ / visit',per(b.spend,b.profile_visits)]].map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div></div>`).join('')}<p style="margin-top:14px"><button class="btn" onclick="$('#bform').classList.toggle('on');$('#bform input').focus()">＋ Log a boost</button></p><form class="bform" id="bform" onsubmit="return saveBoost(event,'${p.id}')"><div class="g">${[['spend','Spent $',true],['days','Days'],['views','Views'],['reach','Reach'],['interactions','Interactions'],['profile_visits','Profile visits'],['follows','Follows'],['link_clicks','Link clicks'],['likes','Likes'],['comments','Comments'],['saves','Saves'],['shares','Shares']].map(([k,l,req])=>`<div><label>${l}</label><input name="${k}" type="number" inputmode="decimal" step="any" min="0" ${req?'required':''} placeholder="–"></div>`).join('')}<div><label>Started</label><input name="start" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="wide"><label>Note</label><input name="note" type="text" placeholder="audience, goal, anything worth remembering"></div></div><div class="act"><button class="btn good" type="submit">Save boost</button><span class="msg">numbers as Instagram's boost sheet shows them</span></div></form><div class="cap">${esc(p.caption||'')}</div>${l.permalink?`<p style="margin-top:18px"><a class="btn" href="${l.permalink}" target="_blank">Open on Instagram ↗</a></p>`:''}`;
+  $('#drawer').innerHTML=`<button class="btn x" id="close">✕</button><div class="eyebrow">${p.format} · ${p.job||''} · ${day(p.date)} ${p.time||''} ET${p.music?' · ♪ '+esc(p.music):''}</div><h2>${esc(p.name)}</h2>${p.cover?`<img src="${p.cover}">`:''}<div class="stats">${st.map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${typeof v==='string'?v:fmt(v)}</div></div>`).join('')}</div>${svg}${p.comments.length?`<h3 style="margin:22px 0 10px;font-size:14px">Comments</h3><div class="cm">${p.comments.map(c=>`<div class="c"><div class="av">${esc((c.by||'?')[0].toUpperCase())}</div><div><div class="t">${esc(c.text)}</div><div class="m">@${esc(c.by)} · ${rel(c.at)}</div></div></div>`).join('')}</div>`:''}${p.format==='reel'?`<div class="note">Instagram reports profile visits and follows only for stills. For a reel they show up in the boost sheet — log a boost below and they land here.</div>`:''}${p.boosts.map(b=>`<div class="boost"><div class="h"><span><b>Boosted</b> · ${b.start?day(b.start):''}${b.days?` · ${b.days} day${b.days>1?'s':''}`:''}${b.note?` · ${esc(b.note)}`:''}</span><a ${ON.click('removeBoost',String(b.boostId),String(p.id))}>remove</a></div><div class="stats" style="margin:0">${[['Spend',money(b.spend)],['Views',fmt(b.views)],['Reach',fmt(b.reach)],['Interactions',fmt(b.interactions)],['Profile visits',fmt(b.profile_visits)],['Follows',fmt(b.follows)],['Link clicks',fmt(b.link_clicks)],['$ / 1k views',b.views?money(1000*b.spend/b.views):'–'],['$ / visit',per(b.spend,b.profile_visits)]].map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div></div>`).join('')}<p style="margin-top:14px"><button class="btn" data-on-click="boostForm">＋ Log a boost</button></p><form class="bform" id="bform" ${ON.on('submit','boostSave',String(p.id))}><div class="g">${[['spend','Spent $',true],['days','Days'],['views','Views'],['reach','Reach'],['interactions','Interactions'],['profile_visits','Profile visits'],['follows','Follows'],['link_clicks','Link clicks'],['likes','Likes'],['comments','Comments'],['saves','Saves'],['shares','Shares']].map(([k,l,req])=>`<div><label>${l}</label><input name="${k}" type="number" inputmode="decimal" step="any" min="0" ${req?'required':''} placeholder="–"></div>`).join('')}<div><label>Started</label><input name="start" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="wide"><label>Note</label><input name="note" type="text" placeholder="audience, goal, anything worth remembering"></div></div><div class="act"><button class="btn good" type="submit">Save boost</button><span class="msg">numbers as Instagram's boost sheet shows them</span></div></form><div class="cap">${esc(p.caption||'')}</div>${l.permalink?`<p style="margin-top:18px"><a class="btn" href="${l.permalink}" target="_blank">Open on Instagram ↗</a></p>`:''}`;
   $('#drawer').classList.add('on');$('#veil').classList.add('on');$('#close').onclick=close};
 window.saveBoost=async(e,id)=>{e.preventDefault();const f=e.target,o={id};for(const el of f.elements)if(el.name)o[el.name]=el.value;const m=$('.msg',f);m.textContent='saving…';try{let res=await fetch(API.boost,{method:'POST',headers:{'content-type':'application/json',...adminHeaders()},body:JSON.stringify(LOCAL?o:{boost:o})});if(res.status===401){res=await fetch(API.boost,{method:'POST',headers:{'content-type':'application/json',...adminHeaders(true)},body:JSON.stringify({boost:o})})}const r=await res.json();if(r.error)throw new Error(r.error);await load();open(id);$('#bform').classList.remove('on')}catch(err){m.textContent=err.message}return false};
 window.removeBoost=async(boostId,id)=>{const o={removed:true,boostId,id};await fetch(API.boost,{method:'POST',headers:{'content-type':'application/json',...adminHeaders()},body:JSON.stringify(LOCAL?o:{boost:o})});await load();open(id)};

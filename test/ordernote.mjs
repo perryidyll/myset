@@ -108,7 +108,7 @@ eq('crew may not ask', (await AS(TC, 'orderCount')).status, 403);
 console.log('\nTHE REMINDER ON OPENING');
 const studio = readFileSync(new URL('../public/studio.js', import.meta.url), 'utf8');
 ok('it asks both counts once the screen is up, then decides', /Promise\.all\(\[msgPeek\(\),orderPeek\(\)\]\)\)\.then\(nudge\)/.test(studio));
-ok('pending orders, with a door to Merch that lands on the Orders list', studio.includes('pending order') && studio.includes("'Open Merch','merch'") && /tab==='merch'\?'goOrders\(\)'/.test(studio) && studio.includes('<div class="sec" id="orders">'));
+ok('pending orders, with a door to Merch that lands on the Orders list', studio.includes('pending order') && studio.includes("'Open Merch','merch'") && /tab==='merch'\?ON\.click\(\['closeSheet'\],\['goOrders'\]\)/.test(studio) && studio.includes('<div class="sec" id="orders">'));
 ok('unread messages, with a door to Messages', studio.includes('unread message') && studio.includes("'Open Messages','messages'"));
 ok('a box under each: quiet for 24 hours', studio.includes('Do not remind me again for 24 hours') && /NUDGE_MS=24\*3600e3/.test(studio));
 ok('never over a live show', /function nudge\(\)\{[\s\S]{0,400}D\.show\.status==='live'\)return;/.test(studio));

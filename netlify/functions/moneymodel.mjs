@@ -105,7 +105,8 @@ async function showDoor(req, url) {
   if (/\.(json|csv)$/.test(url.pathname) || req.method === 'POST' || (req.headers.get('accept') || '').includes('application/json')) {
     return json({ ok: false, error: 'locked', ready: L.ready(), until }, 401);
   }
-  return new Response(L.lockPage({ ready: L.ready(), until }), { status: 200, headers: baseHeaders() });
+  const lock = L.lockPage({ ready: L.ready(), until });
+  return new Response(lock, { status: 200, headers: baseHeaders(undefined, lock) });
 }
 
 const main = async (req) => {
@@ -134,7 +135,7 @@ const main = async (req) => {
   let html;
   try { html = localised(bundledPage('finance/model.html', 'moneymodel')); }
   catch (e) { return new Response('The model is not in this deploy: ' + e.message, { status: 500, headers: baseHeaders('text/plain; charset=utf-8') }); }
-  return new Response(html, { status: 200, headers: baseHeaders() });
+  return new Response(html, { status: 200, headers: baseHeaders(undefined, html) });
 };
 /* guard(): a store that does not answer is a 503 "busy", never an empty page or a crash (decision 0142). */
 export default guard('moneymodel', main);

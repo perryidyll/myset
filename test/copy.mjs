@@ -35,7 +35,7 @@ ok('the voting box says Voting, big and orange', /class="votebox"[\s\S]{0,120}cl
 ok('the audience vote counter labels its x/x value as votes',
    /\$\{freeRemaining\}<small>\/\$\{freeTotal\} votes<\/small>/.test(vote));
 ok('an out-of-votes voting sheet offers “Buy more votes”',
-   /<button class="go" onclick="openBuy\(\)">Buy more votes<\/button>/.test(vote));
+   /<button class="go" data-on-click="openBuy">Buy more votes<\/button>/.test(vote));
 ok('the voting sheet omits the manual-refresh instruction',
    !/please pull down on your screen/.test(vote) && !/see the current list now/.test(vote));
 ok('the live profile has one vote CTA with the requested label',
@@ -227,7 +227,7 @@ const learnAt = setlistBlock.indexOf('${learnSection()}');
 const fansAt = setlistBlock.indexOf('>See what fans see ↗</a>');
 const clearAt = setlistBlock.indexOf('>Clear setlist</button>');
 ok('Setlist actions follow the requested order',
-   /class="big alt orange-outline"[^>]*onclick="openLists\(\)"[^>]*>Organize your songs into setlists</.test(studio)&&
+   /class="big alt orange-outline"[^>]*data-on-click="openLists"[^>]*>Organize your songs into setlists</.test(studio)&&
    addAt >= 0 && importAt > addAt && organizeAt > importAt && learnAt > organizeAt && fansAt > learnAt && clearAt > fansAt);
 ok('Decline + refund appears on Live only, never Setlist',
    /Decline \+ refund votes/.test(studio.slice(studio.indexOf("if(TAB==='live')"), studio.indexOf("if(TAB==='setlist')"))) &&
@@ -258,7 +258,7 @@ ok('both public maps place pins from saved coordinates rather than address guess
 ok('Featured shows remain a $10 first-come city promotion',
    /Featured shows/.test(home)&&/featureStart/.test(studio)&&/\$10/.test(studio)&&/first come, first served/i.test(studio));
 ok('each upcoming gig offers Feature before Edit and cancel',
-   /openPromote\('\$\{esc\(o\.eventId\)\}','\$\{esc\(o\.date\)\}'\)">Feature<\/button>[\s\S]{0,180}>Edit<\/button>[\s\S]{0,180}>✕<\/button>/.test(studio));
+   /ON\.click\('openPromote',String\(o\.eventId\),String\(o\.date\)\)\}>Feature<\/button>[\s\S]{0,180}>Edit<\/button>[\s\S]{0,180}>✕<\/button>/.test(studio));
 ok('the promotion sheet leads with larger orange bullet points',
    /\.promotelede\{[^}]*color:var\(--accent-2\)[^}]*font-size:16px/.test(studio)&&
    /<ul class="promotelede">[\s\S]{0,500}<li>Only \$\{F\.slots\} spots/.test(studio));

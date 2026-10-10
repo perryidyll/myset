@@ -11,6 +11,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-NTnUHepeD3N//SW8Z282jqK+Pel0uVk1iE7ZpCSFnhw=' 'sha256-03MkzeUG07EbQDQTStArLklM62NzCdEvbwKD9UpQ6rY=' 'sha256-8g3SH5/uOoktKJACgfdt9+B+E5TQe2+KcBX8OGk3+0w=' 'sha256-edeYQiSBMGXWXYsuuqQqZ7Sh2iM6TLEwjWz3pvekE7U=' 'sha256-kQy3eOLVl6QcSs0cQJM5u4io2LHsSHA1SzH7r6X7a9Q=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
@@ -732,7 +778,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
   <div id="app"><div style="padding:18px"><div class="sk" style="height:180px;border-radius:16px"></div><div class="sk" style="height:28px;width:55%;margin:18px 0 8px"></div><div class="sk" style="height:14px;width:35%"></div><div class="sk" style="height:48px;margin-top:20px;border-radius:14px"></div></div></div>
   <div class="foot">MySet · myset.vip</div>
 </div>
-<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="bg" id="bg" data-on-click="closeSheet"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
 <div class="toast" id="toast"></div>
 
@@ -740,8 +786,18 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=0831c190"></script>
+<script src="/fan.js?v=c8cb6b8b"></script>
 <script>
+/* THE ACTIONS THIS PAGE'S MARKUP MAY NAME (SEC-006, decision 0209) — every data-on-* below names
+   one of these, or one fan.js registers; the page's Content-Security-Policy refuses an onclick=.
+   Function declarations, so they exist before this line runs. */
+ON.add({
+  doVouch, jumpTo, openPitch, openTip, pickTip, seeMoreEl, sendPitch, sendTip, share, showAmen,
+  tipAmt,
+});
+function tipAmt(){ customAmt(this,[5,10,20],'t-',TIP,'goTip'); }
+function seeMoreEl(){ seeMore(this); }
+function jumpTo(id){ if(jump(id)===false)ON.event.preventDefault(); }   // a door that finds its section scrolls there instead of following the #
 /* /v/<slug> — the second segment is the venue. */
 const SLUG=(()=>{const p=location.pathname.split('/').filter(Boolean);
   return (p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';})();
@@ -865,11 +921,11 @@ function openTip(){
   TIP=10;
   openSheet(`<h3>Tip the staff</h3>
     <p class="lede">For the team at ${esc(v.name)} · sent via Stripe</p>
-    <div class="tiles">${[5,10,20].map(x=>`<button class="tile ${x===10?'on':''}" id="t-${x}" onclick="pickTip(${x})"><b>$${x}</b><span>${x===5?'Cheers':x===10?'Thank you':'Great night!'}</span></button>`).join('')}</div>
+    <div class="tiles">${[5,10,20].map(x=>`<button class="tile ${x===10?'on':''}" id="t-${x}" ${ON.click('pickTip',x)}><b>$${x}</b><span>${x===5?'Cheers':x===10?'Thank you':'Great night!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)"
-      onfocus="customAmt(this,[5,10,20],'t-',TIP,'goTip')" oninput="customAmt(this,[5,10,20],'t-',TIP,'goTip')" onblur="customAmt(this,[5,10,20],'t-',TIP,'goTip')">
+      data-on-focus="tipAmt" data-on-input="tipAmt" data-on-blur="tipAmt">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
-    <button class="go" id="goTip" onclick="sendTip()">Continue to payment</button>
+    <button class="go" id="goTip" data-on-click="sendTip">Continue to payment</button>
     <p class="fineprint" style="margin-top:10px;padding:0;text-align:center">Secure checkout by Stripe · you’ll come right back</p>`,'Tip the staff');
 }
 function pickTip(x){TIP=x;[5,10,20].forEach(k=>{const el=$('#t-'+k);if(el)el.classList.toggle('on',k===x);});
@@ -1023,12 +1079,12 @@ function render(){
   const cover=v.photo||(shots.length>=2?shots.pop():'');
   GALLERY=[cover,...shots].filter(Boolean);
   const zoom=u=>`data-zoom="${esc(u)}" role="button" tabindex="0" aria-label="Enlarge photo"`;
-  const img=(u,w,extra='')=>`<img src="${esc(cdn(u,w))}" alt="" decoding="async" data-raw="${esc(u)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"${extra}>`;
+  const img=(u,w,extra='')=>`<img src="${esc(cdn(u,w))}" alt="" decoding="async" data-raw="${esc(u)}" data-on-error="imgRawOnce"${extra}>`;
   const onair=liveNow?(liveNow.kind==='event'
       ? `<span class="onair"><span class="dot"></span>${esc(liveNow.title||'On now')}</span>`
       : `<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`):'';
   h+=cover?`<div class="pcover rise" ${zoom(cover)} style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
-    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
+    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" data-on-error="imgRaw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>${onair}</div>`
     :`<div class="pcover rise blank">${esc((v.name||'?').slice(0,1).toUpperCase())}${onair}</div>`;
   /* THE FOUR DOORS beside the square: Menu, Events, What guests say, Directions —
@@ -1045,14 +1101,14 @@ function render(){
   const hasMenu=!!(v.menu&&(((v.menu.items||[]).length)||v.menu.note));
   const tel=v.phone?v.phone.replace(/[^0-9+]/g,''):'';
   let doors=[
-    hasMenu?door('menu','Menu',`href="#vmenu" onclick="return jump('vmenu')"`)
+    hasMenu?door('menu','Menu',`href="#vmenu" ${ON.click('jumpTo','vmenu')}`)
       :(v.menu&&v.menu.url?door('menu','Menu',`href="${esc(v.menu.url)}" target="_blank" rel="noopener noreferrer"`):''),
-    door('ev','Events',`href="#vevents" onclick="return jump('vevents')"`),
-    sample?door('say','What guests say',`href="#" onclick="toast('Guests’ posts, photos and reviews land here once the page is claimed.');return false"`)
+    door('ev','Events',`href="#vevents" ${ON.click('jumpTo','vevents')}`),
+    sample?door('say','What guests say',`href="#" ${ON.click(['toast','Guests’ posts, photos and reviews land here once the page is claimed.'],['prevent'])}`)
       :door('say','What guests say',`href="/v/${esc(SLUG)}/community"`),
     dh?door('dir','Directions',`href="${esc(dh)}" target="_blank" rel="noopener noreferrer"`):'',
   ].filter(Boolean);
-  const spare=[tel?door('call','Call',`href="tel:${esc(tel)}"`):'', sample?'':door('share','Share',`href="#" onclick="share();return false"`)].filter(Boolean);
+  const spare=[tel?door('call','Call',`href="tel:${esc(tel)}"`):'', sample?'':door('share','Share',`href="#" ${ON.click(['share'],['prevent'])}`)].filter(Boolean);
   while(doors.length<4&&spare.length) doors.push(spare.shift());
   const inDoors=k=>doors.some(d=>d.includes(`data-door="${k}"`));
   const doorsHtml=doors.join('');
@@ -1088,7 +1144,7 @@ function render(){
   ${shots.length?'':`<nav class="vdoors wide" style="--n:${doors.length}" aria-label="On this page">${doorsHtml}</nav>`}`;
   /* What the doors did not take stays a pill: Share, Call, WhatsApp. */
   const rest=[
-    inDoors('share')?'':`<button type="button" class="vshare" onclick="share()"><svg viewBox="0 0 24 24">${I.share}</svg>Share</button>`,
+    inDoors('share')?'':`<button type="button" class="vshare" data-on-click="share"><svg viewBox="0 0 24 24">${I.share}</svg>Share</button>`,
     tel&&!inDoors('call')?`<a href="tel:${esc(tel)}"><svg viewBox="0 0 24 24">${I.call}</svg>Call</a>`:'',
     v.whatsapp?`<a href="https://wa.me/${esc(v.whatsapp.replace(/[^0-9]/g,''))}" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L4 20l1.2-4.2A8.5 8.5 0 1121 11.5z"/></svg>
@@ -1096,7 +1152,7 @@ function render(){
   if(rest.length) h+=`<div class="vacts">${rest.join('')}</div>`;
   /* TIP THE STAFF (decision 0127): only while the venue takes cards and its plan has
      tips — the server's own gate (shapeVenue tipsOn), so the button never shrugs. */
-  if(v.tipsOn) h+=`<div class="tipbar"><button onclick="openTip()"><b>Tip the staff</b><small>Show the team some love</small></button></div>`;
+  if(v.tipsOn) h+=`<div class="tipbar"><button data-on-click="openTip"><b>Tip the staff</b><small>Show the team some love</small></button></div>`;
 
   /* ON NOW, THEN THE NEXT THREE; everything after them folded under "See more"
      (decision 0129, the founder: "only the next 3 performances and hide the rest"). */
@@ -1123,7 +1179,7 @@ function render(){
       h+=`<div class="more${SEE_MORE?' open':''}" id="more"><div>${days.slice(0,14).map(day=>`
         <div class="dayline">${esc(whenWord(day.date))} <em>– ${dayMonth(day.date)}</em></div>
         <div class="rows">${day.gigs.map(g=>gigRow(g,false)).join('')}</div>`).join('')}</div></div>
-        <button type="button" class="seemore" aria-expanded="${SEE_MORE?'true':'false'}" aria-controls="more" onclick="seeMore(this)"><span>${SEE_MORE?'See less':`See more · ${rest.length}`}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>`;
+        <button type="button" class="seemore" aria-expanded="${SEE_MORE?'true':'false'}" aria-controls="more" data-on-click="seeMoreEl"><span>${SEE_MORE?'See less':`See more · ${rest.length}`}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>`;
     }
     h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars${gigs.some(g=>g.confirmed)?'; a ✓ means the venue confirmed it':''}. Times can change — check with the venue.</p>`;
   } else if(!liveNow){
@@ -1154,7 +1210,7 @@ function render(){
     const fold=!AMEN_ALL&&ams.length>AMEN_SHOW;
     h+=`<div class="sect">What’s here</div><div class="rows${fold?' folded':''}" id="amen">${
       ams.map((a,i)=>`<div class="ai${i>=AMEN_SHOW?' more':''}">${amIcon(a.key)}<span>${esc(a.label)}</span></div>`).join('')}</div>`;
-    if(fold) h+=`<div class="showall"><button class="btn btn-grey btn-sm" onclick="showAmen()">Show all ${ams.length}</button></div>`;
+    if(fold) h+=`<div class="showall"><button class="btn btn-grey btn-sm" data-on-click="showAmen">Show all ${ams.length}</button></div>`;
   }
 
   /* Hours, offers and how to get there, in one place. */
@@ -1233,7 +1289,7 @@ function playCard(){
         : st==='nope'
           ? `<span class="chip">Not this time. Try again another season.</span>`
           : `<span class="chip">Sent — waiting to hear back</span>`)
-    : `<button class="btn2" onclick="openPitch()">Want to perform here?</button>`;
+    : `<button class="btn2" data-on-click="openPitch">Want to perform here?</button>`;
 
   const canV=MINE.canVouch, did=MINE.vouched;
   const n=MINE.vouches||0, need=MINE.need||10;
@@ -1243,7 +1299,7 @@ function playCard(){
       <p style="margin:6px 0 12px">Confirm it and you help them get their green tick.
         ${need} artists who play here does it — no website needed.</p>
       ${did?`<span class="btn2 done">✓ You’ve confirmed this one</span>`
-           :`<button class="btn2 ghost" onclick="doVouch()">Yes, I play here</button>`}
+           :`<button class="btn2 ghost" data-on-click="doVouch">Yes, I play here</button>`}
       <div class="vouchbar"><i style="width:${Math.min(100,Math.round(n/need*100))}%"></i></div>
       <p class="fine">${n} of ${need} artists confirmed</p>
     </div>` : '');
@@ -1270,7 +1326,7 @@ function openPitch(){
     <div class="rv" id="rv"><span class="spin"></span> Fetching your numbers…</div>
     <textarea class="inp" id="pitchMsg" maxlength="400"
       placeholder="Hi — I play acoustic covers and originals, mostly 90s to now. Free most Thursdays. Happy to do a trial night.">${esc((MINE&&MINE.message)||'')}</textarea>
-    <button class="btn btn-pri btn-block" id="pitchGo" onclick="sendPitch()">${MINE&&MINE.sent?'Save it':'Send the enquiry'}</button>
+    <button class="btn btn-pri btn-block" id="pitchGo" data-on-click="sendPitch">${MINE&&MINE.sent?'Save it':'Send the enquiry'}</button>
     <p class="fine" style="text-align:center;margin-top:12px;font-size:12.5px;color:var(--faint)">
       One conversation per venue — it carries on in your Studio’s Messages.</p>`);
   fillReview();

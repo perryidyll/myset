@@ -155,17 +155,17 @@ const { src } = await import('./_src.mjs');
 for (const [page, js] of [['studio.html', 'studio.js'], ['venue-studio.html', 'venue-studio.js']]) {
   const html = src(new URL('../public/' + page, import.meta.url)), code = src(new URL('../public/' + js, import.meta.url));
   ok(`${js}: Welcome back, email over password, a filled Sign in, Forgot your password?`,
-    /Welcome back/.test(code) && /placeholder="Email"/.test(code) && /placeholder="Password"/.test(code) && /class="big fill"[^>]*onclick="passwordSignIn\(\)">Sign in</.test(code) && /Forgot your password\?/.test(code));
+    /Welcome back/.test(code) && /placeholder="Email"/.test(code) && /placeholder="Password"/.test(code) && /class="big fill"[^>]*data-on-click="passwordSignIn">Sign in</.test(code) && /Forgot your password\?/.test(code));
   ok(`${js}: New here? Join the MySet family, a ringed Create account`, /class="join">New here\? Join the MySet family/.test(code) && /class="big ring"[^>]*>Create account</.test(code));
   ok(`${page}: the box is ringed pink-orange, the heading and Sign in are pink-orange`,
     /\.signbox\{[^}]*inset 0 0 0 1\.5px var\(--accent-2\)/.test(html) && /\.gate h2\{[^}]*color:var\(--accent-2\)/.test(html) && /\.big\.fill\{background:var\(--accent-2\)/.test(html));
-  ok(`${js}: create and forgot both go through the six-digit code`, /gate\(null,'join'\)/.test(code) && /gate\(null,'forgot'\)/.test(code) && /action:'start'/.test(code));
-  ok(`${js}: a Password row in Settings with Create / Change`, /openPasswordSheet\(\)/.test(code) && /'Change':'Create'/.test(code));
+  ok(`${js}: create and forgot both go through the six-digit code`, /'gate',null,'join'/.test(code) && /'gate',null,'forgot'/.test(code) && /action:'start'/.test(code));
+  ok(`${js}: a Password row in Settings with Create / Change`, /data-on-click="openPasswordSheet"/.test(code) && /'Change':'Create'/.test(code));
 }
 {
   const code = src(new URL('../public/studio.js', import.meta.url)), html = src(new URL('../public/studio.html', import.meta.url));
-  ok('studio.js: the Studio code is small grey underlined text at the foot that opens a window', /class="foot"><a[^>]*openStudioCode\(\)/.test(code) && /\.gate \.foot a\{color:var\(--muted\);text-decoration:underline/.test(html) && /id="pop"/.test(html));
-  ok('studio.js: the front screen no longer carries "Email me a code" as the door', !/class="big[^"]*"[^>]*onclick="sendCode\(\)">Email me a code/.test(code));
+  ok('studio.js: the Studio code is small grey underlined text at the foot that opens a window', /class="foot"><a[^>]*\['openStudioCode'\]/.test(code) && /\.gate \.foot a\{color:var\(--muted\);text-decoration:underline/.test(html) && /id="pop"/.test(html));
+  ok('studio.js: the front screen no longer carries "Email me a code" as the door', !/class="big[^"]*"[^>]*data-on-click="sendCode">Email me a code/.test(code));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

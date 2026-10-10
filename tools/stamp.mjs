@@ -14,8 +14,9 @@
 // loads on demand, so those are rewritten first and studio.js's own stamp is taken
 // of the result — the other way round, studio.html would point at a studio.js that
 // no longer exists. The regex matches a `src="…"` attribute and a '/…' string alike.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { scriptSrc, hashOf } from '../netlify/functions/_csp.mjs';
 const root = new URL('../', import.meta.url);
 export const PAIRS = [
   /* sample.js carries tips.js's stamp (it loads the decks on the artist page), so it is
@@ -42,6 +43,41 @@ export const stampRe = (js) => new RegExp(`(["'/]${js.replace('.', '\\.')}\\?v=)
    element with that id would be the one getElementById finds first (it was, for an hour). */
 export const appBlock = (css) => `<style id="app-css">\n${css}</style>`;
 export const appRe = /<style id="app-css">\n[\s\S]*?<\/style>/;
+/* on.js rides INSIDE every page in public/ (SEC-006, decision 0209): the whole file, byte for
+   byte, between <script id="on-js"> and </script>, right after the page's script policy — every
+   data-on-* the page or its scripts draw is wired by it, so it must run before anything else. Run
+   this after ANY edit to on.js; test/structure.mjs refuses a page whose copy is stale. */
+/* The copy carries the code, not the commentary — the file's comments are for whoever edits it,
+   and every page would pay for them (about a kilobyte, compressed). on.js keeps its comments in
+   block form for that reason; nothing else is touched. */
+export const onCode = (js) => js.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim()).join('\n') + '\n';
+export const onBlock = (js) => `<script id="on-js">\n/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */\n${onCode(js)}</script>`;
+export const onRe = /<script id="on-js">\n[\s\S]*?<\/script>\n?/;
+/* THE PAGE'S SCRIPT POLICY, written last (decision 0209, netlify/functions/_csp.mjs): the hash of
+   every inline block the page carries (on.js's included), the speculation rules leave.js adds on
+   the pages that load it (read from leave.js, so a rule changed there is a new hash here), and the
+   two map hosts the site header allows. A <meta> governs only what comes after it, so it sits
+   right after the charset, ahead of every script. */
+export const MAP_HOSTS = ['https://maps.googleapis.com', 'https://maps.gstatic.com'];
+export const cspRe = /<meta http-equiv="Content-Security-Policy" content="[^"]*">\n?/;
+export const CHARSET = /<meta charset="utf-8"\s*\/?>\n/i;
+export function speculationText(leaveJs) {
+  const m = /sr\.textContent = '([^'\\]*)';/.exec(leaveJs);
+  if (!m) throw new Error('leave.js: the speculation rules are no longer a plain string — the policy cannot name them');
+  return m[1];
+}
+export function pagePolicy(html, leaveJs) {
+  const extra = /<script[^>]*\ssrc="\/leave\.js"/.test(html) ? [hashOf(speculationText(leaveJs))] : [];
+  return `<meta http-equiv="Content-Security-Policy" content="script-src ${scriptSrc(html, [...extra, ...MAP_HOSTS])}">`;
+}
+/* The page with on.js and its policy in place — what stamp writes and what the test expects. */
+export function withPolicy(html, onJs, leaveJs) {
+  let out = html.replace(cspRe, '').replace(onRe, '');
+  if (!CHARSET.test(out)) throw new Error('no <meta charset="utf-8"> line to put the script policy after');
+  out = out.replace(CHARSET, (m) => m + onBlock(onJs) + '\n');
+  return out.replace(CHARSET, (m) => m + pagePolicy(out, leaveJs) + '\n');
+}
+export const PAGES = readdirSync(new URL('public/', root)).filter((f) => f.endsWith('.html')).sort().map((f) => 'public/' + f);
 if (process.argv[1] && process.argv[1].endsWith('stamp.mjs')) {
   const css = readFileSync(new URL('public/app.css', root), 'utf8');
   if (/<\/style/i.test(css)) throw new Error('app.css must never contain </style — it rides inside every fan page');
@@ -60,5 +96,15 @@ if (process.argv[1] && process.argv[1].endsWith('stamp.mjs')) {
     const after = before.replace(stampRe(js), `$1${want}`);
     if (after === before) console.log(`stamp: ${js} is ${want}, ${page} already says so`);
     else { writeFileSync(html, after); console.log(`stamp: ${js} is ${want}, ${page} updated`); }
+  }
+  const onJs = readFileSync(new URL('public/on.js', root), 'utf8');
+  if (/<\/script/i.test(onJs)) throw new Error('on.js must never contain </script — it rides inside every page');
+  const leaveJs = readFileSync(new URL('public/leave.js', root), 'utf8');
+  for (const page of PAGES) {
+    const html = new URL(page, root);
+    const before = readFileSync(html, 'utf8');
+    const after = withPolicy(before, onJs, leaveJs);
+    if (after === before) console.log(`policy: ${page} already current`);
+    else { writeFileSync(html, after); console.log(`policy: on.js and the script policy written into ${page}`); }
   }
 }

@@ -73,21 +73,21 @@ ok('a night\'s name renames only with Money edit', /const histName=\(id,title\)=
 ok('the photo slot\'s ✕ carries the tab of the slot', /class="rm" data-ed="\$\{area\}" data-act="photoclear"/.test(studio));
 for (const [what, re] of [
   ['Add a song and Import', /<div class="wrap" style="padding-top:18px" data-ed="setlist">\n      <div class="setlist-tools">/],
-  ['Auto-tag', /<button data-ed="setlist" onclick="confirmAutoTag\(\)">/],
-  ['Clear setlist', /<div class="wrap" style="padding-top:18px;padding-bottom:8px" data-ed="setlist">\n      <button class="big alt"[^\n]*\n[^\n]*clearSetlist/],
-  ['Add a gig', /data-ed="gigs">\n        <button class="big bigplay" onclick="openGig\(\)">/],
-  ['Save profile, both', /data-ed="profile"><button class="big mid" onclick="saveProfile\(\)">Save profile/g],
-  ['a fan post\'s Reply, Pin and Hide', /padding-top:6px" data-ed="profile">\n        <button class="act" onclick="replyPost\(/],
-  ['an item\'s ↑ ↓ Edit ✕', /flex:1 1 100%" data-ed="merch">\n        <button class="act" onclick="merchMoveItem\(/],
-  ['+ Add an item', /data-ed="merch"><button class="big alt" onclick="openMerch\(''\)">/],
-  ['an order\'s Done', /data-ed="merch" onclick="orderDone\(/],
-  ['a shop request\'s Done', /data-ed="merch" onclick="wishDone\(/],
-  ['a diary page\'s ↑ ↓ Edit ✕', /flex:1 1 100%" data-ed="diary">\n        <button class="act" onclick="diaryMoveItem\(/],
-  ['+ Write a page', /data-ed="diary"><button class="big alt" onclick="openDiaryPage\(''\)">/],
+  ['Auto-tag', /<button data-ed="setlist" data-on-click="confirmAutoTag">/],
+  ['Clear setlist', /<div class="wrap" style="padding-top:18px;padding-bottom:8px" data-ed="setlist">\n      <button class="big alt"[^\n]*\n[^\n]*data-on-click="askClearSetlist"/],
+  ['Add a gig', /data-ed="gigs">\n        <button class="big bigplay" data-on-click="openGig">/],
+  ['Save profile, both', /data-ed="profile"><button class="big mid" data-on-click="saveProfile">Save profile/g],
+  ['a fan post\'s Reply, Pin and Hide', /padding-top:6px" data-ed="profile">\n        <button class="act" \$\{ON\.click\('replyPost',/],
+  ['an item\'s ↑ ↓ Edit ✕', /flex:1 1 100%" data-ed="merch">\n        <button class="act" \$\{ON\.click\('merchMoveItem',/],
+  ['+ Add an item', /data-ed="merch"><button class="big alt" \$\{ON\.click\('openMerch',''\)\}>/],
+  ['an order\'s Done', /data-ed="merch" \$\{ON\.click\('orderDone',/],
+  ['a shop request\'s Done', /data-ed="merch" \$\{ON\.click\('wishDone',/],
+  ['a diary page\'s ↑ ↓ Edit ✕', /flex:1 1 100%" data-ed="diary">\n        <button class="act" \$\{ON\.click\('diaryMoveItem',/],
+  ['+ Write a page', /data-ed="diary"><button class="big alt" \$\{ON\.click\('openDiaryPage',''\)\}>/],
   ['the reply box and Send', /<div class="field" data-ed="messages"><label>Your reply/],
   ['Re-check the money in Stripe', /data-ed="money"><button class="big alt" data-act="recon"/],
-  ['Deliver them now', /data-ed="money" onclick="recover\(\)"/],
-  ['Look for missing shows, Name these from my calendar', /data-ed="money">\n          <button class="big alt" onclick="healHist\(\)">/],
+  ['Deliver them now', /data-ed="money" data-on-click="recover"/],
+  ['Look for missing shows, Name these from my calendar', /data-ed="money">\n          <button class="big alt" data-on-click="healHist">/],
   ['the room\'s settings block: gone at hidden, shown and not pressable at view', /<div data-see="settings" data-area="settings">\n    \$\{viewNote\('settings'\)\}/]])
   ok(what, Array.isArray(studio.match(re)) && (what !== 'Save profile, both' || count(re) === 2));
 
@@ -102,19 +102,19 @@ for (const [what, re] of [
   ['Face ID', /\$\{PKSUPPORTED\?`<div class="row" data-ed="owner">/],
   ['the Studio code', /<div class="row" data-ed="owner"><div class="m"><div class="t">Studio code/],
   ['recovery codes', /<div class="row" data-ed="owner"><div class="m"><div class="t">Recovery codes/],
-  ['changing the sign-in address', /<button class="act" data-ed="owner" onclick="openEmailChange\(\)">/],
+  ['changing the sign-in address', /<button class="act" data-ed="owner" data-on-click="openEmailChange">/],
   ['download my data', /<div class="row" data-ed="owner"><div class="m"><div class="t">Download my data/],
-  ['sign out everywhere', /<p class="muted" data-ed="owner"[^>]*>\n        <a href="#" onclick="event\.preventDefault\(\);signOutEverywhere\(\)"/],
+  ['sign out everywhere', /<p class="muted" data-ed="owner"[^>]*>\n        <a href="#" \$\{ON\.click\(\['prevent'\],\['signOutEverywhere'\]\)\}/],
   ['delete my account', /<div class="list" data-ed="owner" style="margin-top:14px">\n      <div class="row"><div class="m"><div class="t">Delete my account/],
-  ['the payout account', /data-ed="owner" onclick="payStart\(\)"/],
-  ['the Stripe dashboard', /data-ed="owner" onclick="payDash\(\)"/],
-  ['featuring a gig', /data-ed="owner" onclick="openPromote\(/],
+  ['the payout account', /data-ed="owner" data-on-click="payStart"/],
+  ['the Stripe dashboard', /data-ed="owner" data-on-click="payDash"/],
+  ['featuring a gig', /data-ed="owner" \$\{ON\.click\('openPromote',/],
   ['the plans sheet\'s buttons', /if\(!ownerSeat\(\)\) return '';\n    if\(RANK\[k\]>RANK\[cur\]\)/],
   ['a locked feature\'s Upgrade', /const up=!soon&&ownerSeat\(\);/],
-  ['undoing a deletion', /\$\{ownerSeat\(\)\?`<button class="big" style="margin-top:12px" onclick="undelete\(\)">/],
+  ['undoing a deletion', /\$\{ownerSeat\(\)\?`<button class="big" style="margin-top:12px" data-on-click="undelete">/],
   ['the ID check', /if\(!ownerSeat\(\)&&t\.state!=='verified'\) return '';/],
   ['the first run', /if\(!ownerSeat\(\)\)return false;   \/\/ the first run/],
-  ['the checklist\'s Stripe row', /ownerSeat\(\)\?"setTab\('money'\)":''/]])
+  ['the checklist\'s Stripe row', /ownerSeat\(\)\?ON\.click\('setTab','money'\):''/]])
   ok(what, re.test(studio));
 
 /* THE TRIPWIRE. Read OWNER_ONLY out of admin.mjs and auth.mjs; find every place the

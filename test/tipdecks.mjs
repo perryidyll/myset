@@ -73,7 +73,7 @@ ok('a save opens the claim sheet instead of leaving the phone', /openClaim\(\);\
 const reads = /const SAMPLE_READS=new Set\(\[([^\]]*)\]\)/.exec(studio)[1].match(/'(\w+)'/g).map((x) => x.slice(1, -1)).sort();
 const server = /const SAMPLE_OK = new Set\(\[([\s\S]*?)\]\);/.exec(readFileSync(new URL('../netlify/functions/admin.mjs', import.meta.url), 'utf8'))[1].match(/'(\w+)'/g).map((x) => x.slice(1, -1)).sort();
 ok('the phone’s list of reads is the server’s list', JSON.stringify(reads) === JSON.stringify(server), { reads, server });
-ok('Claim profile stands where the plan badge stands', /\$\{SAMPLE\?`<button class="claimbtn" onclick="openClaim\(\)">Claim profile<\/button>`\s*:PLAN&&PLAN\.ok\?/.test(studio));
+ok('Claim profile stands where the plan badge stands', /\$\{SAMPLE\?`<button class="claimbtn" data-on-click="openClaim">Claim profile<\/button>`\s*:PLAN&&PLAN\.ok\?/.test(studio));
 
 console.log('\nTHE PAGE');
 ok('the banner says exactly that, with no "!"', />Sample profile page – not published<\/div>/.test(sampleSrc) && !/not published!/i.test(sampleSrc));

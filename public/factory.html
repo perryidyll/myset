@@ -13,6 +13,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-0xL7Z/bnb+4De5XimaZaZJEE49svxQFyJ5IaegWQQBA=' 'sha256-Kf4RZAq5uUWAGI9OZibdUDuChOYaUdyzYfYhKlDnBdw=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t})();</script>
 <script src="/theme.js" defer></script>
@@ -422,6 +468,10 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
   <button type="button" class="big alt" id="askN">Not now</button></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
+/* THE ACTIONS THIS PAGE'S MARKUP MAY NAME (SEC-006, decision 0209) — every data-on-* below names
+   one of these; the page's Content-Security-Policy refuses an onclick=. */
+ON.add({ dropSelf });
+function dropSelf(){ this.remove(); }   // a picture that will not load leaves no broken box
 /* ---------- the basics ---------- */
 const $=s=>document.querySelector(s);
 /* EVERY STRING FROM THE SERVER IS ESCAPED, AND ONLY WEB LINKS BECOME LINKS. The
@@ -476,9 +526,9 @@ const rowOf=o=>((S&&S.live)||[]).find(r=>r.owner===o)||(DET[o]&&DET[o].row)||nul
 const pathOf=r=>(r.kind==='venue'?'/v/':'/')+(r.slug||'');
 const own=o=>`data-owner="${esc(o)}"`;
 const dots=q=>{const n=Math.max(0,Math.min(5,Math.round((+q||0)*5)));return `<span class="q" role="img" aria-label="Quality ${n} of 5">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(5-n)}</span>`;};
-const thumb=r=>`<span class="th" aria-hidden="true"><em>${esc(([...String(r.name||r.slug||'?').trim()][0]||'?').toUpperCase())}</em>${imgSrc(r.cover)?`<img src="${esc(imgSrc(r.cover))}" alt="" loading="lazy" onerror="this.remove()">`:''}</span>`;
+const thumb=r=>`<span class="th" aria-hidden="true"><em>${esc(([...String(r.name||r.slug||'?').trim()][0]||'?').toUpperCase())}</em>${imgSrc(r.cover)?`<img src="${esc(imgSrc(r.cover))}" alt="" loading="lazy" data-on-error="dropSelf">`:''}</span>`;
 const chipSt=r=>{const s=stOf(r);return `<span class="st ${esc(s)}">${STW[s]||esc(human(s))}${s==='sent'&&r.ch?' · '+esc(CHW[r.ch]||r.ch):''}</span>`;};
-const img=(u,alt)=>imgSrc(u)?`<img src="${esc(imgSrc(u))}" alt="${esc(alt||'')}" loading="lazy" onerror="this.remove()">`:'';
+const img=(u,alt)=>imgSrc(u)?`<img src="${esc(imgSrc(u))}" alt="${esc(alt||'')}" loading="lazy" data-on-error="dropSelf">`:'';
 const mailto=e=>'mailto:?subject='+encodeURIComponent(e.subject||'')+'&body='+encodeURIComponent(e.body||'');
 /* a venue has no portrait and five photos; an artist a portrait and three (0129) */
 const slotsFor=o=>String(o||'').startsWith('v_')?['cover','p0','p1','p2','p3','p4']:['cover','avatar','p0','p1','p2'];

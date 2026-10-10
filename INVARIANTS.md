@@ -2214,10 +2214,11 @@ If you are about to violate one, stop and say so rather than working around it.
 0dw. **The front end is public, so nothing in it may be secret.** Minifying is not a
     control. Every limit is enforced inside the write that changes the data, and
     `netlify.toml` publishes `public/` only. The CSP is `default-src 'self'` with a
-    named allow-list; `script-src` still needs `'unsafe-inline'` because every page
-    is one file with its script inline, and the honest consequence — it does not
-    stop an injected inline script, only stops that script loading or sending
-    anything — is written down in SECURITY.md rather than glossed.
+    named allow-list. Until 2026-10-10 `script-src` needed `'unsafe-inline'` and so
+    did not stop an injected inline script, as SECURITY.md said rather than gloss
+    it; since decision `0209` each page names its own inline scripts by hash and
+    holds no code in its markup, so an injected `<script>` or `onclick=` runs
+    nothing (0jk).
 
 0dx1. **A paid featured spot is matched by OWNER as well as gig id.** Event ids are
     chosen by the client (`eventSave` takes `event.id` from the body) and every
@@ -2959,3 +2960,26 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     (`LAST_RELEASE_AT`). The valve for a hotfix during a show is the watch run by hand
     with `release=yes`, or the Netlify variable `HOLD_DEPLOYS=off`; a session never
     pulls it on its own. `test/live.mjs`. Decision `0196`.
+
+## No page runs code it does not carry (2026-10-10, decision `0209`)
+
+0jk. **No page runs code it does not carry.** Every page in `public/` carries its own
+    script policy — `<meta http-equiv="Content-Security-Policy">` right after the
+    charset, ahead of every script — naming each of its inline blocks by SHA-256, plus
+    leave.js's speculation rules and the two map hosts (`netlify/functions/_csp.mjs`,
+    written by `node tools/stamp.mjs`, which every edit to an inline script or `on.js`
+    needs). No markup holds code: not an `on*=` attribute, not `setAttribute('on…')`,
+    not a `javascript:` link, not a string to `eval`/`new Function`/a timer. A control
+    names its action — `data-on-<event>="name"`, a JSON step `'["name",…args]'` or
+    sequence `'[["prevent"],["name",…]]'`, or `${ON.click('name', …)}` /
+    `${ON.on('input','name', …)}` built in a script — and `public/on.js`, inlined in
+    every page like app.css, binds it on the element the first time an event of its
+    kind passes on the way down, so it fires where an `onclick=` fired. Each script
+    registers what its markup may name with `ON.add({…})` — function declarations, so
+    they exist before that line runs; anything else through a wrapper
+    (`frSet: (...a) => frSet(...a)`). `this` is the element and `ON.event` the event;
+    what an action returns is ignored (`prevent` and `stop` are steps). The founder's
+    function-served pages (the door, the Show log's lock, the money model, the Show
+    log) send the same policy as a header worked out from the page (`cspFor`). The
+    site header in `netlify.toml` keeps `'unsafe-inline'` as the floor — the page's
+    meta is what binds. `test/csp.mjs`.

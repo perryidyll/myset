@@ -27,6 +27,22 @@
    and redeem() — which INVARIANT 5b keeps per page so shop work never touches the
    voting page's, and everything that draws the page. */
 
+/* AN OLD PAGE WITH THIS NEW SCRIPT (decision 0209, sw.js rule 3): a page the phone stored names
+   its scripts by the stamps it shipped with, and a stamp the phone never fetched is answered with
+   the current file — so a page from before 0209 can meet this script, which wires its buttons
+   through ON. That page has no ON: ask for it again, network first (a reload), once per tab until
+   a current page clears the mark; and never throw meanwhile. */
+if(!window.ON){ try{ if(!sessionStorage.getItem('myset.onreload')){ sessionStorage.setItem('myset.onreload','1'); location.reload(); } }catch(e){} window.ON={ add(){}, has:()=>false, on:()=>'', click:()=>'', event:null }; }
+/* THE ACTIONS FAN MARKUP MAY NAME FROM HERE (SEC-006, decision 0209): the sheet's backdrop, the
+   toast, the lightbox, and the photo fallbacks an <img> asks for with data-on-error — a broken
+   picture tries its stored copy, once. Each page registers its own actions at the top of its own
+   script; all of these are function declarations, so they exist before this line runs. */
+ON.add({ closeSheet, toast, imgFallback, imgRaw, imgRawOnce, lbOff });
+function imgFallback(){ if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback; }
+function imgRaw(){ if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw} }
+function imgRawOnce(){ if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw} }
+function lbOff(){ this.classList.remove('on'); }
+
 /* ── the two everyone reaches for ── (one declaration per line, on purpose: the guard in
    test/structure.mjs reads names at the start of a line, and a name it cannot see is a name
    a page could declare again) */
@@ -179,7 +195,7 @@ function openSheet(h,label){
   }
   if(label) sh.setAttribute('aria-label',label); else sh.removeAttribute('aria-label');
   sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
-    <button class="sheetx" type="button" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+    <button class="sheetx" type="button" data-on-click="closeSheet" aria-label="Close">✕</button></div>${h}`;
   sh.style.transform=''; sh.scrollTop=0;
   document.getElementById('bg').classList.add('on'); sh.classList.add('on'); sh.inert=false;
   const t=sh.querySelector('h3'); if(t){ t.id='sheetTitle'; t.tabIndex=-1; }

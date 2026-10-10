@@ -11,6 +11,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-NTnUHepeD3N//SW8Z282jqK+Pel0uVk1iE7ZpCSFnhw=' 'sha256-PspbLFxmauRJ17uHi8w6kYcdecKxns1vCXXK3V70ieM=' 'sha256-INFenswwa7Mfz9l1s5KXO9gdtguD+AkAfq9+yUDbHio=' 'sha256-eYBRodtGGnczcVfqWBAzqt09Pm4b1XrmxQYQBH0jhBY=' 'sha256-kQy3eOLVl6QcSs0cQJM5u4io2LHsSHA1SzH7r6X7a9Q=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
@@ -757,7 +803,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </div></div>
 <div class="wrap"><div id="app"></div></div>
 <div class="dock" id="dock" hidden></div>
-<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="bg" id="bg" data-on-click="closeSheet"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
 <div class="lastcall" id="lastcall" aria-live="assertive">
   <div class="n" id="lcN">10</div>
@@ -772,8 +818,20 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
      0.15–0.5 s measured on a first visit, which is the visit that matters — and
      nothing here calls MySetPull() before the body has arrived. -->
 <script src="/pull.js"></script>
-<script src="/fan.js?v=0831c190"></script>
+<script src="/fan.js?v=c8cb6b8b"></script>
 <script>
+/* THE ACTIONS THIS PAGE'S MARKUP MAY NAME (SEC-006, decision 0209) — every data-on-* below names
+   one of these, or one fan.js registers; the page's Content-Security-Policy refuses an onclick=.
+   Function declarations, so they exist before this line runs. */
+ON.add({
+  bugSend, checkout, confirmVote, decideLeftover, fbLater, fbSend, fbStar, openAskBday,
+  openAskSong, openBug, openBuy, openLyrics, openTip, openVibe, openVote, pickAskOffer,
+  pickPack, pickSongVotes, pickTip, pickVibe, sendAsk, setFilter, share, shareVote,
+  songVotesAmt, tipAmt, vq,
+});
+function tipAmt(){ customAmt(this,[5,10,20],'t-',sel.tip,'goTip'); }
+function songVotesAmt(){ customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes'); }
+function shareVote(){ shareLink(location.origin+VOTEHREF,'Vote the setlist','Link copied — paste it in your browser'); }
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
    /artist.html routes fall through to the founding artist. */
@@ -1075,7 +1133,7 @@ function fbMaybeAsk(){
 let FB_STARS = 0;
 function fbStar(n){ FB_STARS = n; buzz(8); drawFeedback(); }
 function drawFeedback(){
-  const star = (n) => `<button class="fbst ${FB_STARS >= n ? 'on' : ''}" onclick="fbStar(${n})"
+  const star = (n) => `<button class="fbst ${FB_STARS >= n ? 'on' : ''}" ${ON.click('fbStar',n)}
     aria-label="${n} star${n === 1 ? '' : 's'}">\u2605</button>`;
   openSheet(`
     <div class="kick">A quick favour</div>
@@ -1084,8 +1142,8 @@ function drawFeedback(){
     <div class="fbrow">${[1,2,3,4,5].map(star).join('')}</div>
     <textarea class="fbnote" id="fbNote" rows="3" maxlength="400"
       placeholder="MySet makes live performances so much more fun!"></textarea>
-    <button class="go" onclick="fbSend()" ${FB_STARS ? '' : 'disabled'}>${FB_STARS ? 'Send it' : 'Pick a rating'}</button>
-    <button class="go2" onclick="fbLater()">Not now</button>`);
+    <button class="go" data-on-click="fbSend" ${FB_STARS ? '' : 'disabled'}>${FB_STARS ? 'Send it' : 'Pick a rating'}</button>
+    <button class="go2" data-on-click="fbLater">Not now</button>`);
 }
 function fbLater(){ closeSheet(); }        // fbAsked is already stamped: a week off
 
@@ -1104,8 +1162,8 @@ function openBug(){
     <h3 style="margin:2px 0 2px">Tell us what happened</h3>
     <p class="lede" style="margin-bottom:16px">One sentence is plenty. It goes straight to the artist with what the app saw, so it can be fixed.</p>
     <textarea class="fbnote" id="bugNote" rows="3" maxlength="600" placeholder="I tapped vote and nothing happened"></textarea>
-    <button class="go" onclick="bugSend()">Send it</button>
-    <button class="go2" onclick="closeSheet()">Never mind</button>`);
+    <button class="go" data-on-click="bugSend">Send it</button>
+    <button class="go2" data-on-click="closeSheet">Never mind</button>`);
 }
 async function bugSend(){
   const note = (($('#bugNote') || {}).value || '').trim();
@@ -1205,31 +1263,31 @@ function drawVoteSheet(s){
       ${stepBar(1)}${review}
       <p class="lede" style="margin-top:4px">${(c.remaining||0)>0?`This song takes ${cost} votes and you have ${c.remaining}.`:'You’re out of votes for tonight.'}</p>
       <div class="sticky-act">
-        <button class="go" onclick="openBuy()">Buy more votes</button>
-        <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
+        <button class="go" data-on-click="openBuy">Buy more votes</button>
+        <button class="btn btn-text" data-on-click="closeSheet">Not yet</button>
       </div>`:`
       ${VSTEP?stepBar(VSTEP):''}${review}
       <div class="vqrow">
-        <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
+        <button class="vqb" ${ON.click('vq',-1)} ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
         <div class="vqn"><b class="mono">${multi?total:VQ}</b><small>vote${(multi?total:VQ)===1?'':'s'}</small></div>
-        <button class="vqb" onclick="vq(1)" ${VQ>=max?'disabled':''} aria-label="one more">+</button>
+        <button class="vqb" ${ON.click('vq',1)} ${VQ>=max?'disabled':''} aria-label="one more">+</button>
       </div>
       ${max>1?`<div class="vqmax">You can put up to ${max} on one song</div>`:'<div style="height:10px"></div>'}
       <ul class="vrules">${rules.map(r=>`<li>${r}</li>`).join('')}</ul>
       <div class="sticky-act">
-        <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
+        <button class="go" data-on-click="confirmVote">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
         <p class="vwarn">${warn}</p>
-        <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
+        <button class="btn btn-text" data-on-click="closeSheet">Not yet</button>
       </div>`}
     ${replay&&ST.paymentsEnabled?`
       <div style="margin-top:18px;padding-top:18px;border-top:.5px solid var(--hair)">
         <div class="kick">Or pay for this replay</div>
         <div class="tiles" style="margin-top:10px">
-          ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="sv-${v}" onclick="pickSongVotes(${v})"><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
+          ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="sv-${v}" ${ON.click('pickSongVotes',v)}><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
         </div>
         <input class="inp" id="songVoteAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)"
-          onfocus="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')" oninput="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')" onblur="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')">
-        ${wvHint()}<button class="go" id="goSongVotes" onclick="checkout('song_votes')">Continue to payment</button>
+          data-on-focus="songVotesAmt" data-on-input="songVotesAmt" data-on-blur="songVotesAmt">
+        ${wvHint()}<button class="go" id="goSongVotes" ${ON.click('checkout','song_votes')}>Continue to payment</button>
         <p class="fine secure-votes">$1 = 1 vote · Secure checkout by Stripe</p>
       </div>`:''}`);
 }
@@ -1512,7 +1570,7 @@ function render(){
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}${
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
-    <div class="headtools"><button class="themebtn sharebtn" type="button" onclick="share()" aria-label="Share this page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
+    <div class="headtools"><button class="themebtn sharebtn" type="button" data-on-click="share" aria-label="Share this page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
     <div class="credits ${!c.unlimited&&c.remaining<=0&&!meWait?'low':''} mono" id="cr">${meWait?'<span class="sk" style="display:inline-block;width:46px;height:14px;vertical-align:middle"></span>':c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div></div>
   </div>`;
 
@@ -1532,7 +1590,7 @@ function render(){
     ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
         <div class="t">${esc(d.nowPlaying.title)}</div>${d.nowPlaying.artist?`<div class="by">${esc(d.nowPlaying.artist)}</div>`:''}
         <div class="eq"><i></i><i></i><i></i><i></i></div>
-        <button class="lyricsbtn" onclick="openLyrics()">
+        <button class="lyricsbtn" data-on-click="openLyrics">
           <svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>
           Lyrics</button></div>`
     : live
@@ -1572,7 +1630,7 @@ function render(){
               shrug — INVARIANT 0ad, never show the room a button that leads to one. */
            const qc=d.credits||{}, qcost=s.cost||1;
            const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&!d.paymentsEnabled;
-           return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
+           return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} ${ON.click('openVote',String(s.id))}
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
       </div>`}).join('')
      :`<div class="qempty">${(d.songs||[]).length||(d.played||[]).length
@@ -1583,7 +1641,7 @@ function render(){
   h += `<div class="search">
     <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
     <input id="q" type="search" inputmode="search" placeholder="Search song or artist" value="${esc(FILTER)}" autocomplete="off">
-    ${FILTER?`<button class="clr" onclick="setFilter('')" aria-label="Clear search">✕</button>`:''}
+    ${FILTER?`<button class="clr" ${ON.click('setFilter','')} aria-label="Clear search">✕</button>`:''}
   </div>`;
 
   h += `<div class="sortbar" role="group" aria-label="Sort songs">${SORTS.map(([k,l])=>
@@ -1612,7 +1670,7 @@ function render(){
 
   h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a>
     <a class="backlink" href="/signup" style="font-size:13px;color:var(--faint)">Play live yourself? Get your own page →</a>
-    <div class="foot">MySet · myset.vip · <a href="#" onclick="openBug();return false">Something wrong?</a></div>`;
+    <div class="foot">MySet · myset.vip · <a href="#" ${ON.click(['openBug'],['prevent'])}>Something wrong?</a></div>`;
   $('#app').innerHTML=h;
   const restoreScroll=()=>{
     const queue=$('.queue-scroll'),list=$('.votelist');
@@ -1653,10 +1711,10 @@ function render(){
      votes to buy, so it is the tip alone, across the full width. */
   const dock=$('#dock');
   dock.hidden=false;
-  const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Support ${esc(artistFirst())}</b><small>Show your appreciation</small></button>`;
+  const tipBtn=`<button class="btn btn-pri" data-on-click="openTip"><b>Support ${esc(artistFirst())}</b><small>Show your appreciation</small></button>`;
   dock.innerHTML=`<div class="dockstate"></div>`+((ended||c.unlimited)
     ? tipBtn
-    : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`);
+    : `<button class="btn btn-buy" data-on-click="openBuy"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`);
   dock.style.gridTemplateColumns=(ended||c.unlimited)?'1fr':'';
   paintDockState();
 }
@@ -1695,7 +1753,7 @@ function row(s,c,open,replay,inQueue){
     <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:inQueue?`<div class="queuednote">already voted in queue</div>`:''}</div>
     <div class="cnt mono">${s.votes?`${s.votes} vote${s.votes===1?'':'s'}`:''}</div>
     <button class="vb ${replay?'cost':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
-      onclick="openVote('${s.id}')">Vote</button>
+      ${ON.click('openVote',String(s.id))}>Vote</button>
   </div>`;
 }
 /* Only rendered when the artist has actually switched it on. A button that leads
@@ -1715,11 +1773,11 @@ function askCard(d,open){
       ? 'Ask for it with your votes and/or cash. '+esc(artistFirst('The artist'))+' decides — if it’s a no, your votes come straight back and your card is never charged.'
       : 'Requests are closed now, but here’s what you asked for.'}</p>
     ${A.song||A.birthday||A.vibe?`<div class="askbtns">
-      ${A.vibe?`<button class="askbtn" ${!open?'disabled':''} onclick="openVibe()">
+      ${A.vibe?`<button class="askbtn" ${!open?'disabled':''} data-on-click="openVibe">
         <b>✨ Vibe vote</b><small>${!open?'Voting is paused':'Free · artist picks the song'}</small></button>`:''}
-      ${A.song?`<button class="askbtn" ${(!open||short(A.song.cost))?'disabled':''} onclick="openAskSong()">
+      ${A.song?`<button class="askbtn" ${(!open||short(A.song.cost))?'disabled':''} data-on-click="openAskSong">
         <b>Request a song</b><small>${!open?'Voting is paused':short(A.song.cost)?`Needs ${vv(A.song.cost)}`:vv(A.song.cost)}</small></button>`:''}
-      ${A.birthday?`<button class="askbtn" ${(!open||short(A.birthday.cost))?'disabled':''} onclick="openAskBday()">
+      ${A.birthday?`<button class="askbtn" ${(!open||short(A.birthday.cost))?'disabled':''} data-on-click="openAskBday">
         <b>🎂 Birthday shout-out</b><small>${!open?'Voting is paused':short(A.birthday.cost)?`Needs ${vv(A.birthday.cost)}`:vv(A.birthday.cost)}</small></button>`:''}
     </div>`:''}
     ${mine.length?`<div class="mine">${mine.map(r=>{
@@ -1736,15 +1794,15 @@ function openAskSong(){
       refunded if it’s a no.</p>
     <input class="inp" id="askTitle" maxlength="80" placeholder="Song title" autocomplete="off">
     <input class="inp" id="askArtist" maxlength="60" placeholder="Who's it by? (optional)" autocomplete="off">
-    <button class="go2" id="askGo" onclick="sendAsk('song')">Send with ${a.cost} votes only</button>
+    <button class="go2" id="askGo" ${ON.click('sendAsk','song')}>Send with ${a.cost} votes only</button>
     ${ST.paymentsEnabled?`
       <div style="margin-top:18px;padding-top:18px;border-top:.5px solid var(--hair)">
         <div class="kick">Add a payment offer</div>
         <div class="tiles" style="margin-top:10px">
-          ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="ao-${v}" onclick="pickAskOffer(${v})"><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
+          ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="ao-${v}" ${ON.click('pickAskOffer',v)}><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
         </div>
         <input class="inp" id="askOfferAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)">
-        <button class="go" id="askPayGo" onclick="sendAsk('song',true)">Authorize payment & send request</button>
+        <button class="go" id="askPayGo" ${ON.click('sendAsk','song',true)}>Authorize payment & send request</button>
         <p class="fine secure-votes">$1 = 1 paid vote. Stripe places a temporary card hold. Make ${esc(artistFirst('the artist'))} more inclined to accept — you’re only charged if they play and finish it. If they decline, the hold is released and your ${a.cost} vote${a.cost===1?'':'s'} come back.</p>
       </div>`:''}
     <p class="fine">Requests go straight to the stage. Be kind — they might not know it.</p>`);
@@ -1755,7 +1813,7 @@ function openAskBday(){
   openSheet(`<h3>Birthday shout-out 🎂</h3>
     <p class="lede">Whose birthday is it? Costs ${a.cost} vote${a.cost===1?'':'s'} — refunded if it’s a no.</p>
     <input class="inp" id="askName" maxlength="40" placeholder="Their name" autocomplete="off" autocapitalize="words">
-    <button class="go" id="askGo" onclick="sendAsk('birthday')">Send it up</button>
+    <button class="go" id="askGo" ${ON.click('sendAsk','birthday')}>Send it up</button>
     <p class="fine">${esc(artistFirst('They'))} will see the name on stage.</p>`);
   setTimeout(()=>{const el=$('#askName'); if(el)el.focus();},260);
 }
@@ -1764,8 +1822,8 @@ function openVibe(){
   const a=(ST.asks||{}).vibe;if(!a)return;VIBE_PICK='';
   openSheet(`<h3>What should the next song feel like?</h3>
     <p class="lede">Choose a vibe for free. ${esc(artistFirst('The artist'))} picks whatever song feels right.</p>
-    <div class="vibe-scroll"><div class="vibe-row">${(a.options||[]).map((v,i)=>`<button class="tile" data-vibe="${esc(v)}" onclick="pickVibe(${i})"><b>${esc(v)}</b><span>0 votes</span></button>`).join('')}</div></div>
-    <button class="go" id="vibeGo" onclick="sendAsk('vibe')" disabled>Send vibe</button>`);
+    <div class="vibe-scroll"><div class="vibe-row">${(a.options||[]).map((v,i)=>`<button class="tile" data-vibe="${esc(v)}" ${ON.click('pickVibe',i)}><b>${esc(v)}</b><span>0 votes</span></button>`).join('')}</div></div>
+    <button class="go" id="vibeGo" ${ON.click('sendAsk','vibe')} disabled>Send vibe</button>`);
 }
 function pickVibe(i){const a=(ST.asks||{}).vibe||{},v=(a.options||[])[i];if(!v)return;VIBE_PICK=v;
   document.querySelectorAll('[data-vibe]').forEach(b=>b.classList.toggle('on',b.getAttribute('data-vibe')===v));$('#vibeGo').disabled=false;buzz(8);}
@@ -1855,8 +1913,8 @@ function openLeftover(n){
   openSheet(`<h3>You\u2019ve got ${n} vote${n===1?'':'s'} left</h3>
     <p class="lede">${n===1?'That one':'Those'} you paid for and the night ended first. Your call \u2014 no charge either way.</p>
     <div class="tiles">
-      <button class="tile" id="lf-keep" onclick="decideLeftover('keep')"><b>Keep ${n===1?'it':'them'}</b><span>For the next show</span></button>
-      <button class="tile" id="lf-gift" onclick="decideLeftover('gift')"><b>Let ${esc(artistFirst('them'))} keep it</b><span>Call it a tip</span></button>
+      <button class="tile" id="lf-keep" ${ON.click('decideLeftover','keep')}><b>Keep ${n===1?'it':'them'}</b><span>For the next show</span></button>
+      <button class="tile" id="lf-gift" ${ON.click('decideLeftover','gift')}><b>Let ${esc(artistFirst('them'))} keep it</b><span>Call it a tip</span></button>
     </div>
     <p class="fine">Do nothing and ${n===1?'it stays':'they stay'} yours.</p>`);
 }
@@ -1877,17 +1935,17 @@ function openBuy(){
      that song and Choose is done. From the dock nothing was chosen, so there is
      no bar to show — a step marked done that never happened is a small lie. */
   const sh=$('#sheet'); BUYSONG=(sh&&sh.classList.contains('on')&&sh.querySelector('.vreview'))?VSONG:null;
-  if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab ${esc(artistFirst())} between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab ${esc(artistFirst())} between songs.</p><button class="go" data-on-click="closeSheet">Got it</button>`);return;}
   sel.pack='small';
   // prices are whatever the artist set in their Studio — never hard-coded here
   const P=ST.packs||{small:{votes:3,cents:500},big:{votes:15,cents:2000}};
   const KEYS=['small','big'].filter(k=>P[k]);
   openSheet(`${BUYSONG?stepBar(2):''}<h3>Get more votes</h3><p class="lede buyline">${esc(artistFirst('The artist'))} will receive through Stripe Connect</p>
     <div class="tiles">
-      ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
+      ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" ${ON.click('pickPack',String(k))}>
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
     </div>
-    ${wvHint()}<button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
+    ${wvHint()}<button class="go" id="goBuy" ${ON.click('checkout','votes')}>Continue to payment</button>
     <p class="fine secure-votes">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 /* IN AN APP'S OWN BROWSER (WV, fan.js) the votes a fan buys stay in that browser, and
@@ -1897,19 +1955,19 @@ function openBuy(){
 function wvHint(){
   if(!WV) return '';
   return `<div class="wvhint"><b>You’re in ${WV}’s browser.</b>Votes you buy stay in the browser you buy them in, and paying can finish in another one. To be safe, open this page in your browser first: tap the ··· menu, then <em>Open in browser</em>.
-    <button class="btn btn-grey btn-sm" type="button" onclick="shareLink(location.origin+VOTEHREF,'Vote the setlist','Link copied — paste it in your browser')">Copy link</button></div>`;
+    <button class="btn btn-grey btn-sm" type="button" data-on-click="shareVote">Copy link</button></div>`;
 }
 function pickPack(p){sel.pack=p;buzz(8);
   ['small','big'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
 function openTip(){
-  if(!ST.paymentsEnabled){openSheet(`<h3>Give ${esc(artistFirst())} some love</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  if(!ST.paymentsEnabled){openSheet(`<h3>Give ${esc(artistFirst())} some love</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" data-on-click="closeSheet">Got it</button>`);return;}
   sel.tip=10;
   openSheet(`<h3>Give ${esc(artistFirst())} some love</h3><p class="lede buyline">Sent via Stripe Connect</p>
-    <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
+    <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" ${ON.click('pickTip',v)}><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)"
-      onfocus="customAmt(this,[5,10,20],'t-',sel.tip,'goTip')" oninput="customAmt(this,[5,10,20],'t-',sel.tip,'goTip')" onblur="customAmt(this,[5,10,20],'t-',sel.tip,'goTip')">
+      data-on-focus="tipAmt" data-on-input="tipAmt" data-on-blur="tipAmt">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
-    <button class="go" id="goTip" onclick="checkout('tip')">Continue to payment</button>
+    <button class="go" id="goTip" ${ON.click('checkout','tip')}>Continue to payment</button>
     <p class="fine secure-votes">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 function pickTip(v){sel.tip=v;buzz(8);[5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v));const a=$('#tipAmt');if(a){a.value='';a.classList.remove('on');}const b=$('#goTip');if(b&&!b.disabled)b.textContent='Continue to payment';}
