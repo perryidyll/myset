@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:12 — 472605d — wt5@fix/dash-title-plates (0 files since origin/main)
+**tl;dr:** Dash window titles sit on a 72% backing plate above the chart lines, so lines no longer cross the text
+**Other sessions:** CSS only: .stat now has z-index 4 + color-mix(--screen 72%) background in public/dash.html
+
 ### 2026-10-10 06:33 — 9ec8a75 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to main an eighth time (56555bc: every Studio call has a clock, 0201); suite 6,751 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Ledger: main's SCL-013 (now live) with #257's setCode sentence, and main's new SCL-028 row.
