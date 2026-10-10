@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [5c]
-commits: []
+commits: [b2dbfec]
 tests: [test/delivery.mjs]
 files: [netlify/functions/revenue.mjs]
 ---

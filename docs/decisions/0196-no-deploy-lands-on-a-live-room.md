@@ -8,7 +8,7 @@ area: operations
 reverses:
 superseded_by:
 invariants: [0jj, 9d3]
-commits: []
+commits: [80cc05a]
 tests: [test/live.mjs]
 files: [netlify/functions/live.mjs, tools/hold.sh, tools/version.sh, netlify.toml, .github/workflows/watch.yml, test/live.mjs, test/run.sh]
 ---
@@ -41,7 +41,7 @@ A.
 
 ## What this makes harder
 
-- A deploy during a show arrives up to about five minutes after the last show ends (the watch's tick), and GitHub starts scheduled workflows late when it is busy — five to thirty minutes is normal — so a held build can wait longer than the room did. The valve exists for the one case that cannot wait.
+- A deploy during a show arrives up to about five minutes after the last show ends (the watch's tick), and GitHub starts scheduled workflows late when it is busy — five to thirty minutes is normal — so a held build can wait longer than the room did (measured after the merge: the schedule ran three to seven hours apart — see below; a run by hand with `release=no` releases it sooner). The valve exists for the one case that cannot wait.
 - A MySet outage holds deploys: if `/api/live` cannot answer, nothing builds from git, and the watch does not release. The outside watch opens its `uptime` issue in the same minutes, so the founder knows, and the valve releases a fix.
 - Each production build and each watch tick while a build is held reads one show record per artist. At 300 artists that is 300 reads in 8 s, eight at a time; past that the count comes back `sure:false` and the build waits for a quieter minute. Past a few hundred artists the count should read `gigsched.live` (the live walk's list, 0154) first and walk only when that list is empty.
 - `HOLD_DEPLOYS` is one more Netlify variable to know about. `tools/prod.py` does not report it.
@@ -55,5 +55,9 @@ A.
 
 - `node --import ./test/register.mjs test/live.mjs`: three artists with no show live answer `live: 0, sure: true`; one starts and the address says 1; it ends and the count is 0; a record that cannot be read leaves the count `sure: false` with `unread: 1`; a deadline stops the walk and says so; the registry failing makes the address answer 503, which both callers read as "hold"; the answer carries no name or id and is never cached.
 - `tools/hold.sh` run by hand on 2026-10-09 before the merge: `CONTEXT=deploy-preview` exits 1 (build); `CONTEXT=production HOLD_DEPLOYS=off` exits 1; `CONTEXT=production` against production as it was (no `/api/live` yet, so a 404) exits 0 — the "cannot ask, hold" branch.
-- On the deploy preview of this change: `/api/live` and `/version.json` — see the pull request's checks (filled in below after the preview built).
-- **Not checked:** a real held build during a real show, and the watch's first real release (the hook was fired once by hand after the merge to prove the address and the `LAST_RELEASE_AT` write; the build it started was production's own code).
+- On the deploy preview of this change (#262): `/api/live` answered `{"live":0,"artists":8,"sure":true}` with `cache-control: no-store`, and `/version.json` named the branch's head.
+- **The hold held its own merge.** The squash `80cc05a` (#262) started a production build that Netlify cancelled at the `ignore` step: production did not yet have `/api/live` (a 404), which is the "cannot ask, hold" branch working as written. After reading every artist's `show_<aid>.status` (none live), the build hook was fired once by hand; Netlify published `80cc05a` at 09:46:07 UTC on 2026-10-09. Read back by content: `/version.json` = `{"commit":"80cc05ac58525697c1fb016c1ad7f32122316f53","branch":"main","context":"production"}`, `/api/live` = `{"live":0,"artists":8,"read":8,"unread":0,"sure":true}`.
+- **The hook was replaced on 2026-10-10.** Its id had been written into a ledger row of this public repository, so anyone could have started a production build with it. A new hook was made, its address stored only in the GitHub secret `NETLIFY_BUILD_HOOK`, and the old one deleted (a POST to it answers 404). No document names the hook's id.
+- The watch dispatched once with `release=no` on 2026-10-10 (run 38029870710, success): its release step read `/version.json` and `main` and said "production is main (80cc05ac…); nothing held" — no hook call, as it should.
+- **Not checked:** a real held build during a real show, and the watch's first real release (the hook was fired by hand, not by the watch, so `LAST_RELEASE_AT` has never been written).
+- **Found after the merge: the watch is not a five-minute clock.** GitHub ran the `*/5` schedule 35 times between 2 and 10 October 2026, three to seven hours apart (for example 03:09, 10:26, 17:06, 21:37 UTC on 9 October). A build held during a show is released at the watch's next run, which can be hours after the room empties; `gh workflow run watch.yml -f release=yes` (or Actions → watch → Run workflow) releases it at once. The same gap applies to the outside check of decision 0157.

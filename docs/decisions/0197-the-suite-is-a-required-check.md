@@ -8,7 +8,7 @@ area: engineering-os
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [80cc05a]
 tests: []
 files: [AGENTS.md, .github/workflows/tests.yml]
 ---
@@ -45,5 +45,7 @@ A, not strict.
 
 ## How it was verified
 
-- The ruleset read back from the API after the change lists `required_status_checks` with `suite` / 15368 and `strict_required_status_checks_policy: false`; `gh pr view` on an open PR with a green `suite` shows `mergeStateStatus: CLEAN`.
+- Applied on 2026-10-10 (`gh api -X PUT repos/…/rulesets/23031933`, the existing rules kept). Read back from the API: a fourth rule `required_status_checks` with `{"context":"suite","integration_id":15368}`, `strict_required_status_checks_policy: false`, `do_not_enforce_on_create: false`; the deletion, non-fast-forward and pull-request rules unchanged; no bypass actors. Integration 15368 is `github-actions`, read from a `suite` check run's `app.id`.
+- The rule bites: #263 at `56fff8e`, restacked and with its `suite` still running, read `mergeStateStatus: BLOCKED` from `gh pr view`.
+- Two open docs pull requests had a branch commit whose message carried `[skip ci]` (so no `suite` run); their sessions were told to restack with a head message without it, as this record says.
 - **Not checked:** a merge attempted with a red check (nothing red was open to try it on).

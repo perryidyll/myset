@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [0ad, 0fo, 0fp, 0gg]
-commits: []
+commits: [28ff11b]
 tests: [test/community.mjs]
 files: [netlify/functions/community.mjs, public/shop.html]
 ---
