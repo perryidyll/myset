@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 06:08 — 599bd18 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to today's main a fifth time (80cc05a: No deploy lands on a live room; the suite becomes a required check; the referral month said plainly (0196, 0197, 0207)); suite 6,721 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork): still NOT docs only, merge without [skip ci]. Main moves every few minutes; the push log is the one collision each time (every entry from both sides kept, newest first), the generated overview regenerated.
+
 ### 2026-10-09 16:24 — b8309ef — hold-deploys@ops/hold-deploys (20 files since origin/main)
 **tl;dr:** A code merge while a show is live is no longer built on top of the room: Netlify holds it and the outside watch starts it once the last show ends; myset.vip/version.json says which commit is live; the Studio's Invite card says the referral month is for Hobbyists (0196, 0197, 0207)
 **Other sessions:** New: netlify/functions/live.mjs (/api/live, counts only), tools/hold.sh ([build] ignore), tools/version.sh ([build] command writes public/version.json — verify 'is it live' by that file), watch.yml release step + release=yes input (secret NETLIFY_BUILD_HOOK, variable LAST_RELEASE_AT), test/live.mjs before keyfamilies in run.sh. The suite check becomes REQUIRED on main after this merges (0197): a PR with a red or missing suite cannot merge; [skip ci] only ever in the squash subject.
