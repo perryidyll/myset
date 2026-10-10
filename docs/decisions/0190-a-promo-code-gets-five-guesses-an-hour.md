@@ -8,7 +8,7 @@ area: plans
 reverses:
 superseded_by:
 invariants: [0ix]
-commits: []
+commits: [974353e]
 tests: [test/billing.mjs]
 files: [netlify/functions/_plan.mjs, netlify/functions/admin.mjs, tools/backup.py]
 ---

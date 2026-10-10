@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [0ad, 0ib]
-commits: []
+commits: [b2dbfec]
 tests: [test/request-payments.mjs]
 files: [netlify/functions/_pay.mjs, netlify/functions/pay.mjs]
 ---

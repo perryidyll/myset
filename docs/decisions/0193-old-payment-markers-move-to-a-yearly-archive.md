@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [1, 4, 5c, 7, 7b, 0ho, 0ia, 0ih]
-commits: []
+commits: [e52d6f5]
 tests: [test/delivery.mjs]
 files: [netlify/functions/_pay.mjs, netlify/functions/revenue.mjs, netlify/functions/autocron.mjs, netlify/functions/_metrics.mjs, netlify/functions/_warehouse.mjs, netlify/functions/_register.mjs, netlify/functions/_account.mjs, netlify/functions/_venueaccount.mjs, tools/metrics.mjs, tools/overview.mjs]
 ---

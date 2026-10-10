@@ -8,7 +8,7 @@ area: ops
 reverses:
 superseded_by:
 invariants: [0fb]
-commits: []
+commits: [f83b15d]
 tests: [test/errlog.mjs, test/watch.mjs]
 files: [netlify/functions/_errlog.mjs, netlify/functions/_watch.mjs]
 ---

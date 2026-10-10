@@ -126,11 +126,15 @@ width. Several defects a month are invisible to the tests and obvious on screen.
 
 `main` is protected (decision 0045): direct pushes are refused, force-pushes and deletion
 are blocked, and the only way in is a pull request — with zero required approvals, so the
-person shipping merges their own. Merging **is** the production deploy.
+person shipping merges their own, and one required check: GitHub refuses the merge until
+`suite` is green on the head being merged (decision 0197). Merging **is** the production deploy.
 
 **A merge while a show is live is built later, not now** (decision 0196): Netlify asks
 `/api/live` before every production build and holds the build while any artist is on
-stage; the outside watch starts it within about five minutes of the last show ending.
+stage; the outside watch starts it at its next run after the last show ends. GitHub runs
+that `*/5` schedule hours late (3–7 h apart in October 2026), so after a show anyone may
+run the `watch` workflow with `release=no` to release a held build sooner — it still
+refuses while anyone is live.
 Previews are never held. For a hotfix that cannot wait, the founder runs the `watch`
 workflow by hand with `release=yes` (Actions → watch → Run workflow) — never a session on
 its own. **What production runs** is at https://myset.vip/version.json (the commit, written
@@ -159,7 +163,7 @@ secrets are unset outside production) but it **reads and writes production data*
 
 **Every pull request runs the suite** (decision 0144): `.github/workflows/tests.yml`
 runs `sh test/run.sh` on GitHub's machine and reports it as the check named `suite`.
-It takes about six minutes. Wait for it to go green before merging; a red one is a broken build, not a formality.
+It takes about six minutes, and it is required (decision 0197): a red or missing `suite` cannot be merged.
 Running it yourself first is still the fast way to find out.
 
 Doc-only work puts `[skip ci]` in the **merge subject**, never in a branch commit:
