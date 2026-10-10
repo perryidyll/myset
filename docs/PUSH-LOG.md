@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 19:05 — 8d69672 — myset@claude/myset-encryption-security-460mph (8 files since origin/main)
+**tl;dr:** The ledger reads true again: ADMIN_CODE and the Site-policies check were already done, four stale PER rows gone, PER-022 says GitHub Pro first, then private (0047's addendum); the probe's allowScripts names the versions #254 brought
+**Other sessions:** Docs and the by-hand probe only: merge with [skip ci]. Dependabot #253 (busboy) and #254 (sharp) are merged and live as 25fb3dc; #255 is superseded. The repo stays public until the account has GitHub Pro — on Free a private repo's ruleset is not enforced, so private-first would switch off main's lock.
+
 ### 2026-10-11 01:45 — 6c5153b — caskeep-blank@docs/0205-live (4 files since origin/main)
 **tl;dr:** Nothing a person sees: the records now say the blank-profile-version fix (0205) is live
 **Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-030 done, 0205 commits: [b9467b6], session note. No process sheet cites the race.
