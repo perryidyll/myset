@@ -30,7 +30,7 @@ export const WISHES_PER_NETWORK_PER_DAY = 100;
 
 const empty = () => ({ v: 1, list: [], recent: [], n: 0 });
 const h10 = (v) => sha(String(v || '')).slice(0, 10);
-const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+const clean = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);   // no markup (0203)
 export const newWishId = () => 'w' + Math.random().toString(36).slice(2, 10).padEnd(8, '0').slice(0, 8);
 
 export async function readWishes(owner) {

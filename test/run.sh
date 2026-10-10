@@ -24,6 +24,7 @@ node test/structure.mjs
 echo
 echo "── what the public reads ──"
 node test/copy.mjs
+node --import ./test/register.mjs test/nomarkup.mjs
 echo
 echo "── unit ──"
 node test/unit.mjs
@@ -63,6 +64,7 @@ node --import ./test/register.mjs test/audit-0902.mjs
 echo
 echo "── sample profiles: the private page, the look-only Studio, the claim, the clock (0101) ──"
 node --import ./test/register.mjs test/samples.mjs
+node --import ./test/register.mjs test/sampleerase.mjs
 echo
 echo "── the tip decks, the practice round and the sample page's words (0101, 0102) ──"
 node test/tipdecks.mjs

@@ -444,30 +444,43 @@ export async function sampleSeen(owner, what = 'open') {
    The account's own keys (keysFor / keysForVenue, the same lists that erase a
    deleted account), the photos under the sample's own name, and the sample's record.
    Re-runnable: deleting what is already gone is a no-op. */
+/* LEAVES FIRST, THE RECORD LAST (decision 0204, INVARIANT 0jg). A sample's keys are
+   erased the way an account's are (0173, INVARIANT 0im): `eraseKeys` walks the list
+   from the end, so what an index names goes before the index. The pictures go first
+   (the profile is what names them), the sample's own record last, and the first
+   delete that fails stops the walk and throws — so the caller never drops the
+   register row that names this owner while something it names is still stored.
+   Until 0204 the list ran index first, every failure was swallowed, and the row was
+   dropped regardless: a killed or failing run left files nothing could name. */
 async function eraseData(owner, spare = []) {
   const { sampleImgKeys } = await import('./_img.mjs');
+  const { eraseKeys } = await import('./_account.mjs');
+  const namers = new Set();
   let keys = [];
   let urls = [];
   if (isVenueOwner(owner)) {
     const vid = owner.slice(2);
     const { keysForVenue } = await import('./_venueaccount.mjs');
     const { getVenueProfile } = await import('./_venues.mjs');
-    const p = await getVenueProfile(vid).catch(() => ({}));
+    const p = await getVenueProfile(vid);
     urls = [p.photo, ...(p.photos || [])];
-    keys = await keysForVenue(vid).catch(() => []);
+    keys = await keysForVenue(vid, namers);
   } else {
     const { keysFor } = await import('./_account.mjs');
     const { getProfile } = await import('./_profile.mjs');
-    const p = await getProfile(owner).catch(() => ({}));
+    const p = await getProfile(owner);
     urls = [p.photo, p.avatar, ...(p.photos || [])];
-    keys = await keysFor(owner).catch(() => []);
+    keys = await keysFor(owner, namers);
   }
-  keys.push(...sampleImgKeys(urls), SAMPLE(owner));
   // a rebuild that keeps the photos (0136) spares them — the account's own lists name them too
   const keep = new Set(sampleImgKeys(spare));
-  let gone = 0;
-  for (const k of new Set(keys)) { if (keep.has(k)) continue; try { await store().delete(k); gone++; } catch {} }
-  return gone;
+  const imgs = sampleImgKeys(urls).filter((k) => !keep.has(k));
+  // walked from the end: the pictures first, then the account's own list (leaves before indexes), the record last
+  const list = [...new Set([SAMPLE(owner), ...keys.filter((k) => !keep.has(k)), ...imgs])];
+  namers.add(SAMPLE(owner));
+  const w = await eraseKeys(list, namers);
+  if (w.partial) throw new Error(`sample erase stopped at ${w.cursor || 'the start'}: ${w.error || 'store'}`);
+  return w.gone;
 }
 /* What a rebuild keeps (0136), read before the old page is erased. Hours count as
    set by hand only when some day is open: a page whose hours were never found has

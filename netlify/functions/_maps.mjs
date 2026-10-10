@@ -18,7 +18,8 @@ const MAP_HOSTS = [
   /^(www\.)?openstreetmap\.org$/,
 ];
 
-export const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+// no markup in a short field: a venue's name, tagline, city and menu lines (0203, INVARIANT 0jf)
+export const clean = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 
 /** An https link on a map host, rebuilt through the parser. '' if it isn't one. */
 export function safeMapUrl(raw) {

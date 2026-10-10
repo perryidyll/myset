@@ -10,6 +10,18 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 14:00 — 05680ee — scale-p2-docs@docs/leftovers-live (10 files since origin/main)
+**tl;dr:** Nothing a person sees: the records now say the scale audit's four leftovers (0201–0204) are live
+**Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-026–029 done; commits: filled on 0201–0204; sheets a02/r10/n03/s21 and Puzzle steps say live with the SHA. The foundations.mjs version flake is real (defaultProfile() updatedAt twice), not built.
+
+### 2026-10-10 13:52 — b8332a6 — scale-p3-erase@fix/sample-erase-order (11 files since origin/main)
+**tl;dr:** Nothing a person sees: deleting a sample page never leaves its files behind, and a delete that fails says so instead of claiming done
+**Other sessions:** Restacked onto 9ac41d4 (#260). 0204 / INVARIANT 0jg / SCL-027: removeSample erases leaves first and drops the register row last, only when nothing it names is left; blobs-fake gains __failDeletesAfter. The last of phase two's leftovers. Suite 6,824 / 0 failing.
+
+### 2026-10-10 13:43 — 82b8199 — scale-p3-strip@fix/no-markup-in-profiles (17 files since origin/main)
+**tl;dr:** Artist and venue pages: names, taglines, titles and other short fields can no longer hold < or >, so a page that forgets to escape shows text, never a tag
+**Other sessions:** Restacked onto d1eeeab (#259). 0203 / INVARIANT 0jf / SCL-026. Every short-field clean() in _profile, _maps, _requests, _community, _diary, _wishes strips [<>] (test/nomarkup.mjs reads the line). Suite 6,816 / 0 failing.
+
 ### 2026-10-10 06:47 — a01d245 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to main a tenth time (d1eeeab: a declined request's votes owed back, 0202); suite 6,803 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. The push log and the two generated files collided; main's taken, then regenerated.
@@ -33,6 +45,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-10 13:18 — 68dcba2 — scale-p3-studio@fix/studio-clocks (14 files since origin/main)
 **tl;dr:** Nothing new for a person: the Studio's clocks (#258, 0201) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto 9250218 (#265). Ledger row is SCL-028. tools/mock.mjs FLAGS now carry both 'short' (0178) and 'slow' (0201). Suite 6,747 / 0 failing.
+
+### 2026-10-10 13:18 — c91c794 — docs-merge-day@ops/release-skips-docs (3 files since origin/main)
+**tl;dr:** The outage watch no longer starts a paid production build after every docs-only merge.
+**Other sessions:** watch.yml release step: releases only when GitHub's compare of version.json's commit...main has a commit WITHOUT a Netlify skip marker; a gap of docs-only merges is not a held build. Compare failure = release as before.
 
 ### 2026-10-10 06:24 — 92df220 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to main a seventh time (9250218: scale audit merge day on record, docs only); suite 6,721 ✓ / 0 ✗ on the merged tree
@@ -326,7 +342,6 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
 **tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
 **Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
-
 
 ### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
 **tl;dr:** Sample page builds: the cover is now chosen twice: the best four candidates go back to the model side by side and it picks the one the act would be proudest of; live videos beyond the top three now give frames too (0159)

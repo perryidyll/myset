@@ -33,7 +33,7 @@ export const MAX_BODY = 4000;        // about 700 words; a story, not a book
 const mintId = () => 'd' + Math.random().toString(36).slice(2, 8).padEnd(6, '0').slice(0, 6);
 
 const empty = () => ({ v: 1, pages: [] });
-const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+const clean = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);   // no markup (0203)
 /* The body keeps its paragraphs (blank lines) and nothing else: no tabs, no runs
    of spaces, never more than one empty line between paragraphs. */
 const cleanBody = (v) => String(v == null ? '' : v).replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ')
