@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [0iq]
-commits: []
+commits: [970ddfe]
 tests: [test/netreaders.mjs]
 files: [netlify/functions/_lib.mjs, netlify/functions/_lifecycle.mjs, netlify/functions/stage.mjs, netlify/functions/_warehouse.mjs]
 ---

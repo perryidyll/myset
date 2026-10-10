@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [0ir, 0iq, 0fo, 0fp, 0hm]
-commits: []
+commits: [623f6ce]
 tests: [test/stockholds.mjs]
 files: [netlify/functions/_profile.mjs, netlify/functions/pay.mjs, netlify/functions/_pay.mjs, netlify/functions/webhook.mjs, netlify/functions/_ordernote.mjs, netlify/functions/_account.mjs, netlify/functions/_venueaccount.mjs, public/shop.html, public/community.html, public/studio.js, public/venue-studio.js, tools/mock.mjs]
 ---

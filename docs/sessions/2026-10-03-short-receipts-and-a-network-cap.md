@@ -6,8 +6,8 @@ An overnight builder for the scale audit's phase two ("MySet Audit Solutions 2")
 
 Two audit rows each, from the coordinator:
 
-1. **The vote write ceiling** (decision 0148, INVARIANT 0hv, ledger SCL-001). Every vote rewrites one of twelve fan files holding a twelfth of the room. Trim the receipts kept on each fan, and use more files for bigger rooms if a shape can be proved safe tonight; otherwise ship the trim and write the file design up. Measure 5,000 and 10,000 phones before and after.
-2. **Fake devices** (decision 0149, INVARIANT 0hw, ledger SCL-002). Every fresh device id got free votes and nothing counted by network; fake "I'm here" pings stayed all night and slowed the room. Cap new devices per network per show — one constant, 200, its own commit — and count only recent presence for the polling rung and the board's length. Never show the room a free vote the server would refuse; do not edit `public/vote.html`.
+1. **The vote write ceiling** (decision 0148, INVARIANT 0hv, ledger SCL-017). Every vote rewrites one of twelve fan files holding a twelfth of the room. Trim the receipts kept on each fan, and use more files for bigger rooms if a shape can be proved safe tonight; otherwise ship the trim and write the file design up. Measure 5,000 and 10,000 phones before and after.
+2. **Fake devices** (decision 0149, INVARIANT 0hw, ledger SCL-018). Every fresh device id got free votes and nothing counted by network; fake "I'm here" pings stayed all night and slowed the room. Cap new devices per network per show — one constant, 200, its own commit — and count only recent presence for the polling rung and the board's length. Never show the room a free vote the server would refuse; do not edit `public/vote.html`.
 
 ## What was built
 

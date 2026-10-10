@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:05 — 60e3a55 — scale-p2-docs@docs/phase-two-live (27 files since origin/main)
+**tl;dr:** Nothing a person sees: the records now say the scale audit's phase two is live
+**Other sessions:** Docs only; merge with a skip-ci squash subject. Phase two's ledger rows SCL-001…007 are now SCL-017…023; main's SCL-024/025 are week one's (0196/0197), so the open leftovers #258/#259 move off SCL-024/025. Every 0145–0156/0173–0179 record has commits:.
+
 ### 2026-10-10 06:08 — 599bd18 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to today's main a fifth time (80cc05a: No deploy lands on a live room; the suite becomes a required check; the referral month said plainly (0196, 0197, 0207)); suite 6,721 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork): still NOT docs only, merge without [skip ci]. Main moves every few minutes; the push log is the one collision each time (every entry from both sides kept, newest first), the generated overview regenerated.
