@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: ['0ja']
-commits: []
+commits: ['694f56c']
 tests: ['test/biz.mjs']
 files: ['netlify/functions/_biz.mjs', 'netlify/functions/admin.mjs', 'test/biz.mjs']
 ---
@@ -53,3 +53,11 @@ A book that hits the cap because of materialised records rather than real ones �
 ## What was done to the live data
 
 The five nights above were repaired in production on 2026-10-09 through the `bizSave` action, before the fix shipped. The three Crystal Day nights were restored byte-for-byte from the rule in the 2026-10-02 backup (`pay` blank; 100 min on stage, 20 break, 30 travel, 10 set-up). The two Anantara nights were rebuilt from the artist's own identical records for 9, 16 and 23 September — $180 pay, two band members at $60, own cut $60, 120/40/50/10 minutes — on his explicit confirmation, because the rule itself existed in no snapshot. The book went from 69 records to 74. A second pass the same day put **$60** on those three Crystal Day nights, on the artist's explicit word: the restored rule carried no pay figure, so the nights read correctly but emptily, while all sixteen of his other Crystal Day records carry $60. That figure is his decision, not a restoration — nothing in any snapshot says what those three nights paid.
+
+## How it was verified
+
+`test/biz.mjs` grew a block, "A DELETED GIG LEAVES ITS PLAYED NIGHTS PRICED": a weekly gig priced only by its rule, one night played and filed under it, the gig deleted — then the rule is gone and the night still carries the pay, the band split, the hours and the travel; nothing was invented for a night of the run that was never played; and a second gig's night, written by hand at a different figure, is not overwritten by its dying rule. Fifteen assertions, every one of which fails on the old `pruneRules` body — reverted, they report no pay, no splits and no time. `node --import ./test/register.mjs test/biz.mjs` is 160 ✓ / 0 ✗ on the merged tree, and `sh test/run.sh` exits 0 (6,397 assertions, 0 failures).
+
+Live as `694f56c` on 2026-10-09: the Netlify production deploy for that commit reports `ready`, and all five repaired nights read back through the live site afterwards — the three Crystal Day nights at $60 and 2h 40m, the two Anantara nights at $180, 3h 40m, two splits and a $60 cut.
+
+**Not checked:** the delete path itself was never exercised against production, and must not be — doing so would need a real gig deleted from the live calendar. The guarantee rests on the suite and on the repair being verified by read-back.
