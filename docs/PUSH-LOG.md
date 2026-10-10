@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 14:00 — 05680ee — scale-p2-docs@docs/leftovers-live (10 files since origin/main)
+**tl;dr:** Nothing a person sees: the records now say the scale audit's four leftovers (0201–0204) are live
+**Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-026–029 done; commits: filled on 0201–0204; sheets a02/r10/n03/s21 and Puzzle steps say live with the SHA. The foundations.mjs version flake is real (defaultProfile() updatedAt twice), not built.
+
 ### 2026-10-10 13:52 — b8332a6 — scale-p3-erase@fix/sample-erase-order (11 files since origin/main)
 **tl;dr:** Nothing a person sees: deleting a sample page never leaves its files behind, and a delete that fails says so instead of claiming done
 **Other sessions:** Restacked onto 9ac41d4 (#260). 0204 / INVARIANT 0jg / SCL-027: removeSample erases leaves first and drops the register row last, only when nothing it names is left; blobs-fake gains __failDeletesAfter. The last of phase two's leftovers. Suite 6,824 / 0 failing.
