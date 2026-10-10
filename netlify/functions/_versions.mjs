@@ -48,9 +48,14 @@ export async function keepVersion(key, before, now = Date.now()) {
  *  `fallback()` is what a missing document reads as — a version of THAT is never
  *  kept, because it was never written. */
 export async function casKeep(key, fallback, fn, verify = null) {
+  /* The blank is made ONCE and every read of a missing document gets its bytes: a
+     fallback that stamps the clock (defaultProfile's updatedAt) would otherwise read
+     differently a millisecond later, and a blank that was never written would be kept
+     (0205). A fresh copy each time — fn mutates what it is handed. */
   const blank = JSON.stringify(fallback());
+  const same = () => JSON.parse(blank);
   let before = null;
-  const r = await casDoc(key, fallback, (d) => { before = JSON.stringify(d); return fn(d); }, verify);
+  const r = await casDoc(key, same, (d) => { before = JSON.stringify(d); return fn(d); }, verify);
   if (r && r.ok && before && before !== blank && before !== JSON.stringify(r.data)) await keepVersion(key, before);
   return r;
 }

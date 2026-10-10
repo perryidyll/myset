@@ -21,7 +21,7 @@ const voteFn = (await import('../netlify/functions/vote.mjs')).default;
 const history = (await import('../netlify/functions/history.mjs')).default;
 const { appendLog, readLog, readLogHead, logKeys, partKey } = await import('../netlify/functions/_append.mjs');
 const { readEventLog, EVT, devHash } = await import('../netlify/functions/_evlog.mjs');
-const { keepVersion, listVersions, versionKeys, verKey, VER_GAP_MS } = await import('../netlify/functions/_versions.mjs');
+const { keepVersion, casKeep, listVersions, versionKeys, verKey, VER_GAP_MS } = await import('../netlify/functions/_versions.mjs');
 const { spillPosts, readArchivedPosts, MAX_POSTS, ARCH: PARCH } = await import('../netlify/functions/_community.mjs');
 const { spillFeedback, readArchivedFeedback, MAX_NOTES, ARCH: FARCH } = await import('../netlify/functions/_feedback.mjs');
 const { keysFor, exportArtist } = await import('../netlify/functions/_account.mjs');
@@ -165,6 +165,12 @@ console.log('\nA VERSION BEFORE EVERY OVERWRITE');
   await A('eventSave', { event: { venue: 'The Bar', city: 'Here', date: '2026-12-01', time: '20:00' } });
   await keepVersion(`ev_${AID}`, JSON.stringify({ v: 1, list: [] }), Date.now() + VER_GAP_MS() + 1);
   ok('the calendar is versioned through the same door', (await listVersions(`ev_${AID}`)).length >= 1);
+
+  // a fallback that reads differently every call (the clock, a millisecond on) is still the blank (0205)
+  let tick = 0;
+  const drifting = () => ({ v: 1, updatedAt: ++tick, list: [] });
+  const fresh = await casKeep('log_test_drift', drifting, (d) => { d.list.push('x'); return true; });
+  ok('a first write keeps nothing, even when the blank reads differently a moment later', fresh.ok && (await listVersions('log_test_drift')).length === 0, await listVersions('log_test_drift'));
 }
 
 console.log('\nTHE FEED IS CAPPED, THE RECORD IS NOT');
