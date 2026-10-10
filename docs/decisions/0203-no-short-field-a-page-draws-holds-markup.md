@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0jf]
-commits: []
+commits: [9ac41d4]
 tests: [test/nomarkup.mjs]
 files: [netlify/functions/_profile.mjs, netlify/functions/_maps.mjs, netlify/functions/_requests.mjs, netlify/functions/_community.mjs, netlify/functions/_diary.mjs, netlify/functions/_wishes.mjs, test/nomarkup.mjs]
 ---
