@@ -95,3 +95,5 @@ does not stop the watch.
 **Not checked:** a real push arriving on the founder's phone from the watch; the
 outside workflow on GitHub's schedule (it only runs from `main`); how late GitHub
 actually starts it.
+
+**Measured later (decision 0196):** GitHub's `*/5` schedule ran three to seven hours apart in October 2026. Since decision 0208 a Cloudflare Worker (`cloudflare/clock`) starts the outside check every five minutes, and the schedule is the backstop.

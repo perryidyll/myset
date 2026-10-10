@@ -16,8 +16,11 @@
 # nothing more. If the repository has a secret named NTFY_TOPIC, the same two
 # messages also go to https://ntfy.sh/<topic> as a phone push.
 #
-# GitHub starts scheduled workflows late when it is busy — five to thirty minutes
-# is normal — so this is a backstop, not a stopwatch.
+# GitHub honours the `*/5` schedule below when it is not busy — in October 2026 it
+# ran three to seven hours apart — so a Cloudflare Worker (cloudflare/clock,
+# decision 0208) starts this workflow every five minutes through workflow_dispatch,
+# with no inputs, so release is 'no'. The schedule stays as the backstop for when
+# Cloudflare is down; the concurrency group queues the two, never side by side.
 #
 # It also RELEASES A HELD BUILD (decision 0196): a merge while a show was live was not
 # built (tools/hold.sh); when production is behind main and nobody is live, this starts
