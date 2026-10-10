@@ -1,3 +1,72 @@
+/* AN OLD PAGE WITH THIS NEW SCRIPT (decision 0209, sw.js rule 3): a page the phone stored names
+   its scripts by the stamps it shipped with, and a stamp the phone never fetched is answered with
+   the current file — so a page from before 0209 can meet this script, which wires its buttons
+   through ON. That page has no ON: ask for it again, network first (a reload), once per tab until
+   a current page clears the mark; and never throw meanwhile. */
+if(!window.ON){ try{ if(!sessionStorage.getItem('myset.onreload')){ sessionStorage.setItem('myset.onreload','1'); location.reload(); } }catch(e){} window.ON={ add(){}, has:()=>false, on:()=>'', click:()=>'', event:null }; }
+/* THE ACTIONS THIS STUDIO'S MARKUP MAY NAME (SEC-006, decision 0209). Every data-on-* here —
+   and every ON.click()/ON.on() that builds one — names something registered below, and the
+   page's Content-Security-Policy refuses an onclick= outright. They are function declarations,
+   so they exist before this line runs (const frSet is reached through a wrapper). A button
+   whose action is missing reports "nothing is registered as …" instead of doing nothing. */
+ON.add({
+  act, addLearn, addMedia, addPasskey, addTeam, askClearSetlist, booksCsv, calMove, cancelCrop,
+  changePlan, claimAccount, clearBoardAsk, closeAsk, closePop, closeSheet, closeShow, commAct,
+  confirmAutoTag, confirmCrop, confirmDowngrade, copyData, copyRef, copyText, createPromo,
+  dDraftKeep, declineSong, deleteAccount, deleteAccountConfirm, deleteAccountNow, diaryMoveItem,
+  diaryPagesOff, diaryPagesOn, discardEndedShow, downloadLedger, dropPasskey, emailChangeFinish,
+  emailChangeStart, exportAccount, exqGotIt, flagFlip, foldTo, frCodes, frDone, freePageAddress,
+  frImport, frName, frNameEnter, frNext, frRetryCodeEl, gate, gateBack, gigsAdd, gigsAllFlip,
+  goOrders, hardReset, healHist, hidePostAsk, histAllFlip, histClear, idDecide, idPickEl,
+  impFileEl, impParseEl, impSend, keepPlan, lastCall, loadBooks, loadBugs, loadLedger, loadPay,
+  makeRecovery, mcInStock, mcPickup, mcShipIt, mcShowOff, mcShowOn, mcSoldOut, merchMoveItem,
+  newList, newShowAsk, nightEnter, nudgeSnoozeEl, openClaim, openCodeSheet, openDiaryPage,
+  openEarnTips, openEmailChange, openEndShow, openGig, openImport, openInvoices, openLearn,
+  openList, openLists, openMenu, openMerch, openPasswordSheet, openPlans, openPortal,
+  openPromote, openSessions, openSongSheet, openStudioCode, openStudioInstall, orderDetail,
+  orderDone, passkeySignIn, passwordSignIn, payDash, payPromote, payStart, placeHist,
+  practiceEnd, printSign, pushKeyReset, pwCodeToAddress, pwForgotCode, qrDownload, qrHide,
+  qrHideTap, recover, recoverIn, redeemPromo, reloadPage, replyPost, replySend, retentionOffer,
+  retryDiary, retryMerch, revokeSession, rmDiaryPage, rmMerch, rowMenuEl, runAutoTag,
+  saveAskCost, saveCode, saveCosts, saveDiaryPage, saveEndedShow, saveFreeCredits, saveMerch,
+  saveNight, savePacks, savePassword, saveProfile, saveReplayCost, saveSlug, saveSongCost,
+  sendCode, sendSign, setQuery, setShare, setTab, sheetSync, showPlans, showPricing, showQr,
+  showTips, signOut, signOutEverywhere, signOutOthers, startCheckout, startPractice, startSong,
+  startVerification, submitCode, tipburstOff, toast, togglePush, undelete, unlimitedFan, unlock,
+  warmLyrics, wishDone, frSet: (...a) => frSet(...a),
+});
+/* The actions that were more than a call — each is its old inline body, word for word, with
+   `this` still the element and ON.event where it said `event`. */
+function gigsAdd(){ setTab('gigs'); setTimeout(()=>openGig(null),80); }
+function tipburstOff(){ this.closest('.tipburst').remove(); }
+function gateBack(){ gate(null,GATE_FROM); }
+function idPickEl(){ idPick(this); }
+function foldTo(k,n){ FOLDN[k]=n; render(); }
+function nightEnter(){ if(ON.event.key==='Enter')saveNight(); }
+function rowMenuEl(){ rowMenu(this); }
+function askClearSetlist(){ ask({title:'Remove every song?',lede:'Your setlist empties. This cannot be undone.',yes:'Yes, remove them',no:'Keep them',go:()=>act('clearSetlist')}); }
+function gigsAllFlip(){ GIGSALL=!GIGSALL; render(); }
+function histClear(){ HISTQ=''; HISTFOCUS=false; render(); }
+function histAllFlip(){ HISTALL=!HISTALL; render(); }
+function unlimitedFan(on){ act('unlimitedFan',{fan:myFanId(),on}); }
+function reloadPage(){ location.reload(); }
+function frNameEnter(){ if(ON.event.key==='Enter')frName(); }
+function impParseEl(){ impParse(this.value); }
+function frRetryCodeEl(){ frRetryCode(this); }
+function impFileEl(){ impFile(this); }
+function pushKeyReset(){ PUSHKEY=null; drawPush(); }
+function nudgeSnoozeEl(k){ nudgeSnooze(k,this.checked); }
+function mcPickup(){ mcShip='pickup'; this.classList.add('on'); document.getElementById('mcPost').classList.remove('on'); document.getElementById('mcPostWrap').hidden=true; }
+function mcShipIt(){ mcShip='ship'; this.classList.add('on'); document.getElementById('mcPick').classList.remove('on'); document.getElementById('mcPostWrap').hidden=false; }
+function mcInStock(){ mcOut=false; this.classList.add('on'); document.getElementById('mcSold').classList.remove('on'); }
+function mcSoldOut(){ mcOut=true; this.classList.add('on'); document.getElementById('mcIn').classList.remove('on'); }
+function mcShowOn(){ mcOn=true; this.classList.add('on'); document.getElementById('mcOff').classList.remove('on'); }
+function mcShowOff(){ mcOn=false; this.classList.add('on'); document.getElementById('mcOn').classList.remove('on'); }
+function diaryPagesOn(){ DIARYON=true; this.classList.add('on'); document.getElementById('dpOff').classList.remove('on'); }
+function diaryPagesOff(){ DIARYON=false; this.classList.add('on'); document.getElementById('dpOn').classList.remove('on'); }
+function copyData(){ navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute('data-copy')); toast('Copied'); }
+function replySend(id){ commAct('postReply',id,undefined,(document.getElementById('rpTxt')||{}).value||''); }
+function qrHideTap(){ qrHide(ON.event); }
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
 /* The page name that goes with a studio code. The code alone is only half the
@@ -45,7 +114,7 @@ let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money 
 /* The business dashboard (decision 0065) is two scripts loaded only when a paid
    owner opens Money — the maths and the tab. Served immutable like this file, so
    each carries its own stamp; tools/stamp.mjs rewrites both. */
-const BIZ_V='/biz.js?v=e2d67ecd', MONEY_V='/studio-money.js?v=a0445dd6';
+const BIZ_V='/biz.js?v=e2d67ecd', MONEY_V='/studio-money.js?v=a35c0c9f';
 let MONEY_PROMISE=null, MONEY_FAILED=false;
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
@@ -68,7 +137,7 @@ const tagLabel=(id)=>{
    One library of songs; a setlist is a named subset of it, like a playlist. */
 function setPick(){
   return `<div class="wrap" style="padding-top:10px;padding-bottom:0">
-    <button class="big alt orange-outline" style="justify-content:center;margin:0" onclick="openLists()">Organize your songs into setlists</button>
+    <button class="big alt orange-outline" style="justify-content:center;margin:0" data-on-click="openLists">Organize your songs into setlists</button>
     </div>
     ${D.listFellBack?`<div class="warnstrip"><b>Nothing votable in that set.</b>
       The room is seeing your whole library instead, so the night still works —
@@ -90,7 +159,7 @@ function openLists(){
         :`<button class="act" data-ed="setlist" data-act="luse" data-id="">Use</button>`}
     </div>
     ${lists.map(l=>`<div class="lrow">
-      <div class="m" onclick="openList('${esc(l.id)}')"><b>${esc(l.name)}</b>
+      <div class="m" ${ON.click('openList',String(l.id))}><b>${esc(l.name)}</b>
         <span>${l.count} song${l.count===1?'':'s'} · ${edit('setlist')?'tap to edit':'tap to see'}</span></div>
       ${l.active?'<span class="now">In play</span>'
         :`<button class="act" data-ed="setlist" data-act="luse" data-id="${esc(l.id)}">Use</button>`}
@@ -99,7 +168,7 @@ function openLists(){
           button that looks available and then apologises is the shrug INVARIANT 0ad
           exists to prevent. Sets they already have keep working. */''}
     <div style="margin-top:18px" data-ed="setlist">${lock('setlists',
-      `<button class="big" onclick="newList()">+ New setlist</button>`,
+      `<button class="big" data-on-click="newList">+ New setlist</button>`,
       'Sets you already have keep working.')}</div>
     <p class="muted" style="font-size:12px;margin:12px 0 0">You can also pick a set per gig
       on the <b>Gigs</b> tab — then tapping “Start the show” uses it automatically.</p>`);
@@ -225,7 +294,7 @@ function learnSection(){
       <button class="act pri" data-ed="setlist" data-act="wdone" data-id="${esc(x.id)}">Learned it</button>
       <button class="act warn" data-ed="setlist" data-act="wdel" data-id="${esc(x.id)}">✕</button>
     </div>`).join(''):'<div class="row muted">Nothing on the list.</div>'}</div>
-    <div class="wrap" style="margin-top:14px" data-ed="setlist"><button class="big alt" onclick="openLearn()">+ Add a song to learn</button></div>`;
+    <div class="wrap" style="margin-top:14px" data-ed="setlist"><button class="big alt" data-on-click="openLearn">+ Add a song to learn</button></div>`;
 }
 function openLearn(){
   openSheet(`<h3>A song to learn</h3>
@@ -236,7 +305,7 @@ function openLearn(){
       style="margin-top:9px" autocomplete="off">
     <input class="inp" id="wNote" maxlength="140" placeholder="A note to yourself (optional)"
       style="margin-top:9px" autocomplete="off">
-    <button class="big" style="margin-top:16px" onclick="addLearn()">Add it</button>`);
+    <button class="big" style="margin-top:16px" data-on-click="addLearn">Add it</button>`);
   setTimeout(()=>{const e=$('#wTitle'); if(e)e.focus();},260);
 }
 async function addLearn(){
@@ -279,7 +348,7 @@ function confirmAutoTag(){
       <p class="lede">Every one of your ${songs.length} songs already has genres on it.
         Auto-tag only ever fills in blanks — it will never change something you chose
         yourself.</p>
-      <button class="big" onclick="closeSheet()">Got it</button>`);
+      <button class="big" data-on-click="closeSheet">Got it</button>`);
     return;
   }
   openSheet(`<h3>Auto-tag your songs?</h3>
@@ -295,8 +364,8 @@ function confirmAutoTag(){
     </div>
     <p class="muted" style="font-size:12.5px;margin:14px 0 0">It usually takes a few seconds,
       but with a big setlist give it up to a minute — don’t close the app while it runs.</p>
-    <button class="big" style="margin-top:14px" onclick="runAutoTag()">Tag ${blank} song${blank===1?'':'s'}</button>
-    <button class="big alt" style="margin-top:9px" onclick="closeSheet()">Not now</button>`);
+    <button class="big" style="margin-top:14px" data-on-click="runAutoTag">Tag ${blank} song${blank===1?'':'s'}</button>
+    <button class="big alt" style="margin-top:9px" data-on-click="closeSheet">Not now</button>`);
 }
 async function runAutoTag(){
   if(WRITING)return; WRITING=true;
@@ -315,7 +384,7 @@ async function runAutoTag(){
         `<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
         <p class="muted" style="font-size:12.5px;margin:12px 0 0">Tap <b>Edit</b> on those and
           pick their genres yourself.</p>`:''}
-      <button class="big" style="margin-top:16px" onclick="closeSheet()">Nice</button>`);
+      <button class="big" style="margin-top:16px" data-on-click="closeSheet">Nice</button>`);
   } finally { WRITING=false; }
 }
 
@@ -514,12 +583,12 @@ const r2=(n)=>Math.round(n*100)/100;
 function practiceCard(big){
   return big
     ? `<div class="prcard rise"><div class="prt"><b>Try a practice round</b><span>Pretend fans vote, tip and buy votes. You run the night with the real buttons, and nothing is saved.</span></div>
-        <button class="big bigplay" onclick="startPractice()"><span>▶</span><span style="flex:1">Start a practice round</span></button></div>`
-    : `<div class="wrap" style="padding-top:14px"><button class="big alt" style="justify-content:center;margin:0" onclick="startPractice()">Try a practice round</button></div>`;
+        <button class="big bigplay" data-on-click="startPractice"><span>▶</span><span style="flex:1">Start a practice round</span></button></div>`
+    : `<div class="wrap" style="padding-top:14px"><button class="big alt" style="justify-content:center;margin:0" data-on-click="startPractice">Try a practice round</button></div>`;
 }
 function practiceBar(){
   return `<div class="prbar"><span class="prdot" aria-hidden="true"></span><div class="m"><b>Practice round</b><span>Pretend fans · nothing is saved</span></div>
-    <button class="act" onclick="practiceEnd(true)">Leave</button></div>`;
+    <button class="act" ${ON.click('practiceEnd',true)}>Leave</button></div>`;
 }
 function practiceState(){
   const P=PRACTICE, real=P.real||{}, rs=real.show||{};
@@ -650,15 +719,15 @@ function practiceEnd(leave){
   render(); load({quiet:true}).catch(()=>{});
   if(leave){ toast('Practice over. Nothing was saved'); return; }
   { const t=$('#toast'); if(t){ clearTimeout(tT); t.classList.remove('on'); } }   // the last move's toast would sit over the summary's buttons
-  const cta=SAMPLE?`<button class="big fill" style="justify-content:center" onclick="openClaim()">Claim your page and do it for real</button>`
-    :firstGig()?`<button class="big" style="justify-content:center" onclick="closeSheet();setTab('gigs');setTimeout(()=>openGig(null),80)">Add your first gig</button>`:'';
+  const cta=SAMPLE?`<button class="big fill" style="justify-content:center" data-on-click="openClaim">Claim your page and do it for real</button>`
+    :firstGig()?`<button class="big" style="justify-content:center" ${ON.click(['closeSheet'],['gigsAdd'])}>Add your first gig</button>`:'';
   openSheet(`<div class="prsum"><div class="k">Practice night</div><h3>That’s a set!</h3>
     <div class="stats" style="margin:14px 0 0">
       <div class="c"><b class="mono">${played}</b><span>Songs played</span></div>
       <div class="c"><b class="mono">${votes}</b><span>Votes</span></div>
       <div class="c"><b class="mono acc">$${money.toFixed(2)}</b><span>Tips + votes</span></div></div>
     <p class="lede" style="margin:16px 0">Now picture it on a Friday. On a real night the room votes from their phones, and the tips and vote money go straight to your bank.</p>
-    ${cta}<button class="big alt" style="justify-content:center" onclick="closeSheet()">Done</button></div>`);
+    ${cta}<button class="big alt" style="justify-content:center" data-on-click="closeSheet">Done</button></div>`);
   /* the party is the whole screen's, over the sheet, and gone in three seconds */
   try{ const c=document.createElement('canvas'); c.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:90;pointer-events:none';
     document.body.appendChild(c); confetti(c); setTimeout(()=>c.remove(),3000); }catch(e){}
@@ -816,7 +885,7 @@ function tipBurst(amount,count,note,kind){
     <div class="amt mono">$${(Number(amount)||0).toFixed(2)}</div>
     ${note?`<div class="n">“${esc(String(note).slice(0,80))}”</div>`:''}
     ${brief?'':`<div class="s">${PRACTICE?(votes?'Someone wants their song. On a real night that money is yours.':'On a real night, that goes straight to your bank.'):votes?'Someone wants their song. It goes straight to your account.':first?'That’s the room saying thank you. It goes straight to your account.':'Straight to your account.'}</div>
-    <button class="btn-pri" onclick="this.closest('.tipburst').remove()">Nice</button>`}</div>`;
+    <button class="btn-pri" data-on-click="tipburstOff">Nice</button>`}</div>`;
   document.body.appendChild(el);
   requestAnimationFrame(()=>el.classList.add('on'));
   const timer=setTimeout(()=>{ if(el.isConnected){ el.classList.remove('on'); setTimeout(()=>el.remove(),320); } },brief?2000:6000);
@@ -952,13 +1021,13 @@ function gate(err,mode){
       <p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
       <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
         maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
-      <button class="big fill" style="margin-top:12px" onclick="submitCode()">Continue</button>
-      <button class="act" style="margin-top:6px;width:100%" onclick="gate(null,GATE_FROM)">← Use a different email</button></div>`;
+      <button class="big fill" style="margin-top:12px" data-on-click="submitCode">Continue</button>
+      <button class="act" style="margin-top:6px;width:100%" data-on-click="gateBack">← Use a different email</button></div>`;
   }else if(m==='name'){
     inner=`<div class="signbox"><h2>You’re in</h2>
       <p class="muted" style="font-size:14px;margin:0 0 16px">What should we call you? This is the name fans see.</p>
       <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name" autocomplete="off">
-      <button class="big fill" style="margin-top:12px" onclick="claimAccount()">Create my page</button>
+      <button class="big fill" style="margin-top:12px" data-on-click="claimAccount">Create my page</button>
       <p class="muted" style="font-size:12px;margin:12px 0 0">By creating a page you agree to MySet’s <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</p></div>`;
   }else if(m==='join'||m==='forgot'){
     const join=m==='join';
@@ -967,27 +1036,27 @@ function gate(err,mode){
         ?'Your email is your sign-in. We’ll send a 6-digit code; then you pick your name and a password.'
         :'No problem. We’ll email you a fresh 6-digit code, and you can set a new password once you’re in.'}</p>
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" value="${esc(GATE_EMAIL)}">
-      <button class="big fill" style="margin-top:12px" onclick="sendCode('${m}')">Email me a code</button>
-      <button class="act" style="margin-top:6px;width:100%" onclick="gate()">← Back</button></div>
-      ${join?'':`<p class="foot"><a href="#" onclick="event.preventDefault();gate(null,'recover')">Lost your email too? Use a recovery code</a></p>`}`;
+      <button class="big fill" style="margin-top:12px" ${ON.click('sendCode',String(m))}>Email me a code</button>
+      <button class="act" style="margin-top:6px;width:100%" data-on-click="gate">← Back</button></div>
+      ${join?'':`<p class="foot"><a href="#" ${ON.click(['prevent'],['gate',null,'recover'])}>Lost your email too? Use a recovery code</a></p>`}`;
   }else if(m==='recover'){
     inner=`<div class="signbox"><h2>Recovery code</h2>
       <p class="muted" style="font-size:14px;margin:0 0 16px">One of the eight codes you saved. Each works once, and every other device gets signed out.</p>
       <input class="inp" id="rslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
       <input class="inp mono" id="rcode" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off" style="margin-top:8px;letter-spacing:.12em;text-align:center">
-      <button class="big fill" style="margin-top:12px" onclick="recoverIn()">Sign me in</button>
-      <button class="act" style="margin-top:6px;width:100%" onclick="gate()">← Back</button></div>`;
+      <button class="big fill" style="margin-top:12px" data-on-click="recoverIn">Sign me in</button>
+      <button class="act" style="margin-top:6px;width:100%" data-on-click="gate">← Back</button></div>`;
   }else{
     inner=`<div class="signbox"><h2>Welcome back</h2>
       ${err==='unauthorized'?`<p class="muted" style="font-size:14px;margin:0 0 12px">That didn’t work — try again.</p>`:''}
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="username" placeholder="Email" value="${esc(GATE_EMAIL)}">
       <input class="inp" id="pw" type="password" autocomplete="current-password" placeholder="Password" style="margin-top:8px">
-      <button class="big fill" style="margin-top:12px" onclick="passwordSignIn()">Sign in</button>
-      <p class="signlinks"><a href="#" onclick="event.preventDefault();gate(null,'forgot')">Forgot your password?</a>
-        ${canPK?` · <a href="#" onclick="event.preventDefault();passkeySignIn()">Sign in with Face ID</a><input type="hidden" id="pkslug" value="${esc(localStorage.getItem('myset.slug')||ASLUG)}">`:''}</p></div>
+      <button class="big fill" style="margin-top:12px" data-on-click="passwordSignIn">Sign in</button>
+      <p class="signlinks"><a href="#" ${ON.click(['prevent'],['gate',null,'forgot'])}>Forgot your password?</a>
+        ${canPK?` · <a href="#" ${ON.click(['prevent'],['passkeySignIn'])}>Sign in with Face ID</a><input type="hidden" id="pkslug" value="${esc(localStorage.getItem('myset.slug')||ASLUG)}">`:''}</p></div>
       <p class="join">New here? Join the MySet family</p>
-      <button class="big ring" onclick="gate(null,'join')">Create account</button>
-      <p class="foot"><a href="#" onclick="event.preventDefault();openStudioCode()">Sign in with a Studio code instead</a></p>`;
+      <button class="big ring" ${ON.click('gate',null,'join')}>Create account</button>
+      <p class="foot"><a href="#" ${ON.click(['prevent'],['openStudioCode'])}>Sign in with a Studio code instead</a></p>`;
   }
   document.getElementById('app').innerHTML=`<div class="gate">${inner}</div>`;
   const go={code:submitCode,name:claimAccount,join:()=>sendCode('join'),forgot:()=>sendCode('forgot'),recover:recoverIn,start:passwordSignIn}[m]||passwordSignIn;
@@ -1004,8 +1073,8 @@ function openStudioCode(){
     <p class="lede">The code set in Settings for this page.</p>
     <input class="inp" id="aslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
     <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password" style="margin-top:8px">
-    <button class="big fill" style="margin-top:12px" onclick="unlock()">Unlock</button>
-    <button class="big keep" onclick="closePop()">Back</button>`;
+    <button class="big fill" style="margin-top:12px" data-on-click="unlock">Unlock</button>
+    <button class="big keep" data-on-click="closePop">Back</button>`;
   p.classList.add('on');
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
   setTimeout(()=>{const a=$('#aslug'); if(a&&!a.value) a.focus(); else if(c) c.focus();},80);
@@ -1245,7 +1314,7 @@ function tickCard(){
              <input class="inp" id="idDob" type="date">
              <p class="s muted" style="margin:6px 0 0">Checked against your payout account once, then thrown away \u2014 we don't keep it.</p>
            </div>
-           <label class="bigfile"><input type="file" id="idFile" accept="image/*" style="display:none" onchange="idPick(this)">\u21ea Send a photo of your ID</label>`}
+           <label class="bigfile"><input type="file" id="idFile" accept="image/*" style="display:none" data-on-change="idPickEl">\u21ea Send a photo of your ID</label>`}
       <p class="muted" style="font-size:12px;margin:10px 0 0">We look at it once and delete it. It is never shown on your page and never kept.</p>
     </div>`}`;
 }
@@ -1312,7 +1381,7 @@ function flagCard(){
       <div class="t">${esc(f.name)}</div>
       <div class="s muted">${esc(f.what)}</div>
     </div>
-    <button class="act" onclick="flagFlip('${esc(f.name)}',${f.inForce?'false':'true'})">${f.inForce?'On':'Off'}</button>
+    <button class="act" ${ON.click('flagFlip',String(f.name),(f.inForce?false:true))}>${f.inForce?'On':'Off'}</button>
     </div>`).join('')}</div>`;
 }
 async function flagFlip(name,on){
@@ -1421,7 +1490,7 @@ function lock(flag,html,why){
      clipped mid-word. */
   return `<div class="lock${soon?' soon':''}"><div class="lockin">${html}</div>`+
     (!up?`<div class="lockveil"${soon?'':' style="cursor:default"'}>${pill}</div>`
-         :`<button type="button" class="lockveil" aria-label="${esc(cap)} \u2014 see the plans" onclick="showPlans()">${pill}</button>`)+
+         :`<button type="button" class="lockveil" aria-label="${esc(cap)} \u2014 see the plans" data-on-click="showPlans">${pill}</button>`)+
     `</div>`+(why?`<p class="lockwhy">${esc(why)}</p>`:'');
 }
 /** Takes them to the plan cards, from wherever they tapped. */
@@ -1474,7 +1543,7 @@ function featureCard(){
   return `
   <div class="sec"><span class="kick">Featured shows</span></div>
   <div class="wrap" style="padding-top:16px" data-ed="owner">
-    <button class="big bigplay" onclick="openPromote()"><span>★</span><span style="flex:1">Feature a show</span></button>
+    <button class="big bigplay" data-on-click="openPromote"><span>★</span><span style="flex:1">Feature a show</span></button>
     <p class="muted" style="font-size:12px;margin:9px 0 0">${money$(F.price)} puts one of your gigs at the top of that city's list for that night. ${F.slots} spots a night, first come first served.</p>
   </div>
   ${mine.length?`<div class="sec"><span class="kick">Featured</span><span class="kick">${mine.length}</span></div>
@@ -1498,7 +1567,7 @@ async function openPromote(eventId,date){
   if(!gigs.length){
     openSheet(`<h3>Promote a gig</h3>
       <p class="lede">${eventId?'This show cannot be featured yet.':'Nothing to promote yet.'} A gig needs a date in the future and a city — a featured spot lives in a city's list.</p>
-      <button class="big alt" style="margin-top:14px" onclick="closeSheet()">Close</button>`);
+      <button class="big alt" style="margin-top:14px" data-on-click="closeSheet">Close</button>`);
     return;
   }
   const row=(g)=>{
@@ -1506,7 +1575,7 @@ async function openPromote(eventId,date){
     const label=`${esc(g.venue||'Gig')} · ${esc(g.city)}`;
     const when=daystamp(new Date(g.date+'T12:00:00').getTime());
     return `<button class="row" style="width:100%;text-align:left;border:0;background:none;padding:12px 14px;${full||had?'opacity:.5':''}"
-        ${full||had?'disabled':`onclick="payPromote('${esc(g.eventId)}','${esc(g.date)}')"`}>
+        ${full||had?'disabled':`${ON.click('payPromote',String(g.eventId),String(g.date))}`}>
       <div class="m"><div class="t">${label}</div>
         <div class="s">${when}${g.time?' · '+esc(g.time):''} · ${
           had?'already featured' : full?'no spots left that night' : `${g.left} of ${F.slots} spots left`}</div></div>
@@ -1520,7 +1589,7 @@ async function openPromote(eventId,date){
     </ul>
     <div class="list" style="margin-top:12px">${gigs.map(row).join('')}</div>
     <p class="fine">Paid once, for that night only. If you cancel the gig afterwards the spot is used up, so promote a night you are sure of.</p>
-    <button class="big alt" style="margin-top:12px" onclick="closeSheet()">Never mind</button>`);
+    <button class="big alt" style="margin-top:12px" data-on-click="closeSheet">Never mind</button>`);
 }
 
 async function payPromote(eventId,date){
@@ -1589,7 +1658,7 @@ function sheetCard(){
             <div class="s muted">${S.pct||0}% of Google\u2019s ${Math.round((S.limit||1e7)/1e6)} million cells${S.prev&&S.prev.length?' · sheet '+(S.prev.length+1)+' of '+(S.prev.length+1):''}. At ${Math.round(100*(S.rollAt||8e6)/(S.limit||1e7))}% the nightly update starts a new sheet by itself, shares it with you and emails you.</div></div>
             ${S.url?`<a class="act" href="${esc(S.url)}" target="_blank" rel="noopener">Open</a>`:''}</div>`:''}
          </div>
-         <div class="wrap" style="margin-top:12px"><button class="big${SHEETBUSY?' alt':''}" onclick="sheetSync()">${SHEETBUSY?'Working…':'Update the sheet now'}</button></div>`
+         <div class="wrap" style="margin-top:12px"><button class="big${SHEETBUSY?' alt':''}" data-on-click="sheetSync">${SHEETBUSY?'Working…':'Update the sheet now'}</button></div>`
       : `<div class="list"><div class="row"><div class="m"><div class="t">Not connected yet</div>
            <div class="s muted">${esc(S.reason||'')}</div></div></div></div>
          <p class="muted" style="font-size:12px;padding:0 14px;margin:10px 0 0">Three settings in Netlify, then share the sheet with the address they give you. The full walk-through is in <b>GOOGLE-SHEET-SETUP.md</b>.</p>`}`;
@@ -1623,8 +1692,8 @@ function idQueueCard(){
       <div class="s muted">myset.vip/${esc(r.slug||'')}${r.account&&r.legalName&&r.account!==r.legalName?` \u00b7 goes by ${esc(r.account)}`:''} \u00b7 asked ${dstamp(r.at)}</div>
       <div class="s muted">name ${r.nameMatch?esc(r.nameMatch):'not compared'} \u00b7 date of birth ${r.dobMatch===true?'matches':r.dobMatch===false?'does NOT match':'not compared'}</div>
     </div>
-    <button class="act" onclick="idDecide('${esc(r.artistId)}',true)">Approve</button>
-    <button class="act" onclick="idDecide('${esc(r.artistId)}',false)">No</button></div>`).join('')}</div>
+    <button class="act" ${ON.click('idDecide',String(r.artistId),true)}>Approve</button>
+    <button class="act" ${ON.click('idDecide',String(r.artistId),false)}>No</button></div>`).join('')}</div>
     <p class="muted" style="font-size:12px;padding:10px 14px 0">Open their page in another tab to see the ID \u2014 it is not shown here, and it is deleted the moment you decide.</p>`;
 }
 async function idDecide(who,yes){
@@ -1663,14 +1732,14 @@ function fbCard(){
 const FOLD_FIRST=5, FOLD_STEP=20; let FOLDN={};
 const foldN=(k)=>FOLDN[k]||FOLD_FIRST;
 const fold=(rows,k)=>(rows||[]).slice(0,foldN(k));
-const foldMore=(rows,k)=>{ const n=(rows||[]).length, at=foldN(k); if(n<=at) return at>FOLD_FIRST?`<button class="seemore" onclick="FOLDN['${k}']=${FOLD_FIRST};render()">Show fewer ▴</button>`:'';
-  return `<button class="seemore" onclick="FOLDN['${k}']=${at+FOLD_STEP};render()">Show ${Math.min(FOLD_STEP,n-at)} more ▾</button>`; };
+const foldMore=(rows,k)=>{ const n=(rows||[]).length, at=foldN(k); if(n<=at) return at>FOLD_FIRST?`<button class="seemore" ${ON.click('foldTo',String(k),FOLD_FIRST)}>Show fewer ▴</button>`:'';
+  return `<button class="seemore" ${ON.click('foldTo',String(k),at+FOLD_STEP)}>Show ${Math.min(FOLD_STEP,n-at)} more ▾</button>`; };
 /* What fans reported through "Something wrong?", each with the server's own errors
    from the three hours before it. Fetched on tap, never on the poll. */
 function bugCard(){
   if(!founder()) return '';
   return `<div class="sec"><span class="kick">If something broke</span></div>
-    <div class="list"><div class="row" onclick="loadBugs()" style="cursor:pointer"><div class="m">
+    <div class="list"><div class="row" data-on-click="loadBugs" style="cursor:pointer"><div class="m">
       <div class="t">Bug reports from the room</div>
       <div class="s muted">What a fan said, and what the app saw at the time</div>
     </div></div></div>`;
@@ -1714,7 +1783,7 @@ function payCard(){
     <div class="list"><div class="row"><div class="m">
       <div class="t">Card payments are on <span class="okmark">✓</span></div>
       <div class="s muted">MySet takes ${p.cutPct}% of what comes through the app on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}${p.payoutLine?' '+esc(p.payoutLine):''}</div>
-    </div><button class="act" data-ed="owner" onclick="payDash()">Stripe ↗</button></div></div>`;
+    </div><button class="act" data-ed="owner" data-on-click="payDash">Stripe ↗</button></div></div>`;
   const started=p.started;
   return `<div class="sec"><span class="kick">Getting paid</span></div>
     <div class="list"><div class="row muted" style="display:block">
@@ -1730,8 +1799,8 @@ function payCard(){
         <p class="s muted" style="margin:6px 0 0">Stripe can\u2019t change this later, so it has to be right.</p>
       </div>`}
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="big" style="flex:1;min-width:180px" data-ed="owner" onclick="payStart()">${started?'Finish with Stripe':'Start with Stripe'}</button>
-        ${started?`<button class="act" onclick="loadPay(true)">Check again</button>`:''}
+        <button class="big" style="flex:1;min-width:180px" data-ed="owner" data-on-click="payStart">${started?'Finish with Stripe':'Start with Stripe'}</button>
+        ${started?`<button class="act" ${ON.click('loadPay',true)}>Check again</button>`:''}
       </div>
     </div></div>`;
 }
@@ -1903,7 +1972,7 @@ function openGig(id,onDate){
     ${bizOwner()?`<details class="why" id="gBiz" style="margin-top:14px" open><summary>Pay and the business side</summary>
       <div class="whybody"><p class="muted" style="font-size:12.5px">What this gig pays goes straight into the Money tab — for every night of a run, until you log one separately.</p>
         <div id="gBizBody"><div class="row muted" style="padding:0"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div></div></details>`
-    :(PLAN&&PLAN.ok&&PLAN.plan==='free'&&(PLAN.role||'owner')==='owner')?`<p class="muted" style="font-size:12.5px;margin:14px 0 0">Pay, band splits and costs for every gig are a Bar Star feature — <button class="btn-text" type="button" style="padding:0 4px;font-size:12.5px" onclick="openPlans()">See plans</button></p>`:''}
+    :(PLAN&&PLAN.ok&&PLAN.plan==='free'&&(PLAN.role||'owner')==='owner')?`<p class="muted" style="font-size:12.5px;margin:14px 0 0">Pay, band splits and costs for every gig are a Bar Star feature — <button class="btn-text" type="button" style="padding:0 4px;font-size:12.5px" data-on-click="openPlans">See plans</button></p>`:''}
     <input type="hidden" id="gTz" value="${esc(tz)}">
     <button class="big" style="margin-top:16px" data-act="gigsave" data-id="${esc(ev?ev.id:'')}">${ev?'Save changes':'Add it'}</button>
     ${ev?`<button class="big alt" style="margin-top:10px" data-act="gigdel" data-id="${esc(ev.id)}">Delete this gig${ev.repeat?' and its whole run':''}</button>`:''}`);
@@ -2170,8 +2239,8 @@ const freeCap=()=>{ const c=PLAN&&PLAN.ok&&!PLAN.owner&&PLAN.plan==='free'&&PLAN
    are gone. One chip, not two, because two push the artist's name off a phone. */
 function freeTag(s){
   const cap=freeCap(), used=Math.min((s&&s.gigCount)||0,cap);
-  if(!cap||used>=cap) return `<button class="upg" onclick="openPlans()"${cap?` aria-label="All ${cap} free shows used — upgrade"`:''}>Upgrade <span>↗</span></button>`;
-  return `<button class="plantag" onclick="openPlans()" aria-label="Hobbyist — ${used} of your ${cap} free shows used">Hobbyist · ${used}/${cap} <span>↗</span></button>`;
+  if(!cap||used>=cap) return `<button class="upg" data-on-click="openPlans"${cap?` aria-label="All ${cap} free shows used — upgrade"`:''}>Upgrade <span>↗</span></button>`;
+  return `<button class="plantag" data-on-click="openPlans" aria-label="Hobbyist — ${used} of your ${cap} free shows used">Hobbyist · ${used}/${cap} <span>↗</span></button>`;
 }
 /* The free-show cap, shown only when it is about to matter. */
 function capNote(s){
@@ -2230,13 +2299,13 @@ function goLiveCard(s){
   const booked=!!(gig||up.length);
   const signed=!!D.signAt;
   const rows=[
-    ['ticket','Add your next show',booked?(gig?`Tonight${gig.venue?' · '+esc(gig.venue):''}`:`${esc(up[0].venue||'Your gig')} · ${esc(up[0].date)}`):!edit('gigs')?'The account owner adds the shows':EVENTS?'Where and when — it goes on your page and starts by itself':'Checking your calendar…',booked,edit('gigs')?"setTab('gigs');setTimeout(()=>openGig(null),80)":''],
-    ['qr','Print your QR codes',signed?'At the door, on the bar, on every table':'One big sign, plus 25–50 small ones for the tables and the bar',signed,'printSign()'],
+    ['ticket','Add your next show',booked?(gig?`Tonight${gig.venue?' · '+esc(gig.venue):''}`:`${esc(up[0].venue||'Your gig')} · ${esc(up[0].date)}`):!edit('gigs')?'The account owner adds the shows':EVENTS?'Where and when — it goes on your page and starts by itself':'Checking your calendar…',booked,edit('gigs')?ON.click('gigsAdd'):''],
+    ['qr','Print your QR codes',signed?'At the door, on the bar, on every table':'One big sign, plus 25–50 small ones for the tables and the bar',signed,ON.click('printSign')],
   ];
   const next=rows.findIndex(r=>!r[3]);
   return `<div class="today golive">
     <div class="th"><b>Your first gig</b><span>${booked&&signed?'You’re set — start the show when the room’s in.':'Two things, then you’re on.'}</span></div>
-    ${rows.map((r,i)=>`<button class="todo ${r[3]?'done':''} ${i===next?'next':''}" onclick="${r[4]}">
+    ${rows.map((r,i)=>`<button class="todo ${r[3]?'done':''} ${i===next?'next':''}" ${r[4]}>
       <span class="ic">${CLAYICON[r[0]]}</span>
       <span class="m"><span class="t">${r[1]}</span><span class="s">${r[2]}</span></span>
       <span class="tick">${r[3]?'✓':'○'}</span></button>`).join('')}
@@ -2254,7 +2323,7 @@ function exampleQueue(songs){
   const pick=songs.filter(x=>!x.now&&x.active!==false&&!x.played).slice(0,3);
   const rows=pick.length>=3?pick.map((x,i)=>[x.title,x.artist||'',[4,2,1][i]])
     :[['Wonderwall','Oasis',4],['Valerie','Amy Winehouse',2],['Wish You Were Here','Pink Floyd',1]];
-  return `<div class="sec upnext"><span class="kick">What a request looks like</span><button class="kick" style="color:var(--accent)" onclick="exqGotIt()">Got it</button></div>
+  return `<div class="sec upnext"><span class="kick">What a request looks like</span><button class="kick" style="color:var(--accent)" data-on-click="exqGotIt">Got it</button></div>
     <div class="list exq">${rows.map(([t,a,v],i)=>`<div class="row">
       <div class="rk mono ${i===0?'one':''}">${i+1}</div>
       <div class="m"><div class="t">${esc(t)} <span class="extag">Example</span></div>${a?`<div class="by">${esc(a)}</div>`:''}
@@ -2270,17 +2339,17 @@ function todayCard(s){
   const payOn=PAY?!!(PAY.platformOwner||PAY.ready||PAY.chargesEnabled):!!D.paymentsEnabled;
   const votesOn=!!(s.unlimited||s.freeCredits>0);
   const rows=[
-    ['mic','Select setlist',named?(s.listName?esc(s.listName):'Set for tonight'):ALLSONGS?'All songs — everything you haven’t hidden':'Tap to pick a set, or all your songs',listOn,'openLists()'],
-    ['tip','Card payments ready',payOn?'Tips and extra votes go through Stripe':ownerSeat()?'Tap to set up Stripe':'The account owner sets up Stripe',payOn,ownerSeat()?"setTab('money')":''],
-    ['qr','QR codes out',QRSHOWN?'At the door, on the bar, on every table':'The big sign, plus 25–50 small ones on the tables and the bar',QRSHOWN,'showQr()'],
-    ['ticket','Free votes set',s.unlimited?'Unlimited votes for everyone':`${s.freeCredits||0} free vote${s.freeCredits===1?'':'s'} each`,votesOn,see('settings')?'showPricing()':''],
+    ['mic','Select setlist',named?(s.listName?esc(s.listName):'Set for tonight'):ALLSONGS?'All songs — everything you haven’t hidden':'Tap to pick a set, or all your songs',listOn,ON.click('openLists')],
+    ['tip','Card payments ready',payOn?'Tips and extra votes go through Stripe':ownerSeat()?'Tap to set up Stripe':'The account owner sets up Stripe',payOn,ownerSeat()?ON.click('setTab','money'):''],
+    ['qr','QR codes out',QRSHOWN?'At the door, on the bar, on every table':'The big sign, plus 25–50 small ones on the tables and the bar',QRSHOWN,ON.click('showQr')],
+    ['ticket','Free votes set',s.unlimited?'Unlimited votes for everyone':`${s.freeCredits||0} free vote${s.freeCredits===1?'':'s'} each`,votesOn,see('settings')?ON.click('showPricing'):''],
   ];
   const next=rows.findIndex(r=>!r[3]);
   return `<div class="today">
     <div class="th"><b>Today</b><span>${gig
       ? `${gig.venue?esc(gig.venue):'Your gig'}${gig.time?' · '+esc(gig.time):''}`
       : (!see('gigs')?'Nothing starting in the next few hours':EVENTS?'No gig on the calendar today':'Checking your calendar…')}</span></div>
-    ${rows.map((r,i)=>`<button class="todo ${r[3]?'done':''} ${i===next?'next':''}" onclick="${r[4]}">
+    ${rows.map((r,i)=>`<button class="todo ${r[3]?'done':''} ${i===next?'next':''}" ${r[4]}>
       <span class="ic">${CLAYICON[r[0]]}</span>
       <span class="m"><span class="t">${r[1]}</span><span class="s">${r[2]}</span></span>
       <span class="tick">${r[3]?'✓':'○'}</span></button>`).join('')}
@@ -2363,22 +2432,22 @@ function render(){
       ${D.money===false?'':`<div class="c"><b class="mono acc">$${earned().toFixed(2)}</b><span>Tips + votes</span></div>`}
     </div>
     ${s.venue?'':`<div class="field" style="padding-top:12px"><label>Name this night</label><div style="display:flex;gap:8px">
-      <input class="inp" id="nightName" maxlength="80" placeholder="Where was it? e.g. The Corner Hotel" style="flex:1" onkeydown="if(event.key==='Enter')saveNight()">
-      <button class="act pri" style="min-width:64px" onclick="saveNight()">Save</button></div></div>`}
+      <input class="inp" id="nightName" maxlength="80" placeholder="Where was it? e.g. The Corner Hotel" style="flex:1" data-on-keydown="nightEnter">
+      <button class="act pri" style="min-width:64px" data-on-click="saveNight">Save</button></div></div>`}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
-      <button class="big bigplay" onclick="newShowAsk()">
+      <button class="big bigplay" data-on-click="newShowAsk">
         <span>●</span><span style="flex:1">Start a new show</span></button>
     </div>
     ${capNote(s)}
     <p class="muted" style="font-size:12px;padding:8px 20px 0">
       ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
       ${/* the same night resumes at the free cap; an older one would be refused, so it is not offered (0156) */
-        freeCap()&&(s.gigCount||0)>=freeCap()&&!s.resumeSameNight?'':`<a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+        freeCap()&&(s.gigCount||0)>=freeCap()&&!s.resumeSameNight?'':`<a href="#" ${ON.click(['prevent'],['act','status',{status:'live'}])}
          style="color:var(--accent);font-weight:700">Resume it instead</a>
       — use that if you ended it by mistake.`}</p>`
     :`${SAMPLE||firstGig()?practiceCard(true):''}${todayCard(s)}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
-      <button class="big bigplay" onclick="newShowAsk()">
+      <button class="big bigplay" data-on-click="newShowAsk">
         <span>●</span><span style="flex:1">Start the show</span></button>
     </div>
     ${capNote(s)}
@@ -2399,12 +2468,12 @@ function render(){
       <div><span class="vt">Voting</span>
         <span class="vs">${s.windowOpen?'Fans can vote right now':'Paused — nobody can vote until you re-open'}</span></div>
       <div class="tog">
-        <button class="${s.windowOpen?'on':''}" onclick="act('window',{open:true})">Open</button>
-        <button class="${!s.windowOpen?'on':''}" onclick="act('window',{open:false})">Paused</button>
+        <button class="${s.windowOpen?'on':''}" ${ON.click('act','window',{open:true})}>Open</button>
+        <button class="${!s.windowOpen?'on':''}" ${ON.click('act','window',{open:false})}>Paused</button>
       </div>
     </div>
     ${s.status==='live'?`<div class="wrap" style="padding-top:10px;padding-bottom:0">
-      <button class="lastcall" id="lastCall" onclick="lastCall()">
+      <button class="lastcall" id="lastCall" data-on-click="lastCall">
         <b>Last call</b><small>Ten seconds on every phone in the room</small></button>
     </div>`:''}
     <div class="stats">
@@ -2423,9 +2492,9 @@ function render(){
     ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}
 
     <div class="wrap liveactions" style="padding-top:14px;padding-bottom:10px">
-      ${top?`<button class="big bigplay" onclick="startSong('playTop')">
+      ${top?`<button class="big bigplay" ${ON.click('startSong','playTop')}>
         <span>▶</span><span style="flex:1;min-width:0">Start top voted — ${esc(top.title)} (${top.votes} votes total) ${paidPill(top)}</span></button>`:''}
-      ${now?`<button class="big endnow" onclick="act('endSong')">■ End current song</button>`:''}
+      ${now?`<button class="big endnow" ${ON.click('act','endSong')}>■ End current song</button>`:''}
     </div>
     ${!EXQ&&firstGig()&&!songs.some(x=>x.votes>0)?exampleQueue(songs):''}
     <div class="sec upnext"><span class="kick">Up next</span><span class="kick">Tap ▶ to start · ${pool.length}</span></div>
@@ -2433,16 +2502,16 @@ function render(){
       <div class="rk ${i===0&&x.votes?'one':''} mono">${i+1}</div>
       <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}
         <div class="songvotes"><span class="mono">${x.votes} votes total</span>${paidPill(x)}</div>
-        ${x.votes?`<button class="refundlink" onclick="declineSong('${x.id}')">Decline + refund votes</button>`:''}</div>
-      <button class="act" onclick="startSong('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div></div>
+        ${x.votes?`<button class="refundlink" ${ON.click('declineSong',String(x.id))}>Decline + refund votes</button>`:''}</div>
+      <button class="act" ${ON.click('startSong','play',{song:String(x.id)})}>▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div></div>
     <div class="wrap" style="padding-top:14px;padding-bottom:2px">
-      <button class="big alt orange-outline prend" onclick="openEndShow()" style="justify-content:center">■ End the show</button>
+      <button class="big alt orange-outline prend" data-on-click="openEndShow" style="justify-content:center">■ End the show</button>
     </div>
 
-    <div class="sec"><span class="kick">Played (${s.played.length})</span>${s.played.length?`<button class="kick" style="color:var(--accent)" onclick="clearBoardAsk()">Clear the board</button>`:''}</div>
+    <div class="sec"><span class="kick">Played (${s.played.length})</span>${s.played.length?`<button class="kick" style="color:var(--accent)" data-on-click="clearBoardAsk">Clear the board</button>`:''}</div>
     <div class="list">${songs.filter(x=>x.played).map(x=>`<div class="row done"><div class="rk">♪</div>
       <div class="m"><div class="t">${esc(x.title)}</div></div>
-      <button class="act" onclick="act('unplay',{song:'${x.id}'})">Undo</button></div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
+      <button class="act" ${ON.click('act','unplay',{song:String(x.id)})}>Undo</button></div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
     ${D.tips.recent.length?`<div class="sec"><span class="kick">Recent tips</span></div>
       ${D.tips.recent.map(t=>`<div class="tip"><span>$${Number(t.amount).toFixed(2)}${t.note?' · '+esc(t.note):''}</span><span class="muted">${when(t.at)}</span></div>`).join('')}`:''}`;
   }
@@ -2461,9 +2530,9 @@ function render(){
             its sibling. The second used to be flex:1, which parked "Add a song" at the
             left of a centred button (the founder, 2026-09-12). Two spans still, because
             test/copy.mjs finds ">Add a song</span>". */''}
-      <button class="big" onclick="openSongSheet(null)">
+      <button class="big" ${ON.click('openSongSheet',null)}>
         <span>+</span><span>Add a song</span></button>
-      <button class="big alt" onclick="openImport()">⇪ Import songs</button>
+      <button class="big alt" data-on-click="openImport">⇪ Import songs</button>
       </div>
     </div>
     ${setPick()}
@@ -2476,12 +2545,12 @@ function render(){
       <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
       <input id="setq" type="search" inputmode="search" placeholder="Search song or artist"
         value="${esc(SETQ)}" autocomplete="off">
-      ${SETQ?`<button class="clr" onclick="setQuery('')" aria-label="Clear search">✕</button>`:''}
+      ${SETQ?`<button class="clr" ${ON.click('setQuery','')} aria-label="Clear search">✕</button>`:''}
     </div>
     <div class="sortbar" role="group" aria-label="Sort songs">${SETSORTS.map(([k,l])=>
       `<button data-sort="${k}" class="${SETSORT===k?'on':''}" aria-pressed="${SETSORT===k}">${l}</button>`).join('')}</div>
     <div class="ghead"><span class="kick">Genres</span>
-      <button data-ed="setlist" onclick="confirmAutoTag()">✨ Auto-tag songs</button></div>
+      <button data-ed="setlist" data-on-click="confirmAutoTag">✨ Auto-tag songs</button></div>
     ${genreBar(songs)}
     <div class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row songcard ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
@@ -2494,9 +2563,9 @@ function render(){
       ${/* ONE "…" INSTEAD OF THREE CIRCLES (the founder, 2026-10-09). It opens the hold
             sheet; the three buttons stay in the row, out of sight, because that sheet
             and the swipe tray are built from them (rowMenu, below). */''}
-      <button class="songmore" data-more onclick="rowMenu(this)" aria-label="Actions for ${esc(x.title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
+      <button class="songmore" data-more data-on-click="rowMenuEl" aria-label="Actions for ${esc(x.title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
       <div class="songactions rowacts" aria-hidden="true"><button class="act ico" tabindex="-1" data-ed="setlist" data-act="edit" data-id="${x.id}" aria-label="Edit ${esc(x.title)}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 4.5H6.5A2.5 2.5 0 0 0 4 7v10.5A2.5 2.5 0 0 0 6.5 20H17a2.5 2.5 0 0 0 2.5-2.5V12"/><path d="M9 15.2l.9-3.4 8.1-8.1a1.6 1.6 0 0 1 2.3 2.3l-8.1 8.1z"/></svg></button>
-      <button class="act ico" tabindex="-1" onclick="act('toggleSong',{song:'${x.id}'})" aria-label="${x.active===false?'Show':'Hide'} ${esc(x.title)}" title="${x.active===false?'Show':'Hide'}">${x.active===false
+      <button class="act ico" tabindex="-1" ${ON.click('act','toggleSong',{song:String(x.id)})} aria-label="${x.active===false?'Show':'Hide'} ${esc(x.title)}" title="${x.active===false?'Show':'Hide'}">${x.active===false
         ?'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'
         :'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5c1.6 0 3 .4 4.3 1.1M21.5 12s-3.5 6.5-9.5 6.5c-1.6 0-3-.4-4.3-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M4 20 20 4"/></svg>'}</button>
       <button class="act warn ico" tabindex="-1" data-ed="setlist" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}" title="Delete">✕</button></div>
@@ -2508,7 +2577,7 @@ function render(){
     </div>`}
     <div class="wrap" style="padding-top:18px;padding-bottom:8px" data-ed="setlist">
       <button class="big alt" style="justify-content:center;margin:0;color:var(--accent)"
-        onclick="ask({title:'Remove every song?',lede:'Your setlist empties. This cannot be undone.',yes:'Yes, remove them',no:'Keep them',go:()=>act('clearSetlist')})">Clear setlist</button>
+        data-on-click="askClearSetlist">Clear setlist</button>
     </div>
     `;
   }
@@ -2522,14 +2591,14 @@ function render(){
       const up=occ.filter(o=>o.date>=todayStr()).slice(0,30);
       body=`
       <div class="wrap" style="padding-top:20px;padding-bottom:6px" data-ed="gigs">
-        <button class="big bigplay" onclick="openGig()"><span>+</span><span style="flex:1">Add a gig</span></button>
+        <button class="big bigplay" data-on-click="openGig"><span>+</span><span style="flex:1">Add a gig</span></button>
       </div>
       ${tourCard()}
       <div class="calhead">
         <b>${monthName(CAL_MONTH)}</b>
         <div class="calnav">
-          <button onclick="calMove(-1)" aria-label="Previous month">‹</button>
-          <button onclick="calMove(1)" aria-label="Next month">›</button>
+          <button ${ON.click('calMove',-1)} aria-label="Previous month">‹</button>
+          <button ${ON.click('calMove',1)} aria-label="Next month">›</button>
         </div>
       </div>
       <div class="cal">
@@ -2557,11 +2626,11 @@ function render(){
         <div class="songactions">${o.cancelled
           ? `<button class="act" data-ed="gigs" data-act="gigskip" data-id="${o.eventId}|${o.date}">Restore</button>
              <button class="act warn wide" data-ed="gigs" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
-          : `<button class="act" data-ed="owner" onclick="openPromote('${esc(o.eventId)}','${esc(o.date)}')">Feature</button>
+          : `<button class="act" data-ed="owner" ${ON.click('openPromote',String(o.eventId),String(o.date))}>Feature</button>
              <button class="act" data-ed="gigs" data-act="gigedit" data-id="${o.eventId}">Edit</button>
              <button class="act warn" data-ed="gigs" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}</div>
       </div>`).join('')||(edit('gigs')?'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>':'<div class="row muted">Nothing booked yet.</div>')}
-      ${up.length>5?`<button class="seemore" onclick="GIGSALL=!GIGSALL;render()">${
+      ${up.length>5?`<button class="seemore" data-on-click="gigsAllFlip">${
         GIGSALL?'Show fewer ▴':`See ${up.length-5} more ▾`}</button>`:''}</div>
       <p class="muted" data-ed="gigs" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>
       ${featureCard()}
@@ -2578,7 +2647,7 @@ function render(){
     else if(DETAIL){
       const H=DETAIL,M=H.money||{},V=M.votes||{},T=M.tips||{},St=H.stats||{};
       body=`
-      <div class="wrap" style="padding-top:14px"><button class="act" onclick="closeShow()">← All shows</button></div>
+      <div class="wrap" style="padding-top:14px"><button class="act" data-on-click="closeShow">← All shows</button></div>
       <div class="np rise" style="background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)">
         <div class="k" style="color:var(--muted)">${dstamp(H.endedAt||H.startedAt)}</div>
         ${histName(H.showId,H.title||H.venue||'Untitled show')}
@@ -2641,7 +2710,7 @@ function render(){
         <div class="list"><div class="row" style="flex-wrap:wrap">
           <div class="m" style="flex:1 1 100%"><div class="t">${H.nights?`${H.nights} night${H.nights===1?'':'s'} filed and waiting`:'Every night gets filed here'}</div>
             <div class="s">The business dashboard — fans, votes and tips plus your pay, splits, costs, hours and profit for every show — is a Bar Star feature. Upgrade and ${H.nights?'all of them open':'they open as you play'}.</div></div>
-          <button class="act" data-see="plans" onclick="openPlans()">See plans</button></div></div>`:''}
+          <button class="act" data-see="plans" data-on-click="openPlans">See plans</button></div></div>`:''}
         ${H.locked||biz?'':`
         ${(()=>{  /* filter by anything a night is remembered by: its name, venue, city, date, weekday */
           const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
@@ -2658,7 +2727,7 @@ function render(){
           <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
           <input id="histq" type="search" placeholder="Find a night — venue, city, “friday”, “12 Aug”…"
             value="${esc(HISTQ)}" autocomplete="off">
-          ${HISTQ?`<button class="clr" onclick="HISTQ='';HISTFOCUS=false;render()" aria-label="Clear search">✕</button>`:''}
+          ${HISTQ?`<button class="clr" data-on-click="histClear" aria-label="Clear search">✕</button>`:''}
         </div>`:''}
         <div class="list">${HROWS.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
           <div class="m">${histName(x.showId,x.title||x.venue||'Untitled show')}
@@ -2669,11 +2738,11 @@ function render(){
           <button class="act" data-act="show" data-id="${x.showId}">Open</button></div>`).join('')
           ||(HISTQ?`<div class="row muted">Nothing matches “${esc(HISTQ)}”. A venue, a city, a weekday or a date all work.</div>`
                   :'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>')}</div>
-        ${!HISTQ&&HSHOWN.length>3?`<button class="seemore" onclick="HISTALL=!HISTALL;render()">${HISTALL?'Show fewer ▴':`See ${HSHOWN.length-3} more ▾`}</button>`:''}
+        ${!HISTQ&&HSHOWN.length>3?`<button class="seemore" data-on-click="histAllFlip">${HISTALL?'Show fewer ▴':`See ${HSHOWN.length-3} more ▾`}</button>`:''}
         ${HISTQ?'':`<div class="wrap" style="margin-top:12px" data-ed="money">
-          <button class="big alt" onclick="healHist()">Look for missing shows</button>
+          <button class="big alt" data-on-click="healHist">Look for missing shows</button>
           <p class="muted" style="font-size:12px;margin:8px 0 0">A night is filed when you end the show. If one is missing this goes back through the records and puts it where it belongs.</p>
-          <button class="big alt" style="margin-top:10px" onclick="placeHist()">Name these from my calendar</button>
+          <button class="big alt" style="margin-top:10px" data-on-click="placeHist">Name these from my calendar</button>
           <p class="muted" style="font-size:12px;margin:8px 0 0">Older nights were all filed under the same venue. This renames each one from the gig that was on your calendar that night — nothing else about them changes.</p></div>`}`}`;
       }
       let pays='';
@@ -2694,7 +2763,7 @@ function render(){
         ${R.unredeemed?`<div class="warnbox rise">
           <b>${R.unredeemed} payment${R.unredeemed===1?' was':'s were'} never delivered</b>
           <p>Someone paid and the app didn’t hand over what they bought. This gives it to them — safe to tap twice.</p>
-          <button class="big" data-ed="money" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
+          <button class="big" data-ed="money" data-on-click="recover">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
         <div class="sec"><span class="kick">All payments · last 180 days</span><span class="kick">$${t.all.toFixed(2)}</span></div>
         <div class="list">${fold(R.payments,'pays').map(p=>`<div class="row">
           <div class="m">
@@ -2723,7 +2792,7 @@ function render(){
       const L=P.links||{};
       body=`
       <div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${(D&&D.show&&D.show.slug)?'/'+esc(D.show.slug):'/artist.html'}" style="justify-content:center">View your page ↗</a></div>
-      <div class="wrap" style="padding-top:10px" data-ed="profile"><button class="big mid" onclick="saveProfile()">Save profile</button></div>
+      <div class="wrap" style="padding-top:10px" data-ed="profile"><button class="big mid" data-on-click="saveProfile">Save profile</button></div>
 
       <div class="sec"><span class="kick">Who you are</span></div>
       <div class="field"><label>First name or band name</label><input class="inp" id="pfFirst" maxlength="60" value="${esc(P.first||(P.name||'').split(' ')[0]||'')}" placeholder="What the room calls you"></div>
@@ -2768,7 +2837,7 @@ function render(){
       <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Paste a YouTube, Spotify or Apple Music link. I check it exists before it goes on your page.</p>
       <div class="wrap"><div style="display:flex;gap:8px">
         <input class="inp" id="mdUrl" style="flex:1" placeholder="Paste a link" autocomplete="off">
-        <button class="act pri" id="mdAdd" data-ed="profile" style="min-width:64px" onclick="addMedia()">Add</button>
+        <button class="act pri" id="mdAdd" data-ed="profile" style="min-width:64px" data-on-click="addMedia">Add</button>
       </div></div>
       <div class="list" style="margin-top:14px">${P.media.map((m,i)=>`<div class="row">
         <div class="m"><div class="t">${esc(m.title||m.provider)}</div>
@@ -2778,7 +2847,7 @@ function render(){
         <button class="act" data-ed="profile" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
         <button class="act warn" data-ed="profile" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
       </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>
-      <div class="wrap" style="margin-top:14px" data-ed="profile"><button class="big mid" onclick="saveProfile()">Save profile</button></div>
+      <div class="wrap" style="margin-top:14px" data-ed="profile"><button class="big mid" data-on-click="saveProfile">Save profile</button></div>
       ${fbCard()}
       ${commSection()}
       ${presskitCard()}
@@ -2822,7 +2891,7 @@ function render(){
     <div class="field" data-ed="owner"><label>myset.vip/</label><div style="display:flex;gap:8px">
       <input class="inp" id="slugIn" maxlength="32" placeholder="yourname" style="flex:1"
         value="${esc((TEAM&&TEAM.slug)||'')}">
-      <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
+      <button class="act pri" style="min-width:64px" data-on-click="saveSlug">Save</button></div></div>
     ${TEAM&&TEAM.slug?`<div class="wrap" style="margin-top:10px">
       <a class="big alt" href="/${esc(TEAM.slug)}" style="justify-content:center">Open myset.vip/${esc(TEAM.slug)} ↗</a></div>`:''}
 
@@ -2842,15 +2911,15 @@ function render(){
           they like" is running your show, not pricing it. Wrapping the whole block
           in one lock quietly took a working control off every free artist. */''}
     ${lock('pricing',`<div class="wrap"><div class="chips">
-      ${[1,2,3,5,10].map(n=>`<button class="chip ${!s.unlimited&&s.freeCredits===n?'on':''}" onclick="act('freeCredits',{n:${n}})">${n}</button>`).join('')}
+      ${[1,2,3,5,10].map(n=>`<button class="chip ${!s.unlimited&&s.freeCredits===n?'on':''}" ${ON.click('act','freeCredits',{n:n})}>${n}</button>`).join('')}
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
       <input class="inp" id="fcCustom" type="number" inputmode="numeric" min="0" max="999" style="flex:1"
         placeholder="Any other number" value="${!s.unlimited&&![1,2,3,5,10].includes(s.freeCredits)?s.freeCredits:''}">
-      <button class="act pri" style="min-width:64px" onclick="saveFreeCredits()">Set</button>
+      <button class="act pri" style="min-width:64px" data-on-click="saveFreeCredits">Set</button>
     </div></div>`,'Everyone gets '+s.freeCredits+' free votes for the night until then.')}
     <div class="wrap" style="margin-top:12px"><div class="chips">
-      <button class="chip ${s.unlimited?'on':''}" onclick="act('unlimited',{on:${!s.unlimited}})">∞ Unlimited votes for everyone</button>
+      <button class="chip ${s.unlimited?'on':''}" ${ON.click('act','unlimited',{on:!s.unlimited})}>∞ Unlimited votes for everyone</button>
     </div>
     ${s.unlimited?`<p class="muted" style="font-size:12px;margin:9px 0 0">Everyone in the room can vote as much as they like. Nobody can buy votes while this is on.</p>`:`<p class="muted" style="font-size:12px;margin:9px 0 0">Free on every plan — it is your show, not a price.</p>`}
     </div>
@@ -2860,23 +2929,23 @@ function render(){
     <div class="sec"><span class="kick">Votes per song</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes it takes to put one vote on a song.</p>
     ${lock('pricing',`<div class="wrap"><div class="chips">
-      ${[1,2,3,5].map(n=>`<button class="chip ${(s.songCost||1)===n?'on':''}" onclick="act('songCost',{n:${n}})">${n}</button>`).join('')}
+      ${[1,2,3,5].map(n=>`<button class="chip ${(s.songCost||1)===n?'on':''}" ${ON.click('act','songCost',{n:n})}>${n}</button>`).join('')}
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
       <input class="inp" id="scCustom" type="number" inputmode="numeric" min="1" max="20" style="flex:1"
         placeholder="Any other number" value="${![1,2,3,5].includes(s.songCost||1)?(s.songCost||''):''}">
-      <button class="act pri" style="min-width:64px" onclick="saveSongCost()">Set</button>
+      <button class="act pri" style="min-width:64px" data-on-click="saveSongCost">Set</button>
     </div></div>`,'A song costs '+(s.songCost||1)+' vote'+((s.songCost||1)===1?'':'s')+' until then.')}
 
     <div class="sec"><span class="kick">Cost to replay a played song</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you've already played stay votable, but cost this many votes to bring back.</p>
     ${lock('pricing',`<div class="wrap"><div class="chips">
-      ${[2,3,5,8,10].map(n=>`<button class="chip ${(s.replayCost||5)===n?'on':''}" onclick="act('replayCost',{n:${n}})">${n}</button>`).join('')}
+      ${[2,3,5,8,10].map(n=>`<button class="chip ${(s.replayCost||5)===n?'on':''}" ${ON.click('act','replayCost',{n:n})}>${n}</button>`).join('')}
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
       <input class="inp" id="rcCustom" type="number" inputmode="numeric" min="1" max="99" style="flex:1"
         placeholder="Any other number" value="${![2,3,5,8,10].includes(s.replayCost||5)?(s.replayCost||''):''}">
-      <button class="act pri" style="min-width:64px" onclick="saveReplayCost()">Set</button>
+      <button class="act pri" style="min-width:64px" data-on-click="saveReplayCost">Set</button>
     </div></div>`,'A replay costs '+(s.replayCost||5)+' votes until then.')}
 
     <div class="sec"><span class="kick">Price of extra votes</span></div>
@@ -2886,7 +2955,7 @@ function render(){
         <input class="inp" id="${pre}v" type="number" min="1" max="100" value="${s.packs[k].votes}" style="flex:1">
         <span class="muted" style="font-size:13px">votes for $</span>
         <input class="inp" id="${pre}c" type="number" min="1" max="500" step="0.5" value="${(s.packs[k].cents/100)}" style="flex:1"></div></div>`).join('')}
-    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="savePacks()">Save prices</button></div>`,
+    <div class="wrap" style="margin-top:12px"><button class="big alt" data-on-click="savePacks">Save prices</button></div>`,
       'The standard prices stay on, and the money is still yours.')}
 
     <div class="sec"><span class="kick">Requests from fans</span></div>
@@ -2894,19 +2963,19 @@ function render(){
     ${[['song','Request a song','A title you haven’t got listed',s.requests],
        ['birthday','Happy birthday shout-out','With the name of whoever it’s for',s.birthdays]].map(([k,t,d,cfg])=>`
       <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
-        <div class="tog"><button class="${cfg.on?'on':''}" onclick="act('askSet',{kind:'${k}',on:true})">On</button>
-        <button class="${!cfg.on?'on':''}" onclick="act('askSet',{kind:'${k}',on:false})">Off</button></div></div>
+        <div class="tog"><button class="${cfg.on?'on':''}" ${ON.click('act','askSet',{kind:String(k),on:true})}>On</button>
+        <button class="${!cfg.on?'on':''}" ${ON.click('act','askSet',{kind:String(k),on:false})}>Off</button></div></div>
       ${cfg.on?`<div class="wrap" style="padding-top:10px;padding-bottom:4px">
       ${/* Switching requests ON is free — that is running your show. What one COSTS
             is pricing, so only the cost is greyed. The server draws the line in the
             same place (see askSet in admin.mjs), which is why this can. */''}
       ${lock('pricing',`<div class="chips">
-        ${[1,2,3,5,10].map(n=>`<button class="chip ${cfg.cost===n?'on':''}" onclick="act('askSet',{kind:'${k}',cost:${n}})">${n}</button>`).join('')}
+        ${[1,2,3,5,10].map(n=>`<button class="chip ${cfg.cost===n?'on':''}" ${ON.click('act','askSet',{kind:String(k),cost:n})}>${n}</button>`).join('')}
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
         <input class="inp" id="ac${k}" type="number" inputmode="numeric" min="1" max="99" style="flex:1"
           placeholder="Any other number of votes" value="${![1,2,3,5,10].includes(cfg.cost)?cfg.cost:''}">
-        <button class="act pri" style="min-width:64px" onclick="saveAskCost('${k}')">Set</button>
+        <button class="act pri" style="min-width:64px" ${ON.click('saveAskCost',String(k))}>Set</button>
       </div>`,'Asking still works — it just costs the standard '+cfg.cost+' votes.')}
       <p class="muted" style="font-size:12px;margin:8px 0 0">Costs <b>${cfg.cost} vote${cfg.cost===1?'':'s'}</b>.</p></div>`:''}`).join('')}
 
@@ -2916,15 +2985,15 @@ function render(){
       ${[['votes','Votes and voters','How many votes tonight, and how many people cast them',!!(s.crowd&&s.crowd.votes)],
          ['tips','Tips','What the room has tipped tonight, as a total',!!(s.crowd&&s.crowd.tips)]].map(([k,t,d,on])=>`
       <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
-        <div class="tog"><button class="${on?'on':''}" onclick="act('crowdSet',{which:'${k}',on:true})">On</button>
-        <button class="${!on?'on':''}" onclick="act('crowdSet',{which:'${k}',on:false})">Off</button></div></div>`).join('')}`,
+        <div class="tog"><button class="${on?'on':''}" ${ON.click('act','crowdSet',{which:String(k),on:true})}>On</button>
+        <button class="${!on?'on':''}" ${ON.click('act','crowdSet',{which:String(k),on:false})}>Off</button></div></div>`).join('')}`,
       'Both are off. The room sees its own votes and nothing else until you switch these on.')}
 
     <div class="sec"><span class="kick">Starting by itself</span></div>
     <div class="row"><div class="m"><div class="t">Start shows from my calendar</div>
       <div class="s">${s.autoStart!==false?'A gig on your calendar starts its show at its start time if you haven’t.':'Off — only you start a show. Ending by itself still applies.'}</div></div>
-      <div class="tog"><button class="${s.autoStart!==false?'on':''}" onclick="act('autoStart',{on:true})">On</button>
-      <button class="${s.autoStart===false?'on':''}" onclick="act('autoStart',{on:false})">Off</button></div></div>
+      <div class="tog"><button class="${s.autoStart!==false?'on':''}" ${ON.click('act','autoStart',{on:true})}>On</button>
+      <button class="${s.autoStart===false?'on':''}" ${ON.click('act','autoStart',{on:false})}>Off</button></div></div>
 
     <div class="sec"><span class="kick">Payments</span></div>
     <div class="row"><div class="m"><div class="t">Card payments ${D.paymentsEnabled?'ON':'OFF'}</div>
@@ -2934,12 +3003,12 @@ function render(){
     <div class="sec"><span class="kick">This device</span></div>
     <div class="row"><div class="m"><div class="t">Unlimited votes for me</div>
       <div class="s">${(s.unlimitedFans||[]).includes(myFanId())?'This phone votes without limit':'Just for testing — nobody else gets this'}</div></div>
-      <div class="tog"><button class="${(s.unlimitedFans||[]).includes(myFanId())?'on':''}" onclick="act('unlimitedFan',{fan:myFanId(),on:true})">On</button>
-      <button class="${!(s.unlimitedFans||[]).includes(myFanId())?'on':''}" onclick="act('unlimitedFan',{fan:myFanId(),on:false})">Off</button></div></div>
+      <div class="tog"><button class="${(s.unlimitedFans||[]).includes(myFanId())?'on':''}" ${ON.click('unlimitedFan',true)}>On</button>
+      <button class="${!(s.unlimitedFans||[]).includes(myFanId())?'on':''}" ${ON.click('unlimitedFan',false)}>Off</button></div></div>
 
     <div class="sec"><span class="kick">Lyrics</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fetch the words for your whole setlist once, before a gig. They’re stored on your own server after that, so a room full of people tapping “Lyrics” never hits the internet. Takes about half a minute.</p>
-    <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
+    <div class="wrap"><button class="big alt" id="lyrWarm" data-on-click="warmLyrics">↓ Fetch lyrics for the whole setlist</button></div>
     </div>
 
     <div data-see="plans">
@@ -2975,12 +3044,12 @@ function render(){
             portal, and an account section that silently disappears is exactly the
             thing Perry could not find. */''}
       <div class="planbox" id="planbox">
-        <button class="bigup" onclick="openPlans()">${!ownerSeat()?'See the plans':PLAN.plan==='pro'?'Rock Star membership':'Upgrade your plan'} <span>↗</span></button>
+        <button class="bigup" data-on-click="openPlans">${!ownerSeat()?'See the plans':PLAN.plan==='pro'?'Rock Star membership':'Upgrade your plan'} <span>↗</span></button>
         <p class="planwhen">${planWhen(s)}</p>
       </div>
       <div class="field" data-ed="owner"><label>Got a code?</label><div style="display:flex;gap:8px">
         <input class="inp" id="promoIn" maxlength="24" placeholder="FRIENDS100" autocapitalize="characters" style="flex:1">
-        <button class="act pri" style="min-width:64px" onclick="redeemPromo()">Apply</button></div></div>
+        <button class="act pri" style="min-width:64px" data-on-click="redeemPromo">Apply</button></div></div>
       ${founder()?`
         <div class="sec"><span class="kick">Codes you hand out</span></div>
         <div class="list">${(PROMOS&&PROMOS.codes||[]).map(c=>`<div class="row ${c.revoked?'off':''}">
@@ -2998,7 +3067,7 @@ function render(){
             <input class="inp" id="pcMonths" type="number" min="1" max="60" value="12" style="flex:1" placeholder="months">
             <input class="inp" id="pcMax" type="number" min="0" max="9999" value="0" style="flex:1" placeholder="max uses (0 = ∞)">
           </div>
-          <button class="big alt" style="margin-top:12px" onclick="createPromo()">Create code</button></div>
+          <button class="big alt" style="margin-top:12px" data-on-click="createPromo">Create code</button></div>
 
         <div class="sec"><span class="kick">Venues</span></div>
         <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Anyone can claim a venue page, and it stays an <b>unverified listing</b> until someone says otherwise. A venue with an email at its own website verifies itself instantly; the rest are your call.</p>
@@ -3021,14 +3090,14 @@ function render(){
     <div class="row"><div class="m"><div class="t">Show venues my numbers</div>
       <div class="s">${PLAN&&PLAN.ok&&PLAN.shareStats===false?'Off — venues see nothing from your shows':'People and votes for shows at their venue'}</div></div>
       <div class="tog">
-        <button class="${!PLAN||PLAN.shareStats!==false?'on':''}" onclick="setShare(true)">On</button>
-        <button class="${PLAN&&PLAN.shareStats===false?'on':''}" onclick="setShare(false)">Off</button></div></div>
+        <button class="${!PLAN||PLAN.shareStats!==false?'on':''}" ${ON.click('setShare',true)}>On</button>
+        <button class="${PLAN&&PLAN.shareStats===false?'on':''}" ${ON.click('setShare',false)}>Off</button></div></div>
 
     </div>
 
     <div data-see="settings">
     <div class="sec"><span class="kick">Codes to print</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to bring it up full size, then screenshot or print it.${SAMPLE?'':` Or <button type="button" onclick="printSign()" style="border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--accent);cursor:pointer">print the big sign and 25–50 table cards</button> in one go.`}</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to bring it up full size, then screenshot or print it.${SAMPLE?'':` Or <button type="button" data-on-click="printSign" style="border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--accent);cursor:pointer">print the big sign and 25–50 table cards</button> in one go.`}</p>
     ${SAMPLE?`<div class="list"><div class="row muted">Your codes are made the moment the page is yours: claim it and they appear here, ready to print.</div></div>`
     :(TEAM&&TEAM.slug)?`<div class="qrs">
       ${QRS.map(([k,t,d])=>`
@@ -3042,7 +3111,7 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Share this and they land on a signup that knows you sent them. When someone you invited goes paid, you get a month of Bar Star on us — while you're on Hobbyist.${TEAM&&TEAM.invited?` <b>${TEAM.invited} so far.</b>`:''}</p>
     <div class="field"><div style="display:flex;gap:8px">
       <input class="inp" id="refLink" readonly value="myset.vip/signup?ref=${esc((TEAM&&TEAM.slug)||'')}" style="flex:1">
-      <button class="act pri" style="min-width:64px" onclick="copyRef()">Copy</button></div></div>
+      <button class="act pri" style="min-width:64px" data-on-click="copyRef">Copy</button></div></div>
     ${TEAM&&TEAM.invitedNames&&TEAM.invitedNames.length?`<div class="list">${TEAM.invitedNames.map(n=>`<div class="row"><div class="m"><div class="t">${esc(n)}</div></div></div>`).join('')}</div>`:''}
     </div>
 
@@ -3068,7 +3137,7 @@ function render(){
           'Your plan has '+PLAN.limits.seats+' sign-in'+(PLAN.limits.seats===1?'':'s')+'. Rock Star has '+(((PLAN.plans||{}).pro||{}).seats||5)+'.')
       : `<div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
           <input class="inp" id="teamEmail" type="email" inputmode="email" placeholder="you@email.com" style="flex:1">
-          <button class="act pri" style="min-width:64px" onclick="addTeam()">Add</button></div></div>`}
+          <button class="act pri" style="min-width:64px" data-on-click="addTeam">Add</button></div></div>`}
     </div>
 
     ${/* SIGNING IN. Perry asked: "do we have a forgot password? button and process
@@ -3080,24 +3149,24 @@ function render(){
     <div class="list">
       ${PLAN&&PLAN.email?`<div class="row"><div class="m"><div class="t">Password${TEAM&&TEAM.ok?(myPw()?' \u00b7 set':' \u00b7 not set'):''}</div>
         <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
-        <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>`
+        <button class="act" data-on-click="openPasswordSheet">${myPw()?'Change':'Create'}</button></div>`
       :codeAddrs().length?`<div class="row"><div class="m"><div class="t">Password${codeAddrs().some(x=>x.pw)?' \u00b7 set':' \u00b7 not set'}</div>
         <div class="s">You\u2019re in with the Studio code. Set a password for ${codeAddrs().length===1?esc(codeAddrs()[0].email):'one of the addresses on this account'} and you can sign in with your email and password.</div></div>
-        <button class="act" onclick="openPasswordSheet()">${codeAddrs().some(x=>x.pw)?'Change':'Create'}</button></div>`
+        <button class="act" data-on-click="openPasswordSheet">${codeAddrs().some(x=>x.pw)?'Change':'Create'}</button></div>`
       :`<div class="row"><div class="m"><div class="t">Password</div>
         <div class="s">This sign-in has no email on it. Sign in with your email to set a password for it.</div></div></div>`}
       ${PKSUPPORTED?`<div class="row" data-ed="owner"><div class="m"><div class="t">Face ID or fingerprint${PKEYS?(PKEYS.length?' \u00b7 '+PKEYS.length+' device'+(PKEYS.length===1?'':'s'):' \u00b7 not set up'):''}</div>
         <div class="s">Sign in with a look instead of a code from your email. The key stays on the phone; MySet only keeps the half that can check it. Your code still works if you lose the phone.</div></div>
-        <button class="act" onclick="addPasskey()">${PKEYS&&PKEYS.length?'Add another':'Set it up'}</button></div>
+        <button class="act" data-on-click="addPasskey">${PKEYS&&PKEYS.length?'Add another':'Set it up'}</button></div>
       ${(PKEYS||[]).map(k=>`<div class="row" data-ed="owner"><div class="m"><div class="t">${esc(k.label)}</div>
         <div class="s">Added ${daystamp(k.at)}${k.lastAt?' \u00b7 last used '+daystamp(k.lastAt):' \u00b7 not used yet'}</div></div>
-        <button class="act" onclick="dropPasskey('${esc(k.id)}')">Remove</button></div>`).join('')}`:''}
+        <button class="act" ${ON.click('dropPasskey',String(k.id))}>Remove</button></div>`).join('')}`:''}
       <div class="row" data-ed="owner"><div class="m"><div class="t">Studio code${TEAM&&TEAM.ok?(TEAM.codeSet?' \u00b7 on':' \u00b7 not set'):''}</div>
         <div class="s">A code for this page, so you can get in from any phone even when email is slow. At least 8 characters, and not your page name.</div></div>
-        <button class="act" onclick="openCodeSheet()">${TEAM&&TEAM.codeSet?'Change':'Set one'}</button></div>
+        <button class="act" data-on-click="openCodeSheet">${TEAM&&TEAM.codeSet?'Change':'Set one'}</button></div>
       <div class="row" data-ed="owner"><div class="m"><div class="t">Recovery codes${REC?(REC.made?' \u00b7 '+REC.left+' of '+REC.of+' unused':' \u00b7 not set up yet'):''}</div>
         <div class="s">Eight one-time codes for the day you can\u2019t get into your email. Keep them somewhere that isn\u2019t your phone.</div></div>
-        <button class="act" onclick="makeRecovery()">${REC&&REC.made?'New codes':'Make codes'}</button></div>
+        <button class="act" data-on-click="makeRecovery">${REC&&REC.made?'New codes':'Make codes'}</button></div>
     </div>
 
     ${/* IF SOMETHING LOOKS WRONG.
@@ -3110,34 +3179,34 @@ function render(){
     <div class="sec"><span class="kick">Your account</span></div>
     <div class="list">
       <div class="row"><div class="m"><div class="t">${esc((PLAN&&PLAN.email)||'Signed in with the Studio code')}</div><div class="s">${PLAN&&PLAN.email?'Sign-in address':'No email on this sign-in'}${TEAM&&TEAM.emails&&ownerSeat()?` · ${TEAM.emails.length} sign-in${TEAM.emails.length===1?'':'s'} on this page`:''}</div></div>
-        ${PLAN&&PLAN.email?`<button class="act" data-ed="owner" onclick="openEmailChange()">Change</button>`:''}</div>
+        ${PLAN&&PLAN.email?`<button class="act" data-ed="owner" data-on-click="openEmailChange">Change</button>`:''}</div>
       <div class="row"><div class="m"><div class="t">Where you’re signed in</div>
         <div class="s">${SESS&&SESS.ok?(SESS.list.length+' device'+(SESS.list.length===1?'':'s')):'Every phone and laptop with a live sign-in.'}</div></div>
-        <button class="act" onclick="openSessions()">See them</button></div>
+        <button class="act" data-on-click="openSessions">See them</button></div>
       <div class="row" data-ed="owner"><div class="m"><div class="t">Download my data</div><div class="s">Everything MySet holds about you, as one file. Never a fan’s device.</div></div>
-        <button class="act" onclick="exportAccount()">Download</button></div>
+        <button class="act" data-on-click="exportAccount">Download</button></div>
       ${PLAN&&PLAN.billing&&PLAN.billing.portal?`<div class="row"><div class="m"><div class="t">Invoices and receipts</div><div class="s">Every payment you’ve made to MySet.</div></div>
-        <button class="act" onclick="openInvoices()">Open</button></div>`:''}
+        <button class="act" data-on-click="openInvoices">Open</button></div>`:''}
     </div>
     ${/* Perry asked for logout at the bottom, just above delete. There used to be two
           sign-out buttons scattered up the page, and neither of them told the
           server — so the token stayed valid for the rest of its month. */''}
     <div class="wrap" style="margin-top:14px">
-      <button class="big alt" onclick="signOut()">Sign out of this device</button>
+      <button class="big alt" data-on-click="signOut">Sign out of this device</button>
       <p class="muted" data-ed="owner" style="font-size:12.5px;margin:10px 0 0;text-align:center">
-        <a href="#" onclick="event.preventDefault();signOutEverywhere()" style="color:var(--accent);font-weight:600">Sign out everywhere, including this one</a></p>
+        <a href="#" ${ON.click(['prevent'],['signOutEverywhere'])} style="color:var(--accent);font-weight:600">Sign out everywhere, including this one</a></p>
       <p class="muted" id="bootStat" style="font-size:12px;margin:10px 0 0;text-align:center;opacity:.7">${bootStat()}</p>
     </div>
     <div class="list" data-ed="owner" style="margin-top:14px">
       <div class="row"><div class="m"><div class="t">Delete my account</div><div class="s">Your page goes offline today. We keep everything for 30 days, then it’s gone.</div></div>
-        <button class="act warn" onclick="deleteAccount()">Delete</button></div>
+        <button class="act warn" data-on-click="deleteAccount">Delete</button></div>
     </div>
 
     <div class="sec"><span class="kick">If something looks wrong</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Pull down anywhere to refresh. If that isn't enough, these are the bigger hammers — neither one touches your songs, your votes or your money.</p>
     <div class="wrap">
-      <button class="big alt" onclick="location.reload()">↻ Reload the Studio</button>
-      <div style="margin-top:10px"><button class="big alt" onclick="hardReset()">Clear what's stored on this phone</button></div>
+      <button class="big alt" data-on-click="reloadPage">↻ Reload the Studio</button>
+      <div style="margin-top:10px"><button class="big alt" data-on-click="hardReset">Clear what's stored on this phone</button></div>
       <p class="muted" style="font-size:12px;margin:10px 0 0">The second one throws away the offline copy and starts the app fresh. You stay signed in.</p>
     </div>`;
   }
@@ -3154,11 +3223,11 @@ function render(){
         ? `<a class="whoami" href="/${esc(s.slug)}"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
         : `<h1>${esc(s.artist)}</h1>`}
     </div>
-    <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
-    ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
+    <div class="headactions"><button class="tipsbtn" type="button" data-on-click="showTips" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
+    ${SAMPLE?`<button class="claimbtn" data-on-click="openClaim">Claim profile</button>`
     :PLAN&&PLAN.ok?(!see('plans')?'':PLAN.plan==='free'
       ?freeTag(s)
-      :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
+      :`<button class="plantag" data-on-click="openPlans">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
   </div>
   ${leavingBar()}${cardTrouble(s)}${viewNote(TABAREA[TAB])}${body}
   ${TAB==='setlist'?'':`<div class="wrap" style="padding-top:26px;padding-bottom:8px">
@@ -3217,9 +3286,9 @@ function tabBar(){
   const on=t=>t==='menu'?(TAB==='profile'||TAB==='merch'||TAB==='diary'||TAB==='settings'||TAB==='messages'):TAB===t;
   // the Menu tab wears a small pink-orange dot while a message waits (0074)
   return `<nav class="tabbar" aria-label="Studio"><div class="in">
-    <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')" aria-current="${TAB==='live'?'page':'false'}">${TABICON.live}Live</button>
+    <button data-tab-live class="${TAB==='live'?'on':''}" ${ON.click('setTab','live')} aria-current="${TAB==='live'?'page':'false'}">${TABICON.live}Live</button>
     ${[['setlist','Setlist'],['gigs','Gigs'],['money','Money'],['menu','Menu']].filter(([t])=>!TABAREA[t]||see(TABAREA[t])).map(([t,l])=>
-      `<button class="${on(t)?'on':''}"${t==='menu'?' data-tab-menu':''} onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}${t==='menu'&&MSGN.unread>0?'<i class="tabdot"></i>':''}</button>`).join('')}
+      `<button class="${on(t)?'on':''}"${t==='menu'?' data-tab-menu':''} ${t==='menu'?ON.click('openMenu'):ON.click('setTab',String(t))} aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}${t==='menu'&&MSGN.unread>0?'<i class="tabdot"></i>':''}</button>`).join('')}
   </div></nav>`;
 }
 function openMenu(){
@@ -3227,25 +3296,25 @@ function openMenu(){
   const planLine=PLAN&&PLAN.ok?(PLAN.plan==='free'?'Hobbyist plan · see the plans':esc((PLAN.limits&&PLAN.limits.label)||PLAN.plan)+' · manage'):'Plans';
   msgPeek();   // the count on the row is the freshest it can be without a timer
   openSheet(`<h3>Menu</h3>
-    <button class="menurow" data-see="profile" onclick="closeSheet();setTab('profile')">
+    <button class="menurow" data-see="profile" ${ON.click(['closeSheet'],['setTab','profile'])}>
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
       <div class="m">Profile<span>Manage your profile page</span></div><span class="chev">›</span></button>
-    <button class="menurow" data-see="merch" onclick="closeSheet();setTab('merch')">
+    <button class="menurow" data-see="merch" ${ON.click(['closeSheet'],['setTab','merch'])}>
       <svg viewBox="0 0 24 24"><path d="M3.5 4.5h7.5l9.5 9.5-6.5 6.5L3.5 11z"/><circle cx="7.6" cy="8.6" r="1.4"/></svg>
       <div class="m">Merch store<span>Items, sizes, prices and orders</span></div><span class="chev">›</span></button>
-    <button class="menurow" data-see="diary" onclick="closeSheet();setTab('diary')">
+    <button class="menurow" data-see="diary" ${ON.click(['closeSheet'],['setTab','diary'])}>
       <svg viewBox="0 0 24 24"><path d="M12 7.5v12M12 7.5c-1.4-1.6-3.6-2-7-2v12c3.4 0 5.6.4 7 2M12 7.5c1.4-1.6 3.6-2 7-2v12c-3.4 0-5.6.4-7 2"/></svg>
       <div class="m">Diary<span>The stories behind your songs</span></div><span class="chev">›</span></button>
-    ${msgAllowed()?`<button class="menurow" data-menu="messages" onclick="closeSheet();setTab('messages')">
+    ${msgAllowed()?`<button class="menurow" data-menu="messages" ${ON.click(['closeSheet'],['setTab','messages'])}>
       <svg viewBox="0 0 24 24"><path d="M3.5 7a2.5 2.5 0 0 1 2.5-2.5h12A2.5 2.5 0 0 1 20.5 7v7.5a2.5 2.5 0 0 1-2.5 2.5h-7.2L7 20.5V17H6a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
       <div class="m">Messages<span>Booking requests and replies</span></div>${MSGN.unread>0?`<b class="bub">${MSGN.unread}</b>`:''}<span class="chev">›</span></button>`:''}
-    <button class="menurow" onclick="closeSheet();setTab('settings')">
+    <button class="menurow" ${ON.click(['closeSheet'],['setTab','settings'])}>
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.54h.08A1.7 1.7 0 0 0 10.1 3V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
       <div class="m">Settings<span>${ownerSeat()?'Prices, votes, codes, who can sign in':see('settings')?'Prices, votes, your sign-in':'Your sign-in and your devices'}</span></div><span class="chev">›</span></button>
-    <button class="menurow" data-see="plans" onclick="closeSheet();openPlans()">
+    <button class="menurow" data-see="plans" ${ON.click(['closeSheet'],['openPlans'])}>
       <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
       <div class="m">Your plan<span>${planLine}</span></div><span class="chev">›</span></button>
-    <button class="menurow out" onclick="closeSheet();signOut()">
+    <button class="menurow out" ${ON.click(['closeSheet'],['signOut'])}>
       <svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>
       <div class="m">Sign out<span>Of this device</span></div></button>`);
 }
@@ -3300,17 +3369,17 @@ function drawFirstRun(){
 function frStep(n){
   const s=(D&&D.show)||{};
   const bar=`<div class="bar">${[1,2,3,4].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div><span class="k">Step ${n} of 4</span>`;
-  const skip=`<button class="btn-text" onclick="frNext()">Skip for now</button>`;
+  const skip=`<button class="btn-text" data-on-click="frNext">Skip for now</button>`;
   let h='';
   if(n===1) h=`<h2>What’s your page called?</h2>
     <p>The name on your page. Change it any time in Profile.</p>
-    <input class="inp" id="frName" maxlength="60" placeholder="Your name, or the band’s" value="${esc((PROF&&PROF.name)||s.artist||'')}" onkeydown="if(event.key==='Enter')frName()">
-    <button class="btn-pri btn-block" onclick="frName()">Next</button>${skip}`;
+    <input class="inp" id="frName" maxlength="60" placeholder="Your name, or the band’s" value="${esc((PROF&&PROF.name)||s.artist||'')}" data-on-keydown="frNameEnter">
+    <button class="btn-pri btn-block" data-on-click="frName">Next</button>${skip}`;
   if(n===2) h=`<h2>Paste your songs</h2>
     <p>One per line — <b>Title, Artist</b> or <b>Title — Artist</b>. You can add more, and organise them into setlists, on the Setlist tab.</p>
-    <textarea class="inp" id="frSongs" rows="7" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
+    <textarea class="inp" id="frSongs" rows="7" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" data-on-input="impParseEl"></textarea>
     <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
-    <button class="btn-pri btn-block" id="impGo" onclick="frImport()" disabled>Import these</button>${skip}`;
+    <button class="btn-pri btn-block" id="impGo" data-on-click="frImport" disabled>Import these</button>${skip}`;
   if(n===3){ const on=!!(PAY&&(PAY.ready||PAY.chargesEnabled));
     /* Three honest states, the same three the Money tab's card knows: on; started
        on Stripe but not finished (back from an abandoned onboarding — the account
@@ -3319,18 +3388,18 @@ function frStep(n){
        Money tab's underneath. */
     h=on
     ? `<h2>Card payments are on ✓</h2><p>Tips and extra votes go through Stripe, straight to you.</p>
-       <button class="btn-pri btn-block" onclick="frNext()">Next</button>`
+       <button class="btn-pri btn-block" data-on-click="frNext">Next</button>`
     : PAY&&PAY.started
     ? `<h2>Stripe still needs a few details</h2>
        <p>You started this but Stripe hasn’t finished checking yet. Tips and extra votes stay off in your room until it has — so nothing can land in the wrong account.</p>
-       <button class="btn-pri btn-block" onclick="frSet('4');payStart()">Finish with Stripe</button>
-       <button class="btn-text" onclick="frNext()">Later</button>`
+       <button class="btn-pri btn-block" ${ON.click(['frSet','4'],['payStart'])}>Finish with Stripe</button>
+       <button class="btn-text" data-on-click="frNext">Later</button>`
     : `<h2>Take tips and paid votes</h2>
        <p>Stripe pays you out directly and takes a few minutes to set up. It can wait — the Money tab has the same button.</p>
        <div class="field" style="padding:0 0 4px"><label>Where’s your bank account?</label>
          <select class="inp" id="frCountry">${payCountries()}</select></div>
-       <button class="btn-pri btn-block" onclick="frSet('4');payStart()">Start with Stripe</button>
-       <button class="btn-text" onclick="frNext()">Later</button>`; }
+       <button class="btn-pri btn-block" ${ON.click(['frSet','4'],['payStart'])}>Start with Stripe</button>
+       <button class="btn-text" data-on-click="frNext">Later</button>`; }
   /* THE SIGN is the last step, and printing it finishes the setup: the one thing
      a first gig needs is this on every table. "Done" is still there for the artist
      who will print at the venue. */
@@ -3338,13 +3407,13 @@ function frStep(n){
     <p>One big one for the door, and 25–50 small ones for the tables and the bar: the print has both. They scan it, they vote, you play.</p>
     ${TEAM&&TEAM.slug?`<div class="qrwrap"><img src="${qrSrc('profile',6)}" alt="Your QR code"></div>
       <p style="text-align:center;margin-top:-6px">myset.vip/${esc(TEAM.slug)}</p>
-      <button class="btn-pri btn-block" onclick="printSign()">Print my QR codes</button>
-      <button class="btn-text" onclick="sendSign()">Send it to my phone</button>`
+      <button class="btn-pri btn-block" data-on-click="printSign">Print my QR codes</button>
+      <button class="btn-text" data-on-click="sendSign">Send it to my phone</button>`
       :TEAM
-      ?`<p class="muted">Couldn’t load your code — <button class="lnk" onclick="frCodes()">open Settings</button>, it’s under Codes to print.</p>
-        <button class="btn-text" onclick="frRetryCode(this)">Try again</button>`
+      ?`<p class="muted">Couldn’t load your code — <button class="lnk" data-on-click="frCodes">open Settings</button>, it’s under Codes to print.</p>
+        <button class="btn-text" data-on-click="frRetryCodeEl">Try again</button>`
       :`<p class="muted">Loading your code…</p>`}
-    <button class="btn-text" onclick="frDone()">Done</button>`;
+    <button class="btn-text" data-on-click="frDone">Done</button>`;
   return `<div class="fr">${bar}${h}</div>`;
 }
 function frNext(){ FR.step=Math.min(4,FR.step+1); frSet(String(FR.step)); drawFirstRun(); }
@@ -3415,7 +3484,7 @@ function owedPanel(){
     <div class="ah"><b>Votes still owed back</b><span>The refund didn’t finish</span></div>
     ${owed.map(o=>`<div class="arow"><div class="m"><div class="t">${esc(o.title||(o.ask?'A declined request':'A declined song'))}</div>
       <div class="s">${o.ask?'Declined request · its votes haven’t gone back to the fan yet':'Declined · its votes haven’t all gone back to the room yet'}</div></div>
-      <button class="act pri" onclick="act(${o.ask?`'askDecline',{id:'${esc(o.id)}'}`:`'declineSong',{song:'${esc(o.id)}'}`})">Finish the refund</button></div>`).join('')}</div>`;
+      <button class="act pri" ${o.ask?ON.click('act','askDecline',{id:String(o.id)}):ON.click('act','declineSong',{song:String(o.id)})}>Finish the refund</button></div>`).join('')}</div>`;
 }
 function asksPanel(){
   const all=(D&&D.asks)||[];
@@ -3471,7 +3540,7 @@ function openSheet(h,kind=''){
   const sh=$('#sheet');
   sh.className='sheet'+(kind?' '+kind:'');
   sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
-    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+    <button class="sheetx" data-on-click="closeSheet" aria-label="Close">✕</button></div>${h}`;
   seatPass(sh);
   sh.style.transform=''; sh.scrollTop=0;
   $('#bg').classList.add('on'); sh.classList.add('on');
@@ -3490,7 +3559,7 @@ function maybeVerifyIntro(){
     openSheet(`<h3>verify your account now</h3>
       <p class="verify-lede">only verified profiles will show up in search results!</p>
       <p class="verify-note">(this is to minimize fraudulent use and ensure the best experience for MySet audiences)</p>
-      <button class="big" onclick="startVerification()">Get verified</button>`,'verify-intro');
+      <button class="big" data-on-click="startVerification">Get verified</button>`,'verify-intro');
   },0);
 }
 function startVerification(){closeSheet();scrollTo({top:0,behavior:'smooth'});}
@@ -3935,16 +4004,16 @@ function qrBig(k){
   if(k!=='home'&&!(TEAM&&TEAM.slug)){ toast('Still loading your page address'); return; }
   const el=$('#qrbig');
   const copy=qrCopy(k);
-  el.innerHTML=`<div onclick="event.stopPropagation()">
+  el.innerHTML=`<div data-on-click="stop">
     <div class="qrpaper">
       <img src="${qrSrc(k,10)}" alt="${esc(row[1])} QR code">
       <div class="cap">${esc(copy.head)}</div><div class="cap2">${esc(copy.line)}</div>
       <div class="sub">${esc(copy.url)}</div>
     </div>
     <div class="qracts">
-      <button onclick="qrDownload('${k}')">Download</button>
-      ${k==='profile'?'<button onclick="qrHide();printSign()">Print</button>':''}
-      <button onclick="qrHide()">Done</button>
+      <button ${ON.click('qrDownload',String(k))}>Download</button>
+      ${k==='profile'?'<button '+ON.click(['qrHide'],['printSign'])+'>Print</button>':''}
+      <button data-on-click="qrHide">Done</button>
     </div>
   </div>`;
   el.classList.add('on');
@@ -3972,9 +4041,9 @@ function openEndShow(){
   const today=new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
   openSheet(`<h3>Save this show</h3><p class="lede">Give the night a title for your records, or leave the suggested title as-is.</p>
     <input class="inp" id="endShowTitle" maxlength="100" value="Untitled show – ${esc(today)}" aria-label="Show title">
-    <button class="big" style="margin-top:16px" onclick="saveEndedShow()">Save + end show</button>
-    <button class="big alt" style="color:var(--accent)" onclick="discardEndedShow()">Discard + end show</button>
-    <button class="big alt" onclick="closeSheet()">Keep show running</button>`);
+    <button class="big" style="margin-top:16px" data-on-click="saveEndedShow">Save + end show</button>
+    <button class="big alt" style="color:var(--accent)" data-on-click="discardEndedShow">Discard + end show</button>
+    <button class="big alt" data-on-click="closeSheet">Keep show running</button>`);
 }
 async function saveEndedShow(){
   const title=((($('#endShowTitle')||{}).value)||'').trim();
@@ -4040,7 +4109,7 @@ async function warmLyrics(){
     openSheet(`<h3>${d.fetched} of ${d.total} found</h3>
       <p class="lede">No lyrics online for these. Open each in the Setlist tab and paste them, or leave them — the button just won’t show.</p>
       <div class="list">${d.missing.map(t=>`<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
-      <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
+      <button class="big" style="margin-top:14px" data-on-click="closeSheet">Got it</button>`);
 }
 /* ---------- bulk import: CSV file or pasted text ----------
    Parsing happens HERE so the artist sees exactly what will be added before
@@ -4051,10 +4120,10 @@ function openImport(){
   IMP=[];
   openSheet(`<h3>Import songs</h3>
     <p class="lede">A CSV file or pasted list. One song per line — <b>Title, Artist</b> or <b>Title — Artist</b>. A header row is fine.</p>
-    <label class="bigfile"><input type="file" id="impFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="impFile(this)">⇪ Choose a CSV or text file</label>
-    <textarea class="inp" id="impText" rows="5" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
+    <label class="bigfile"><input type="file" id="impFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" data-on-change="impFileEl">⇪ Choose a CSV or text file</label>
+    <textarea class="inp" id="impText" rows="5" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" data-on-input="impParseEl"></textarea>
     <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
-    <button class="go" id="impGo" onclick="impSend()" disabled>Import</button>`);
+    <button class="go" id="impGo" data-on-click="impSend" disabled>Import</button>`);
 }
 function impParse(text){
   const rows=[];
@@ -4171,17 +4240,17 @@ async function drawPush(){
     'Chrome on Android, or the Studio added to your home screen on iPhone.'));
   if(!st.can&&st.why==='no-worker') return paint(row('Couldn’t start alerts here',
     'Reload the page and try again. If it keeps happening, this browser is blocking background workers.',
-    `<button class="act" onclick="PUSHKEY=null;drawPush()">Retry</button>`));
+    `<button class="act" data-on-click="pushKeyReset">Retry</button>`));
   if(!st.can&&st.why==='ios-not-installed') return paint(
     row('Add the Studio to your home screen first','On iPhone, alerts only work once it’s installed.',
-      `<button class="act" onclick="openStudioInstall()">How</button>`));
+      `<button class="act" data-on-click="openStudioInstall">How</button>`));
   if(st.denied) return paint(row('Alerts are blocked',
     'Your phone is blocking them. Turn them back on in Settings → Notifications → MySet.'));
 
   paint(row(st.on?'Alerts are on':'Get alerts on your phone',
     st.on?`You'll be told when ${pushWhat()}, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
          :`Know the moment ${pushWhat()} — no need to watch the screen.`,
-    `<button class="act${st.on?'':' '}" onclick="togglePush(${st.on?'false':'true'})">${st.on?'Turn off':'Turn on'}</button>`));
+    `<button class="act${st.on?'':' '}" ${ON.click('togglePush',(st.on?false:true))}>${st.on?'Turn off':'Turn on'}</button>`));
 }
 
 /* What this seat's phone will hear (decision 0114): a request is every seat's, a
@@ -4232,7 +4301,7 @@ function openStudioInstall(){
     <p class="muted" style="font-size:12px;padding:12px 4px 0">${ios
       ? 'It has to be <b>Safari</b> — Chrome on iPhone can’t add to the home screen.'
       : 'The wording moves around between Android versions.'}</p>
-    <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
+    <button class="big" style="margin-top:14px" data-on-click="closeSheet">Got it</button>`);
 }
 
 
@@ -4273,17 +4342,17 @@ function merchSection(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Sells from your shop page. Fans pay you directly through Stripe — MySet takes your plan’s cut on the price, Stripe takes its fee from your side. An item with a link sells wherever that link goes instead.</p>
     ${!D.paymentsEnabled?`<div class="row muted">Fans can’t pay by card until Stripe is set up on the <b>Money</b> tab — items with a link still sell, and everything shows.</div>`:''}
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">The order here is the order on the shop — the first item is the one on top of the card on your community page.</p>
-    <div class="list">${MERCH===null?(MERCHERR?`<div class="row muted" onclick="retryMerch()" style="cursor:pointer"><div class="m"><div class="t">${esc(MERCHERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):items.map((m,i)=>`<div class="row"${m.on===false||m.out||m.stock===0?' style="opacity:.6"':''} style="flex-wrap:wrap">
+    <div class="list">${MERCH===null?(MERCHERR?`<div class="row muted" data-on-click="retryMerch" style="cursor:pointer"><div class="m"><div class="t">${esc(MERCHERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):items.map((m,i)=>`<div class="row"${m.on===false||m.out||m.stock===0?' style="opacity:.6"':''} style="flex-wrap:wrap">
         <div style="display:flex;align-items:center;flex:1 1 100%;min-width:0">
         <div class="slotmini" style="background-image:url('${esc(m.img||'')}')">${m.img?'':'＋'}</div>
         <div class="m"><div class="t">${esc(m.title)}</div>
           <div class="s">${m.cents?money(m.cents):'No price'} · ${m.ship==='ship'?'Shipped'+(m.post>0?' +'+money(m.post):''):'Pickup at the show'}${m.link?' · link':''}${(m.imgs||[]).length>1?' · '+m.imgs.length+' photos':''}${m.stock!=null&&!m.out?(m.stock===0?' · <b style="color:var(--accent)">Sold out</b>':' · '+m.stock+' left'):''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${sizes(m)}</div></div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%" data-ed="merch">
-        <button class="act" onclick="merchMoveItem('${esc(m.id)}','up')" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
-        <button class="act" onclick="merchMoveItem('${esc(m.id)}','down')" ${i===items.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
-        <button class="act" onclick="openMerch('${esc(m.id)}')">Edit</button>
-        <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
-    <div class="wrap" style="margin-top:14px" data-ed="merch"><button class="big alt" onclick="openMerch('')">+ Add an item</button></div>`;
+        <button class="act" ${ON.click('merchMoveItem',String(m.id),'up')} ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
+        <button class="act" ${ON.click('merchMoveItem',String(m.id),'down')} ${i===items.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
+        <button class="act" ${ON.click('openMerch',String(m.id))}>Edit</button>
+        <button class="act warn" ${ON.click('rmMerch',String(m.id))}>✕</button></div></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
+    <div class="wrap" style="margin-top:14px" data-ed="merch"><button class="big alt" ${ON.click('openMerch','')}>+ Add an item</button></div>`;
   return `${SAMPLE?'':`<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${shopHref}" style="justify-content:center">See your shop ↗</a></div>`}
     ${lock('merch', list, why)}
     ${ordersSection()}
@@ -4300,7 +4369,7 @@ function wishesSection(){
     <div class="list">${WISHES===null?'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>':w.slice(0,60).map(x=>`<div class="row ${x.done?'muted':''}">
       <div class="m"><div class="t" style="white-space:normal">${esc(x.text)}</div>
         <div class="s">${x.name?esc(x.name)+' · ':''}${x.itemTitle?'about '+esc(x.itemTitle)+' · ':''}${when(x.at)}${x.done?' · Done':''}</div></div>
-      <button class="act ${x.done?'':'pri'}" data-ed="merch" onclick="wishDone('${esc(x.id)}',${x.done?'false':'true'})">${x.done?'Undo':'Done'}</button></div>`).join('')
+      <button class="act ${x.done?'':'pri'}" data-ed="merch" ${ON.click('wishDone',String(x.id),(x.done?false:true))}>${x.done?'Undo':'Done'}</button></div>`).join('')
       ||'<div class="row muted">Nothing asked for yet. Requests land here the moment a fan sends one.</div>'}</div>`;
 }
 async function wishDone(id,done){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'wishDone',id,done})}); if(d&&d.ok){WISHES=d.wishes;render();} }
@@ -4391,8 +4460,8 @@ function nudge(){
   NUDGED=true;
   openSheet(`<h3>Waiting for you</h3>${rows.map(([k,line,btn,tab])=>`<div class="nudge">
       <p class="nudge-line">${line}</p>
-      <button class="big" type="button" onclick="closeSheet();${tab==='merch'?'goOrders()':`setTab('${tab}')`}">${btn}</button>
-      <label class="nudge-skip"><input type="checkbox" onchange="nudgeSnooze('${k}',this.checked)"> Do not remind me again for 24 hours</label>
+      <button class="big" type="button" ${tab==='merch'?ON.click(['closeSheet'],['goOrders']):ON.click(['closeSheet'],['setTab',String(tab)])}>${btn}</button>
+      <label class="nudge-skip"><input type="checkbox" ${ON.on('change','nudgeSnoozeEl',String(k))}> Do not remind me again for 24 hours</label>
     </div>`).join('')}`,'nudges');
 }
 async function loadMsgs(force){
@@ -4573,12 +4642,12 @@ function earningsCard(){
     <div class="cnt mono">${m$(m.net)}</div></div>`).join('')}</div>`
    :`<div class="list"><div class="row muted">No payments in the last twelve months.</div></div>`}
   <div class="wrap" style="margin-top:12px">
-    <button class="big alt" onclick="downloadLedger()">Download it as a spreadsheet</button>
+    <button class="big alt" data-on-click="downloadLedger">Download it as a spreadsheet</button>
     <p class="muted" style="font-size:12px;margin:8px 0 0">Every figure comes straight from Stripe — the same numbers your bank sees. “Yours” is after both fees. Hand the file to whoever does your tax.${PLAN&&PLAN.owner?' <b>Your gigs only</b> — subscriptions other artists pay MySet are kept out of this and live in the books below.':''}</p>
-    <button class="act" style="margin-top:10px" onclick="loadLedger(true)">↺ Check again</button>
+    <button class="act" style="margin-top:10px" ${ON.click('loadLedger',true)}>↺ Check again</button>
   </div>
   ${revDonut(REV)}
-  <div class="wrap" style="margin-top:12px"><button class="btn-grey btn-block" onclick="openEarnTips()">Quick tips for earning more</button></div>`;
+  <div class="wrap" style="margin-top:12px"><button class="btn-grey btn-block" data-on-click="openEarnTips">Quick tips for earning more</button></div>`;
 }
 
 /* Twelve bars, oldest on the left. Padded to twelve from the newest key the ledger
@@ -4651,7 +4720,7 @@ function openEarnTips(){
   openSheet(`<h3>Earn more tonight</h3>
     <p class="lede">Nine things that cost nothing and move the number on this tab.</p>
     <ul class="earnlist">${tips.map(t=>`<li><b>${t[0]}</b>${t[1]}</li>`).join('')}</ul>
-    <button class="big alt" style="margin-top:8px" onclick="closeSheet();setTab('settings')">Codes to print</button>`);
+    <button class="big alt" style="margin-top:8px" ${ON.click(['closeSheet'],['setTab','settings'])}>Codes to print</button>`);
 }
 
 async function downloadLedger(){
@@ -4692,8 +4761,8 @@ function booksCard(){
     <button class="act" data-act="bookmonth" data-id="${m.month}">Costs</button></div>`).join('')}${foldMore(rows,'books')}</div>
   <div class="wrap" style="margin-top:12px">
     <p class="muted" style="font-size:12px;margin:0 0 10px">“Came in” is subscriptions plus MySet’s cut of what fans paid artists, after Stripe’s own fee — read from Stripe’s balance, so it is what actually landed. “Went out” is what you type in below, because nothing can read your Netlify bill for you.</p>
-    <button class="big alt" onclick="booksCsv()">Download the books</button>
-    <button class="act" style="margin-top:10px" onclick="loadBooks(true)">↺ Check again</button>
+    <button class="big alt" data-on-click="booksCsv">Download the books</button>
+    <button class="act" style="margin-top:10px" ${ON.click('loadBooks',true)}>↺ Check again</button>
   </div>`;
 }
 
@@ -4717,8 +4786,8 @@ function costSheet(month){
     ${Object.keys(KIND).map(k=>`<div class="field"><label>${KIND[k]}</label>
       <input class="inp" id="ck_${k}" inputmode="decimal" placeholder="0.00"
         value="${(m.costs&&m.costs[k])?((m.costs[k].cents/100).toFixed(2)):''}"></div>`).join('')}
-    <button class="big" style="margin-top:14px" onclick="saveCosts('${month}')">Save</button>
-    <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Cancel</button>`);
+    <button class="big" style="margin-top:14px" ${ON.click('saveCosts',String(month))}>Save</button>
+    <button class="big alt" style="margin-top:10px" data-on-click="closeSheet">Cancel</button>`);
 }
 async function saveCosts(month){
   const kinds=['hosting','email','domain','software','contractor','other'];
@@ -4749,8 +4818,8 @@ function ordersSection(){
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''}&nbsp;·&nbsp;$${Number(x.amount||0).toFixed(2)}</div>
           <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+money(x.post)+' shipping':''} · ${when(x.at)}${x.refunded?' · Refunded — don’t hand it over':x.short?' · Sold out before it was paid — refunding the buyer':(done?' · '+verb:'')+lossNote(x)}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
-        <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
-        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" data-ed="merch" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button>`}</div></div>`;}).join('')
+        <button class="act" ${ON.click('orderDetail',String(x.sid))}>Details</button>
+        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" data-ed="merch" ${ON.click('orderDone',String(x.sid),(done?false:true))}>${done?'Undo':verb}</button>`}</div></div>`;}).join('')
       ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
 }
 /* THE ITEM EDITOR. Sizes are typed as one comma-separated line and become
@@ -4852,19 +4921,19 @@ function openMerch(id,draft){
       <div id="mcVarQty">${mcVarQtyRows(d?mcVar.map(v=>({...v,stock:(d.vq||{})[v.label.toLowerCase()]??v.stock})):mcVar)}</div></div>
     <div class="field"><label>Or a link to where it sells (optional)</label><input class="inp" id="mcLink" value="${esc(m.link)}" placeholder="https://…"></div>
     <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Shipped asks for an address at checkout</div></div>
-      <div class="tog"><button id="mcPick" class="${m.ship!=='ship'?'on':''}" onclick="mcShip='pickup';this.classList.add('on');document.getElementById('mcPost').classList.remove('on');document.getElementById('mcPostWrap').hidden=true">Pickup</button>
-      <button id="mcPost" class="${m.ship==='ship'?'on':''}" onclick="mcShip='ship';this.classList.add('on');document.getElementById('mcPick').classList.remove('on');document.getElementById('mcPostWrap').hidden=false">Shipped</button></div></div>
+      <div class="tog"><button id="mcPick" class="${m.ship!=='ship'?'on':''}" data-on-click="mcPickup">Pickup</button>
+      <button id="mcPost" class="${m.ship==='ship'?'on':''}" data-on-click="mcShipIt">Shipped</button></div></div>
     <div class="field" id="mcPostWrap"${m.ship==='ship'?'':' hidden'}><label>Shipping per order (USD)</label><input class="inp" id="mcPostage" inputmode="decimal" value="${d?esc(d.post):(m.post?(m.post/100):'')}" placeholder="6">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${mcPostHelp()}</p></div>
     <div class="field" id="mcStockWrap"${mcVar.length?' hidden':''}><label>Quantity in stock (optional)</label><input class="inp" id="mcStock" type="number" inputmode="numeric" min="0"${MERCHLIM.maxStock?' max="'+MERCHLIM.maxStock+'"':''} value="${d?esc(d.stock):(m0.stock!=null?m0.stock:'')}" placeholder="Leave blank if you’re not counting">
       <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back. With sizes, the counts sit under each size instead.</p></div>
     <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
-      <div class="tog"><button id="mcIn" class="${m.out!==true?'on':''}" onclick="mcOut=false;this.classList.add('on');document.getElementById('mcSold').classList.remove('on')">In stock</button>
-      <button id="mcSold" class="${m.out===true?'on':''}" onclick="mcOut=true;this.classList.add('on');document.getElementById('mcIn').classList.remove('on')">Sold out</button></div></div>
+      <div class="tog"><button id="mcIn" class="${m.out!==true?'on':''}" data-on-click="mcInStock">In stock</button>
+      <button id="mcSold" class="${m.out===true?'on':''}" data-on-click="mcSoldOut">Sold out</button></div></div>
     <div class="row"><div class="m"><div class="t">On the page</div></div>
-      <div class="tog"><button id="mcOn" class="${m.on!==false?'on':''}" onclick="mcOn=true;this.classList.add('on');document.getElementById('mcOff').classList.remove('on')">On</button>
-      <button id="mcOff" class="${m.on===false?'on':''}" onclick="mcOn=false;this.classList.add('on');document.getElementById('mcOn').classList.remove('on')">Off</button></div></div>
-    <button class="big" style="margin-top:14px" id="mcSave" onclick="saveMerch('${esc(id)}')">Save</button>`);
+      <div class="tog"><button id="mcOn" class="${m.on!==false?'on':''}" data-on-click="mcShowOn">On</button>
+      <button id="mcOff" class="${m.on===false?'on':''}" data-on-click="mcShowOff">Off</button></div></div>
+    <button class="big" style="margin-top:14px" id="mcSave" ${ON.click('saveMerch',String(id))}>Save</button>`);
   setTimeout(()=>{const e=document.getElementById('mcTitle'); if(e&&!id&&!d)e.focus();},260);
   const sv=document.getElementById('mcVariants'); if(sv) sv.addEventListener('input',mcSyncSizes);   // the count fields follow the sizes as they are typed
 }
@@ -4961,17 +5030,17 @@ function diarySection(){
   const list=`<div class="sec"><span class="kick">Your pages</span><span class="kick">${pages.length}${DIARYCAP?'/'+DIARYCAP:''}</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">The stories behind your songs — how one came to be, the night it landed, a moment worth keeping. A page can point at a song from your library, and fans can read its lyrics beside the story. Your page wears a <b>Diary</b> button as soon as one page is on.</p>
     ${pages.length&&!shown?`<div class="row muted">Every page is off, so the Diary button isn’t on your page yet. Turn one on and it appears.</div>`:''}
-    <div class="list">${DIARY===null?(DIARYERR?`<div class="row muted" onclick="retryDiary()" style="cursor:pointer"><div class="m"><div class="t">${esc(DIARYERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):pages.map((p,i)=>`<div class="row"${p.on===false?' style="opacity:.6;flex-wrap:wrap"':' style="flex-wrap:wrap"'}>
+    <div class="list">${DIARY===null?(DIARYERR?`<div class="row muted" data-on-click="retryDiary" style="cursor:pointer"><div class="m"><div class="t">${esc(DIARYERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):pages.map((p,i)=>`<div class="row"${p.on===false?' style="opacity:.6;flex-wrap:wrap"':' style="flex-wrap:wrap"'}>
         <div class="m" style="flex:1 1 100%;min-width:0"><div class="t">${esc(p.title)}</div>
           <div class="s">${[p.when?esc(p.when):'',dSongOf(p)?'♪ '+esc(dSongOf(p)):'',p.on===false?'Off':''].filter(Boolean).join(' · ')||'A moment'}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%" data-ed="diary">
-        <button class="act" onclick="diaryMoveItem('${esc(p.id)}','up')" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
-        <button class="act" onclick="diaryMoveItem('${esc(p.id)}','down')" ${i===pages.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
-        <button class="act" onclick="openDiaryPage('${esc(p.id)}')">Edit</button>
-        <button class="act warn" onclick="rmDiaryPage('${esc(p.id)}')">✕</button></div></div>`).join('')||'<div class="row muted">Nothing written yet. The first page is the hardest — start with the song people always ask about.</div>'}</div>
+        <button class="act" ${ON.click('diaryMoveItem',String(p.id),'up')} ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
+        <button class="act" ${ON.click('diaryMoveItem',String(p.id),'down')} ${i===pages.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
+        <button class="act" ${ON.click('openDiaryPage',String(p.id))}>Edit</button>
+        <button class="act warn" ${ON.click('rmDiaryPage',String(p.id))}>✕</button></div></div>`).join('')||'<div class="row muted">Nothing written yet. The first page is the hardest — start with the song people always ask about.</div>'}</div>
     ${full
-      ? `<p class="muted" data-ed="diary" style="font-size:12.5px;padding:12px 20px 0"><b style="color:var(--accent)">That’s the ${DIARYCAP} pages ${esc(DIARYLIM.label||'your plan')} holds.</b> Edit one, or make room${DIARYLIM.plan!=='pro'&&ownerSeat()?' — or <a href="#" onclick="showPlans();return false" style="color:var(--accent-ink);font-weight:600">see the plans</a> for a bigger diary':''}.</p>`
-      : `<div class="wrap" style="margin-top:14px" data-ed="diary"><button class="big alt" onclick="openDiaryPage('')">+ Write a page</button></div>`}`;
+      ? `<p class="muted" data-ed="diary" style="font-size:12.5px;padding:12px 20px 0"><b style="color:var(--accent)">That’s the ${DIARYCAP} pages ${esc(DIARYLIM.label||'your plan')} holds.</b> Edit one, or make room${DIARYLIM.plan!=='pro'&&ownerSeat()?' — or <a href="#" '+ON.click(['showPlans'],['prevent'])+' style="color:var(--accent-ink);font-weight:600">see the plans</a> for a bigger diary':''}.</p>`
+      : `<div class="wrap" style="margin-top:14px" data-ed="diary"><button class="big alt" ${ON.click('openDiaryPage','')}>+ Write a page</button></div>`}`;
   return `<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${diaryHref}" style="justify-content:center">See your diary ↗</a></div>
     ${list}`;
 }
@@ -4983,7 +5052,7 @@ function openDiaryPage(id){
   DIARYON=p0.on!==false;
   const songs=[...((D&&D.songs)||[])].sort((a,b)=>String(a.title).localeCompare(String(b.title)));
   const opt=songs.map(x=>`<option value="${esc(x.id)}"${x.id===p.songId?' selected':''}>${esc(x.title)}${x.artist?' — '+esc(x.artist):''}</option>`).join('');
-  const keep=`oninput="dDraftKeep('${esc(id)}')"`;
+  const keep=`${ON.on('input','dDraftKeep',String(id))}`;
   if(id) DCOVER=null;   // a staged cover belongs to a new page only
   const cover=id?(p0.img||''):(DCOVER&&DCOVER.data||'');
   openSheet(`<h3>${id?'Edit the page':'Write a page'}</h3>
@@ -4997,9 +5066,9 @@ function openDiaryPage(id){
     <div class="field"><label>The story</label><textarea class="inp" id="dpBody" rows="10"${DIARYLIM.maxBody?' maxlength="'+DIARYLIM.maxBody+'"':''} placeholder="Where it came from, who was in the room, what it took. A blank line starts a new paragraph." ${keep}>${esc(p.body)}</textarea>
       <p class="muted" style="font-size:12px;margin:7px 0 0;display:flex;justify-content:space-between"><span>Your words, in your voice. Fans read this on your diary page.</span><span id="dpCount">${DIARYLIM.maxBody?`${String(p.body||'').length} / ${DIARYLIM.maxBody}`:''}</span></p></div>
     <div class="row"><div class="m"><div class="t">On the page</div><div class="s">Off keeps it here, out of sight — it still counts as a page</div></div>
-      <div class="tog"><button id="dpOn" class="${DIARYON?'on':''}" onclick="DIARYON=true;this.classList.add('on');document.getElementById('dpOff').classList.remove('on')">On</button>
-      <button id="dpOff" class="${DIARYON?'':'on'}" onclick="DIARYON=false;this.classList.add('on');document.getElementById('dpOn').classList.remove('on')">Off</button></div></div>
-    <button class="big" style="margin-top:14px" id="dpSave" onclick="saveDiaryPage('${esc(id)}')">Save</button>`);
+      <div class="tog"><button id="dpOn" class="${DIARYON?'on':''}" data-on-click="diaryPagesOn">On</button>
+      <button id="dpOff" class="${DIARYON?'':'on'}" data-on-click="diaryPagesOff">Off</button></div></div>
+    <button class="big" style="margin-top:14px" id="dpSave" ${ON.click('saveDiaryPage',String(id))}>Save</button>`);
   setTimeout(()=>{const e=document.getElementById(p.title?'dpBody':'dpTitle'); if(e&&!id)e.focus();},260);
 }
 async function saveDiaryPage(id){
@@ -5037,7 +5106,7 @@ async function orderDetail(sid){
     <div class="list" style="margin-top:12px">
       <div class="row"><div class="m"><div class="t">${esc(b.name||'Name not given')}</div><div class="s">${esc(b.email||'')}</div></div></div>
       ${sh?`<div class="row"><div class="m"><div class="t">Ship to</div><div class="s">${esc(addr)}</div></div>
-        <button class="act" data-copy="${esc(addr)}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute('data-copy'));toast('Copied')">Copy</button></div>`
+        <button class="act" data-copy="${esc(addr)}" data-on-click="copyData">Copy</button></div>`
         :`<div class="row muted">Pickup — hand it over at a show.</div>`}
     </div>
     <p class="fine">Fetched from Stripe just now. MySet doesn’t keep it.</p>`);
@@ -5051,11 +5120,11 @@ function commSection(){
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}${p.showLabel?' · '+esc(p.showLabel):''}</div>
         ${p.reply?`<div class="s" style="color:var(--accent-2)">You: ${esc(p.reply.text)}</div>`:''}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px" data-ed="profile">
-        <button class="act" onclick="replyPost('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
-        <button class="act" onclick="commAct('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
-        ${canHide()?`<button class="act" onclick="${p.hidden?`commAct('postHide','${esc(p.id)}',false)`
-          :`hidePostAsk('${esc(p.id)}',${(p.photos.length||p.clip)?'true':'false'})`}">${p.hidden?'Un-hide':'Hide'}</button>`
-          :`<button class="act" style="opacity:.5" onclick="toast('Hiding a post is a Bar Star feature');openPlans()">Hide · Bar Star</button>`}
+        <button class="act" ${ON.click('replyPost',String(p.id))}>${p.reply?'Edit reply':'Reply'}</button>
+        <button class="act" ${ON.click('commAct','postPin',String(p.id),(p.pinned?false:true))}>${p.pinned?'Unpin':'Pin'}</button>
+        ${canHide()?`<button class="act" ${p.hidden?ON.click('commAct','postHide',String(p.id),false)
+          :ON.click('hidePostAsk',String(p.id),(p.photos.length||p.clip)?true:false)}>${p.hidden?'Un-hide':'Hide'}</button>`
+          :`<button class="act" style="opacity:.5" ${ON.click(['toast','Hiding a post is a Bar Star feature'],['openPlans'])}>Hide · Bar Star</button>`}
         ${/* Greyed rather than hidden — the founder's rule for a locked feature: show it,
              say what it needs, never pretend it isn't there. The server refuses it
              too, so this is the sign and not the lock (15k). */''}</div>
@@ -5071,7 +5140,7 @@ function replyPost(id){
   const p=(COMM||[]).find(x=>x.id===id)||{};
   openSheet(`<h3>Reply</h3><p class="lede">${esc((p.text||'').slice(0,160))}</p>
     <textarea class="inp" id="rpTxt" maxlength="500" style="min-height:110px">${esc(p.reply?p.reply.text:'')}</textarea>
-    <button class="big" style="margin-top:14px" onclick="commAct('postReply','${esc(id)}',undefined,(document.getElementById('rpTxt')||{}).value||'')">Save</button>`);
+    <button class="big" style="margin-top:14px" ${ON.click('replySend',String(id))}>Save</button>`);
 }
 
 
@@ -5139,12 +5208,12 @@ function openPlans(){
     if(k===cur) return `<button class="big now" disabled>Your plan</button>`;
     // changing the plan is the owner's (0dc): a seat that may look at the plans gets no button to press (0105)
     if(!ownerSeat()) return '';
-    if(RANK[k]>RANK[cur]) return sub?`<button class="big" onclick="changePlan('${k}')">Move to ${TIER_COPY[k].name}</button>`
-                                     :`<button class="big" onclick="startCheckout('${k}')">Upgrade to ${TIER_COPY[k].name}</button>`;
+    if(RANK[k]>RANK[cur]) return sub?`<button class="big" ${ON.click('changePlan',String(k))}>Move to ${TIER_COPY[k].name}</button>`
+                                     :`<button class="big" ${ON.click('startCheckout',String(k))}>Upgrade to ${TIER_COPY[k].name}</button>`;
     /* "Comped until" is for a plan that came from a code or a referral — never on the
        founder's own account (the founder, 2026-09-13). */
     if(comped&&!sub&&!PLAN.owner) return `<button class="big now" disabled>Comped until ${dstamp(PLAN.until)}</button>`;
-    return sub?`<button class="big alt" onclick="confirmDowngrade('${k}')">Switch to ${TIER_COPY[k].name}</button>`
+    return sub?`<button class="big alt" ${ON.click('confirmDowngrade',String(k))}>Switch to ${TIER_COPY[k].name}</button>`
               :`<button class="big now" disabled>${TIER_COPY[k].name}</button>`;
   };
   openSheet(`<div class="plansheet"><h3>Plans</h3><p class="lede">Everything in each plan, listed in full. ${ownerSeat()?'Change any time.':'The account owner changes the plan.'}</p>
@@ -5168,16 +5237,16 @@ function confirmDowngrade(plan){
   const cur=TIER_COPY[PLAN.plan].name;
   openSheet(`<div class="dg"><h3>Are you sure you want to lose your ${cur} membership benefits?</h3>
     <p class="lede">You’d be switching to ${TIER_COPY[plan].name}.</p>
-    <button class="big no" style="margin-top:16px" onclick="closeSheet()">No, keep ${cur}</button>
-    <button class="big yes" style="margin-top:10px" onclick="retentionOffer('${plan}')">Yes, switch to ${TIER_COPY[plan].name}</button></div>`);
+    <button class="big no" style="margin-top:16px" data-on-click="closeSheet">No, keep ${cur}</button>
+    <button class="big yes" style="margin-top:10px" ${ON.click('retentionOffer',String(plan))}>Yes, switch to ${TIER_COPY[plan].name}</button></div>`);
 }
 async function retentionOffer(plan){
   if(PLAN.billing&&PLAN.billing.retentionUsed){ changePlan(plan); return; }
   api('/admin',{method:'POST',body:JSON.stringify({action:'planRetainOffered'}),quiet:true});
   openSheet(`<div class="dg"><h3>We’re sad to see you go…</h3>
     <p class="lede">Would you like to keep your plan for <b>50% off</b> for 1 more month?</p>
-    <button class="big no" style="margin-top:16px" onclick="keepPlan()">Yes — keep it, half price this month</button>
-    <button class="big yes" style="margin-top:10px" onclick="changePlan('${plan}')">No thanks, switch to ${TIER_COPY[plan].name}</button></div>`);
+    <button class="big no" style="margin-top:16px" data-on-click="keepPlan">Yes — keep it, half price this month</button>
+    <button class="big yes" style="margin-top:10px" ${ON.click('changePlan',String(plan))}>No thanks, switch to ${TIER_COPY[plan].name}</button></div>`);
 }
 async function keepPlan(){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'planRetain'})});
@@ -5222,15 +5291,15 @@ async function exportAccount(){
 function deleteAccount(){
   openSheet(`<h3>Delete your account?</h3>
     <p class="lede">Your page goes offline straight away. We keep everything for 30 days in case you change your mind, then it’s gone for good.</p>
-    <button class="big alt" style="margin-top:16px" onclick="closeSheet()">Keep my account</button>
-    <button class="big" style="margin-top:10px;background:var(--accent-2);color:#fff" onclick="deleteAccountConfirm()">Yes, delete my account</button>`);
+    <button class="big alt" style="margin-top:16px" data-on-click="closeSheet">Keep my account</button>
+    <button class="big" style="margin-top:10px;background:var(--accent-2);color:#fff" data-on-click="deleteAccountConfirm">Yes, delete my account</button>`);
 }
 function deleteAccountConfirm(){
   openSheet(`<h3>Last check.</h3>
     <p class="lede">Your page, songs, gig history, photos and community posts. Your plan is cancelled today, so you won’t be charged again.</p>
     <div class="field"><label>Type DELETE to confirm</label><input class="inp" id="delWord" autocapitalize="characters" autocomplete="off" placeholder="DELETE"></div>
-    <button class="big" style="margin-top:14px;background:var(--accent)" onclick="deleteAccountNow()">Delete for good</button>
-    <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Keep my account</button>`);
+    <button class="big" style="margin-top:14px;background:var(--accent)" data-on-click="deleteAccountNow">Delete for good</button>
+    <button class="big alt" style="margin-top:10px" data-on-click="closeSheet">Keep my account</button>`);
 }
 async function deleteAccountNow(){
   const w=(document.getElementById('delWord')||{}).value||'';
@@ -5263,8 +5332,8 @@ function leavingBar(){
   return `<div class="paybar">
     <b>${ownerSeat()?'Your':'This'} account is being deleted on ${daystamp(del.purgeAt)}</b>
     <p>Everything is still here — your songs, gigs, history and photos. Nothing has been erased.</p>
-    ${ownerSeat()?`<button class="big" style="margin-top:12px" onclick="undelete()">Undo, keep my page</button>
-    ${del.slugFreed?'':`<p style="margin-top:10px"><a href="#" onclick="event.preventDefault();freePageAddress()">Free up my page address now</a></p>`}`
+    ${ownerSeat()?`<button class="big" style="margin-top:12px" data-on-click="undelete">Undo, keep my page</button>
+    ${del.slugFreed?'':`<p style="margin-top:10px"><a href="#" ${ON.click(['prevent'],['freePageAddress'])}>Free up my page address now</a></p>`}`
       :'<p style="margin-top:10px">Only the account owner can undo it.</p>'}</div>`;
 }
 /* "Your card didn't go through." Zero extra calls — the state is already in the
@@ -5277,7 +5346,7 @@ function cardTrouble(s){
   if(s&&s.status==='live'&&TAB!=='settings')return '';
   const ends=Number(B.graceUntil||PLAN.until||0);
   const days=ends?Math.ceil((ends-Date.now())/86400000):0;
-  const fix=B.subscribed?`onclick="openPortal()"`:`onclick="startCheckout('${(B.plan||'pro')}')"`;
+  const fix=B.subscribed?`data-on-click="openPortal"`:`${ON.click('startCheckout',String((B.plan||'pro')))}`;
   if(days>1) return `<div class="paybar">
     <b>Your card didn’t go through</b>
     <p>We couldn’t take this month’s payment. It’s almost always an expired card or a bank asking a question — nothing on your page has changed.</p>
@@ -5303,7 +5372,7 @@ function cardTrouble(s){
 function planWhen(s){
   if(!PLAN||!PLAN.ok)return '';
   const b=PLAN.billing||{}, name=esc(PLAN.limits.label);
-  const link=b.portal?` · <a href="#" onclick="event.preventDefault();openPortal()">Card, invoices and receipts ↗</a>`:'';
+  const link=b.portal?` · <a href="#" ${ON.click(['prevent'],['openPortal'])}>Card, invoices and receipts ↗</a>`:'';
   if(PLAN.comped) return `${name}, on the house${PLAN.until?' until '+daystamp(PLAN.until):''}`;
   if(PLAN.plan==='free') return 'Hobbyist'+(freeCap()?` — ${Math.min((s&&s.gigCount)||0,freeCap())} of your ${freeCap()} free shows used`:'')+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
   const when=b.renewsAt||PLAN.until;
@@ -5456,11 +5525,11 @@ function openPasswordSheet(prompt){
       :'For '+esc(em)+'. Next time it\u2019s just your email and password.')}</p>
     ${has?`<div class="field" id="pwCurWrap"><label>Current password</label><input class="inp" id="pwCur" type="password" autocomplete="current-password" placeholder="Your current password"></div>
     <div class="field" id="pwCodeWrap" style="display:none"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
-    <p class="muted" style="font-size:12px;margin:6px 0 0"><a href="#" id="pwForgot" onclick="event.preventDefault();pwForgotCode()" style="color:var(--accent-2);font-weight:600">Forgot it? Email me a code instead</a></p>`:''}
+    <p class="muted" style="font-size:12px;margin:6px 0 0"><a href="#" id="pwForgot" ${ON.click(['prevent'],['pwForgotCode'])} style="color:var(--accent-2);font-weight:600">Forgot it? Email me a code instead</a></p>`:''}
     <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
     <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
-    <button class="big fill" style="margin-top:14px" onclick="savePassword()">${has?'Change it':'Save my password'}</button>
-    ${prompt&&!has?`<button class="big keep" onclick="closeSheet()">Not now</button>`:''}
+    <button class="big fill" style="margin-top:14px" data-on-click="savePassword">${has?'Change it':'Save my password'}</button>
+    ${prompt&&!has?`<button class="big keep" data-on-click="closeSheet">Not now</button>`:''}
     <p class="muted" style="font-size:12px;margin:12px 0 0">Your email code and Face ID keep working either way.</p>`);
 }
 /* From the Studio code: pick the address, get a code there, choose the password.
@@ -5474,11 +5543,11 @@ function openPasswordFromCode(){
     <div class="field"><label>Address</label>${one
       ?`<input class="inp" id="pwEmail" type="email" value="${esc(rows[0].email)}" readonly>`
       :`<select class="inp" id="pwEmail">${rows.map(x=>`<option value="${esc(x.email)}">${esc(x.email)}${x.pw?' \u00b7 has a password':''}</option>`).join('')}</select>`}</div>
-    <button class="big ring" id="pwSend" style="margin-top:10px" onclick="pwCodeToAddress()">Email me a code</button>
+    <button class="big ring" id="pwSend" style="margin-top:10px" data-on-click="pwCodeToAddress">Email me a code</button>
     <div class="field" id="pwCodeWrap" style="display:none;margin-top:10px"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
     <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
     <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
-    <button class="big fill" style="margin-top:14px" onclick="savePassword()">Save my password</button>
+    <button class="big fill" style="margin-top:14px" data-on-click="savePassword">Save my password</button>
     <p class="muted" style="font-size:12px;margin:12px 0 0">Your Studio code, your email code and Face ID keep working either way.</p>`);
 }
 async function pwCodeToAddress(){
@@ -5526,7 +5595,7 @@ function openCodeSheet(){
     <p class="lede">A code for this page, so you can get in from any phone even when email is slow.</p>
     <div class="field"><label>New code</label><input class="inp" id="fCode" type="password" placeholder="At least 8 characters" autocomplete="new-password"></div>
     <p class="muted" style="font-size:12px;margin:8px 0 0">At least 8 characters, not your page name, and not the same character over and over.</p>
-    <button class="big" style="margin-top:14px" onclick="saveCode()">Save it</button>
+    <button class="big" style="margin-top:14px" data-on-click="saveCode">Save it</button>
     <p class="muted" style="font-size:12px;margin:12px 0 0">${PLAN&&PLAN.owner
       ? 'The original code from Netlify keeps working as a backup, so you can never lock yourself out.'
       : 'Forget it and you can still sign in with your email, or with a recovery code.'}</p>`);
@@ -5556,14 +5625,14 @@ function drawSessions(){
   const rows=SESS.list.map(x=>`<div class="row">
     <div class="m"><div class="t">${x.current?'This phone':esc(x.label)}</div>
       <div class="s">${x.current?esc(x.label)+' · ':''}signed in ${when(x.at)}${x.email?' · '+esc(x.email):''}</div></div>
-    ${x.current?`<button class="act" onclick="closeSheet();signOut()">Sign out</button>`
-              :`<button class="act warn" onclick="revokeSession('${esc(x.sid)}')">Sign out</button>`}</div>`).join('');
+    ${x.current?`<button class="act" ${ON.click(['closeSheet'],['signOut'])}>Sign out</button>`
+              :`<button class="act warn" ${ON.click('revokeSession',String(x.sid))}>Sign out</button>`}</div>`).join('');
   openSheet(`<h3>Where you\u2019re signed in</h3>
     <p class="lede">Every phone and laptop with a live sign-in. Signing one out is instant.</p>
     <div class="list">${rows||'<div class="row muted">Nothing to show yet.</div>'}
     ${SESS.legacy?`<div class="row muted"><div class="m"><div class="t">An older sign-in</div>
       <div class="s">This one started before MySet kept a list, so we can\u2019t tell you which device it is. Signing out everywhere clears it.</div></div></div>`:''}</div>
-    <button class="big alt" style="margin-top:14px" onclick="signOutOthers()">Sign out my other devices</button>`);
+    <button class="big alt" style="margin-top:14px" data-on-click="signOutOthers">Sign out my other devices</button>`);
 }
 async function revokeSession(sid){
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'sessionRevoke',sid})});
@@ -5690,7 +5759,7 @@ async function makeRecovery(){
   openSheet(`<h3>Your recovery codes</h3>
     <p class="lede">This is the only time we can show you these. Write them down, or copy them somewhere safe.</p>
     <div class="list"><div class="row"><div class="m"><div class="t mono" style="line-height:1.9;white-space:pre">${esc(list)}</div></div></div></div>
-    <button class="big" style="margin-top:14px" onclick="copyText(${esc(JSON.stringify(list))})">Copy them</button>
+    <button class="big" style="margin-top:14px" ${ON.click('copyText',list)}>Copy them</button>
     <p class="fine">Each one works once. Use one to sign in at myset.vip/studio if you ever lose your email.</p>`);
   REC=null; loadRecovery(true);
 }
@@ -5701,7 +5770,7 @@ function openEmailChange(){
   openSheet(`<h3>Move your account to a new address</h3>
     <p class="lede">We send a code to the new address and one to <b>${esc((PLAN&&PLAN.email)||'')}</b>. Both have to go in, so nobody can walk off with your page.</p>
     <div class="field"><label>New address</label><input class="inp" id="ecNew" type="email" inputmode="email" placeholder="you@email.com"></div>
-    <button class="big" style="margin-top:14px" onclick="emailChangeStart()">Send both codes</button>`);
+    <button class="big" style="margin-top:14px" data-on-click="emailChangeStart">Send both codes</button>`);
 }
 async function emailChangeStart(){
   const to=(($('#ecNew')||{}).value||'').trim();
@@ -5712,7 +5781,7 @@ async function emailChangeStart(){
     <p class="lede">One to <b>${esc(to)}</b>, one to <b>${esc((PLAN&&PLAN.email)||'')}</b>. Both boxes, then it moves.</p>
     <div class="field"><label>Code sent to the new address</label><input class="inp mono" id="ecA" inputmode="numeric" maxlength="6" placeholder="000000"></div>
     <div class="field"><label>Code sent to ${esc((PLAN&&PLAN.email)||'your current address')} — or a recovery code</label><input class="inp mono" id="ecB" placeholder="000000"></div>
-    <button class="big" style="margin-top:14px" onclick="emailChangeFinish(${esc(JSON.stringify(to))})">Move my account</button>`);
+    <button class="big" style="margin-top:14px" ${ON.click('emailChangeFinish',to)}>Move my account</button>`);
 }
 async function emailChangeFinish(to){
   const a=(($('#ecA')||{}).value||'').trim(), b=(($('#ecB')||{}).value||'').trim();
@@ -5795,8 +5864,8 @@ async function openCrop(slot,file){
       ${square?'<div class="cropguide"></div>':''}
     </div>
     <input class="zoom" id="cropZoom" type="range" min="100" max="320" value="100">
-    <button class="big" style="margin-top:14px" onclick="confirmCrop()">Use this photo</button>
-    <button class="act" style="margin-top:10px;width:100%" onclick="cancelCrop()">Cancel</button>`);
+    <button class="big" style="margin-top:14px" data-on-click="confirmCrop">Use this photo</button>
+    <button class="act" style="margin-top:10px;width:100%" data-on-click="cancelCrop">Cancel</button>`);
   paintCrop(); wireCrop();
 }
 function paintCrop(){

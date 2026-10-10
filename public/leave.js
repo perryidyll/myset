@@ -104,7 +104,9 @@
   try {
     if (HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules')) {
       var sr = document.createElement('script'); sr.type = 'speculationrules';
-      sr.textContent = JSON.stringify({ prefetch: [{ where: { and: [{ href_matches: '/*' }, { not: { href_matches: '/api/*' } }] }, eagerness: 'moderate' }] });
+      /* Written out, not built: the pages' script policy names this exact text by its hash
+         (tools/stamp.mjs reads it from here; decision 0209), so a rule changed here is a new hash. */
+      sr.textContent = '{"prefetch":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/api/*"}}]},"eagerness":"moderate"}]}';
       document.head.appendChild(sr);
     }
   } catch (e) {}

@@ -11,6 +11,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-NTnUHepeD3N//SW8Z282jqK+Pel0uVk1iE7ZpCSFnhw=' 'sha256-mm8jvf4CRWtjOFwFcNrax3nSx6vIvobgxwXb2ifo0+Q=' 'sha256-zfDcrZmVQzzAxxyB7bruTl90zi1uL5sPgmcLQ6K4cE8=' 'sha256-edeYQiSBMGXWXYsuuqQqZ7Sh2iM6TLEwjWz3pvekE7U=' 'sha256-kQy3eOLVl6QcSs0cQJM5u4io2LHsSHA1SzH7r6X7a9Q=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
@@ -861,14 +907,14 @@ a.pc:active{transform:scale(.97)}
 <!-- the floating window (calendar, one night, the tour poster); empty until opened -->
 <div class="win" id="win" role="dialog" aria-modal="true" tabindex="-1" data-nopull hidden></div>
 <!-- the Book sheet, and a booker's conversation at their link; empty until opened -->
-<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="bg" id="bg" data-on-click="closeSheet"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" data-nopull inert></div>
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=0831c190"></script>
+<script src="/fan.js?v=c8cb6b8b"></script>
 <script>
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
@@ -956,7 +1002,7 @@ function mediaCard(m){
   const shape=m.ratio?`r${m.ratio}`:'';
   const style=m.height?`height:${Math.min(m.height,168)}px`:'';
   const art=m.thumb
-    ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback"`:''} alt="" loading="lazy">`
+    ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" data-on-error="imgFallback"`:''} alt="" loading="lazy">`
     : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
   return `<div class="media rise" data-mid="${esc(m.mid)}">
     <button class="facade ${shape}" style="${shape?'':style}" data-mid="${esc(m.mid)}"
@@ -973,7 +1019,7 @@ function mediaCard(m){
 /* The same item as a small card in the "Watch more" strip. */
 function reelCard(m){
   const art=m.thumb
-    ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback"`:''} alt="" loading="lazy">`
+    ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" data-on-error="imgFallback"`:''} alt="" loading="lazy">`
     : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
   return `<div class="rc" role="button" tabindex="0" data-reel="${esc(m.mid)}" aria-label="Watch ${esc(m.title||PROV[m.provider]||'media')}">
     <div class="th">${art}<span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></div>
@@ -1469,7 +1515,7 @@ function render(){
   const fc=fpos(P.focus&&P.focus.cover), fa=fpos(P.focus&&P.focus.avatar);
   const initial=esc(String(P.name||'').trim().charAt(0).toUpperCase()||'♪');
   h+=cover?`<div class="pcover rise" ${zoom(cover)} style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
-    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async"${fc?` style="object-position:${fc}"`:''}>
+    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" data-on-error="imgRaw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async"${fc?` style="object-position:${fc}"`:''}>
     <div class="veil"></div>
   </div>
 `:`<div class="pcover rise blank"><div class="veil"></div></div>
@@ -1477,8 +1523,8 @@ function render(){
   h+=`
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
-      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" ${zoom(u)}><img src="${esc(cdn(u,220))}" alt="" decoding="async" data-raw="${esc(u)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"></div>`).join('')}</div>`:''}
-      ${avatar?`<div class="pav" ${zoom(avatar)} style="background-image:url('${esc(cdn(avatar,48))}')${fa?`;background-position:${fa}`:''}"><img src="${esc(cdn(avatar,320))}" alt="" decoding="async" data-raw="${esc(avatar)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"${fa?` style="object-position:${fa}"`:''}></div>`:`<div class="pav blank" aria-hidden="true">${initial}</div>`}
+      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" ${zoom(u)}><img src="${esc(cdn(u,220))}" alt="" decoding="async" data-raw="${esc(u)}" data-on-error="imgRawOnce"></div>`).join('')}</div>`:''}
+      ${avatar?`<div class="pav" ${zoom(avatar)} style="background-image:url('${esc(cdn(avatar,48))}')${fa?`;background-position:${fa}`:''}"><img src="${esc(cdn(avatar,320))}" alt="" decoding="async" data-raw="${esc(avatar)}" data-on-error="imgRawOnce"${fa?` style="object-position:${fa}"`:''}></div>`:`<div class="pav blank" aria-hidden="true">${initial}</div>`}
     </div>
     <div class="pname">
       <h1>${esc(P.name)}</h1>

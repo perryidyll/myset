@@ -1,3 +1,9 @@
+/* AN OLD PAGE WITH THIS NEW SCRIPT (decision 0209, sw.js rule 3): a page the phone stored names
+   its scripts by the stamps it shipped with, and a stamp the phone never fetched is answered with
+   the current file — so a page from before 0209 can meet this script, which wires its buttons
+   through ON. That page has no ON: ask for it again, network first (a reload), once per tab until
+   a current page clears the mark; and never throw meanwhile. */
+if(!window.ON){ try{ if(!sessionStorage.getItem('myset.onreload')){ sessionStorage.setItem('myset.onreload','1'); location.reload(); } }catch(e){} window.ON={ add(){}, has:()=>false, on:()=>'', click:()=>'', event:null }; }
 /* THE BUSINESS DASHBOARD — the Money tab for a paid owner, the editor sheet, and the
    Pay / Splits / Costs / Time / Gear rows the gig form borrows  (decision 0065)
 
@@ -419,7 +425,7 @@ function showsList(inP,S,P){
     ${folded?`<button class="row bizmore" type="button" data-act="bizmore">Show ${Math.min(STEP,all.length-open)} more</button>`:MORE>FOLD&&!q.length&&!PICKS&&all.length>FOLD?`<button class="row bizmore" type="button" data-act="bizfewer">Show fewer</button>`:''}
     ${sparse?`<div class="row muted">Played a night MySet wasn't at? Add it on the Gigs tab — past dates are fine — and it shows up here.</div>`:''}</div>
   ${BZ.dropped>0?`<p class="muted" style="font-size:12px;padding:10px 18px 0;margin:0">MySet keeps your last ${((HIST&&HIST.shows)||[]).length} nights; ${BZ.dropped} older ones are not shown.</p>`:''}
-  <div class="wrap bizfoot2" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0 4px"><button class="btn-text" onclick="healHist()">Look for missing shows</button><button class="btn-text" onclick="placeHist()">Name these from my calendar</button></div>`;
+  <div class="wrap bizfoot2" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0 4px"><button class="btn-text" data-on-click="healHist">Look for missing shows</button><button class="btn-text" data-on-click="placeHist">Name these from my calendar</button></div>`;
 }
 function merch(S,P){
   const app=(ORDERS||[]).filter(o=>{ const d=Biz.localDate(o.at||0); return d>=P.from&&d<=P.to; });
@@ -461,7 +467,7 @@ function tab(){
       <div class="list"><div class="row" style="flex-wrap:wrap">
         <div class="m" style="flex:1 1 100%"><div class="t">${n?`${plural(n,'night')} filed and waiting`:'Every night gets filed here'}</div>
           <div class="s">The business dashboard — fans, votes and tips plus your pay, splits, costs, hours and profit for every show — is a Bar Star feature. Upgrade and ${n?'all of them open':'they open as you play'}.</div></div>
-        <button class="act" onclick="openPlans()">See plans</button></div></div>`; }
+        <button class="act" data-on-click="openPlans">See plans</button></div></div>`; }
     if(BZ.status===403) return `<div class="list" style="margin-top:14px"><div class="row muted">The business dashboard is the account owner's.</div></div>`;
     return `<div class="list" style="margin-top:14px"><div class="row muted" data-act="bizretry" style="cursor:pointer">Couldn't load the dashboard — tap to try again.</div></div>`;
   }
@@ -520,7 +526,7 @@ function tonight(L){
 const capLine=(kind,n,lim,stored)=>{
   const P=(PLAN&&PLAN.plans)||{}, top=Number((P.pro||{})[kind])||lim, plusN=Number((P.plus||{})[kind])||lim;
   const word=kind==='band'?'band members':'costs', pro=PLAN&&PLAN.plan==='pro';
-  const see=`<button class="btn-text" type="button" onclick="openPlans()">See plans</button>`;
+  const see=`<button class="btn-text" type="button" data-on-click="openPlans">See plans</button>`;
   if(stored>lim) return `<p class="cap">${n} of ${lim} — from your Rock Star months ${see}</p>`;
   if(pro||lim>=top) return `<p class="cap">That's the ${top} Rock Star allows</p>`;
   return `<p class="cap">Bar Star allows ${plusN} ${word} a show — Rock Star allows ${top} ${see}</p>`;

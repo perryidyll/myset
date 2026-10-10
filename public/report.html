@@ -21,6 +21,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-ex2JgzmTEu+9WI7e8npdaDB+8c0KP1Ck/T9fs9T/OEE=' 'sha256-FN6HDYDTRQu1sUIwh7Rle2b7URFA6hBRfOEndtyOG2s=' https://maps.googleapis.com https://maps.gstatic.com">
+<script id="on-js">
+/* public/on.js — edit that file, then run node tools/stamp.mjs (decision 0209) */
+(() => {
+  if (window.ON) return;
+  try { sessionStorage.removeItem('myset.onreload'); } catch (e) {}
+  const acts = Object.create(null);
+  const OWN = ['prevent', 'stop'];
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tellError = (x) => { try { (window.reportError || ((y) => setTimeout(() => { throw y; })))(x); } catch (y) {} };
+  const attr = (type, name, args) => `data-on-${type}="${escAttr(args.length ? JSON.stringify([name, ...args]) : name)}"`;
+  const ON = window.ON = {
+    event: null,
+    add(o) { for (const k of Object.keys(o)) { if (OWN.includes(k)) tellError(new Error(`ON: "${k}" is built in`)); else if (typeof o[k] === 'function') acts[k] = o[k]; } },
+    has: (k) => typeof acts[k] === 'function',
+    on: (type, name, ...args) => attr(type, name, args),
+    click: (name, ...args) => attr('click', name, args),
+  };
+  acts.prevent = () => { ON.event.preventDefault(); };
+  acts.stop = () => { ON.event.stopPropagation(); };
+  function fire(e) {
+    const v = this.getAttribute('data-on-' + e.type);
+    if (!v) return;
+    const was = ON.event;
+    ON.event = e;
+    try {
+      let steps = v.charAt(0) === '[' ? JSON.parse(v) : v;
+      if (!Array.isArray(steps)) steps = [[steps]];
+      else if (!Array.isArray(steps[0])) steps = [steps];
+      for (const [name, ...args] of steps) {
+        const f = acts[name];
+        if (typeof f !== 'function') throw new Error(`ON: nothing is registered as "${name}"`);
+        f.apply(this, args);
+      }
+    } catch (x) { tellError(x); } finally { ON.event = was; }
+  }
+  const bind = (e) => {
+    const name = 'data-on-' + e.type;
+    for (let n = e.target; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.hasAttribute(name)) n.addEventListener(e.type, fire);
+      if (!e.bubbles) break;
+    }
+  };
+  for (const t of ['click', 'input', 'change', 'submit', 'keydown', 'focus', 'blur', 'error']) document.addEventListener(t, bind, true);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex,nofollow" />
 <title>Business report — MySet</title>
@@ -144,6 +190,11 @@ footer p{margin:0 0 6px}
 <div class="page" id="page"><div class="state"><p class="muted">Adding up…</p></div></div>
 <script src="/biz.js?v=e2d67ecd"></script>
 <script>
+/* THE ACTIONS THIS PAGE'S MARKUP MAY NAME (SEC-006, decision 0209) — every data-on-* below names
+   one of these; the page's Content-Security-Policy refuses an onclick=. */
+ON.add({ load, settings, printPage, veilOff });
+function printPage(){ window.print(); }
+function veilOff(){ document.getElementById('veil').classList.remove('on'); }
 /* The session is the Studio's, read exactly as studio.html reads it: the passcode
    and the artist it names, or the account token. This page never signs anyone in
    and never signs anyone out — a bad session sends the reader to the Studio. */
@@ -183,7 +234,7 @@ function window_(){
 
 function state(h,p,link,label){
   $('#page').innerHTML=`<div class="state"><span class="mark">${MARK}MySet</span><h1>${h}</h1><p>${p}</p>
-    ${link?`<a class="btn pri" href="${link}">${label}</a>`:`<button class="btn pri" onclick="load()">Try again</button>`}</div>`;
+    ${link?`<a class="btn pri" href="${link}">${label}</a>`:`<button class="btn pri" data-on-click="load">Try again</button>`}</div>`;
 }
 
 async function load(){
@@ -218,7 +269,7 @@ function draw(d){
   $('#page').innerHTML=`
   <div class="top">
     <a class="mark" href="/" aria-label="MySet home">${MARK}MySet <small>Business report</small></a>
-    <span class="tools"><a class="btn" href="/studio">← Studio</a><button class="btn pri" onclick="window.print()">Print / Save as PDF</button></span>
+    <span class="tools"><a class="btn" href="/studio">← Studio</a><button class="btn pri" data-on-click="printPage">Print / Save as PDF</button></span>
   </div>
   <div class="title">
     <div class="kick">${PICK.length?'Selected shows':'Period'}</div>
@@ -237,7 +288,7 @@ function draw(d){
     <div class="kpi"><div class="k">Hours</div><div class="v mono">${Biz.hm(t.includedMinutes)||'—'}</div><div class="s">${esc(kinds.join(' · '))||'no kinds included'}</div></div>
     <div class="kpi"><div class="k">Full evening rate</div><div class="v mono">${rate(R.evening)}</div><div class="s">${viewWords(fees)}${t.timed<t.shows?` · ${t.timed} of ${t.shows} shows timed`:''}</div></div>
     <div class="kpi"><div class="k">Stage time rate</div><div class="v mono">${rate(R.stage)}</div><div class="s">${viewWords(fees)} · on-stage minutes only</div></div>
-    <div class="kpi set noprint"><div class="k">Adjust $/h calculations</div><button class="btn" type="button" onclick="settings()">Rate settings</button><div class="s">Which hours count, whose rate, before or after the fee.</div></div>
+    <div class="kpi set noprint"><div class="k">Adjust $/h calculations</div><button class="btn" type="button" data-on-click="settings">Rate settings</button><div class="s">Which hours count, whose rate, before or after the fee.</div></div>
   </div>
   <section><div class="charts">
     <div class="chart"><h2>Profit</h2>${chart(t,from,to)}</div>
@@ -342,7 +393,7 @@ function settings(){
     <h4>Fees</h4>
     <label class="sw"><span>Show rates after MySet’s fee</span><input type="checkbox" data-net ${VIEW.net?'checked':''}><i></i></label>
     <p class="saved" id="setsaved"></p>
-    <button class="btn pri done" type="button" onclick="document.getElementById('veil').classList.remove('on')">Done</button></div>`;
+    <button class="btn pri done" type="button" data-on-click="veilOff">Done</button></div>`;
   v.classList.add('on');
   v.querySelectorAll('[data-hour]').forEach(i=>i.addEventListener('change',async()=>{
     const h=Object.assign({},(D.biz.prefs=D.biz.prefs||{}).hours||{}); h[i.dataset.hour]=i.checked; D.biz.prefs.hours=h; draw(D);

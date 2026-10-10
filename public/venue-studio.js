@@ -1,3 +1,41 @@
+/* AN OLD PAGE WITH THIS NEW SCRIPT (decision 0209, sw.js rule 3): a page the phone stored names
+   its scripts by the stamps it shipped with, and a stamp the phone never fetched is answered with
+   the current file — so a page from before 0209 can meet this script, which wires its buttons
+   through ON. That page has no ON: ask for it again, network first (a reload), once per tab until
+   a current page clears the mark; and never throw meanwhile. */
+if(!window.ON){ try{ if(!sessionStorage.getItem('myset.onreload')){ sessionStorage.setItem('myset.onreload','1'); location.reload(); } }catch(e){} window.ON={ add(){}, has:()=>false, on:()=>'', click:()=>'', event:null }; }
+/* THE ACTIONS THE VENUE STUDIO'S MARKUP MAY NAME (SEC-006, decision 0209). Every data-on-* here —
+   and every ON.click()/ON.on() that builds one — names something registered below, and the
+   page's Content-Security-Policy refuses an onclick= outright. They are function declarations,
+   so they exist before this line runs. A button whose action is missing reports "nothing is
+   registered as …" instead of doing nothing. */
+ON.add({
+  addMenuItem, addStaff, changePlan, claim, closeSheet, confirmDowngrade, copyData, copyInv,
+  deleteAccount, deleteAccountConfirm, deleteAccountNow, exportAccount, gate, gateBack,
+  gigAnswer, gigSend, keepPlan, loadPay, openClaim, openEvent, openInvoices, openMenu,
+  openMenuItem, openOffer, openPasswordSheet, openPlans, openPortal, openSessions, openSuggest,
+  openVMerch, orderDetail, orderDone, passwordSignIn, payDash, payStart, postDeleteAsk,
+  postHideAsk, pwCodeToAddress, pwForgotCode, qrDownload, qrHide, qrHideTap, retentionOffer,
+  revokeSession, rmVMerch, runVerify, saveMenu, savePage, savePassword, saveSlug, saveVMerch,
+  sendCode, sendSuggest, setTab, shareInvite, showPlans, showTips, signOut, signOutEverywhere,
+  signOutOthers, startCheckout, submitCode, toggleVPush, undelete, vComm, vLedgerCsv, vmInStock,
+  vmMove, vmPickup, vmShipIt, vmShowOff, vmShowOn, vmSoldOut, vpushKeyReset, vReply, vReplySave,
+  wishDone,
+});
+/* The actions that were more than a call — each is its old inline body, word for word, with
+   `this` still the element and ON.event where it said `event`. */
+function gateBack(){ gate(null,GATE_FROM); }
+function vpushKeyReset(){ VPUSHKEY=null; drawVPush(); }
+function copyData(){ navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute('data-copy')); toast('Copied'); }
+function postHideAsk(id,msg){ if(confirm(msg))vComm('postHide',id,true); }
+function postDeleteAsk(id){ if(confirm('Delete this post for good?'))vComm('postDelete',id); }
+function vmPickup(){ vmcShip='pickup'; this.classList.add('on'); document.getElementById('vmPost').classList.remove('on'); document.getElementById('vmPostWrap').hidden=true; }
+function vmShipIt(){ vmcShip='ship'; this.classList.add('on'); document.getElementById('vmPick').classList.remove('on'); document.getElementById('vmPostWrap').hidden=false; }
+function vmInStock(){ vmcOut=false; this.classList.add('on'); document.getElementById('vmSold').classList.remove('on'); }
+function vmSoldOut(){ vmcOut=true; this.classList.add('on'); document.getElementById('vmIn').classList.remove('on'); }
+function vmShowOn(){ vmcOn=true; this.classList.add('on'); document.getElementById('vmOff').classList.remove('on'); }
+function vmShowOff(){ vmcOn=false; this.classList.add('on'); document.getElementById('vmOn').classList.remove('on'); }
+function qrHideTap(){ qrHide(ON.event); }
 const $=s=>document.querySelector(s), API='/api';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 let TOKEN=localStorage.getItem('myset.vtoken')||'';
@@ -92,8 +130,8 @@ function gate(err,mode){
       <p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
       <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
         placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
-      <button class="big fill" style="margin-top:12px" onclick="submitCode()">Continue</button>
-      <button class="act" style="margin-top:6px;width:100%" onclick="gate(null,GATE_FROM)">← Use a different email</button></div>`;
+      <button class="big fill" style="margin-top:12px" data-on-click="submitCode">Continue</button>
+      <button class="act" style="margin-top:6px;width:100%" data-on-click="gateBack">← Use a different email</button></div>`;
   }else if(m==='name'){
     inner=`<div class="signbox"><h2>You’re in</h2>
       <p class="muted" style="font-size:14px;margin:0 0 16px">What's the place called? This is the name people will see.</p>
@@ -102,7 +140,7 @@ function gate(err,mode){
         <input class="inp" id="newCity" maxlength="60" placeholder="City" style="flex:1">
         <input class="inp" id="newCountry" maxlength="60" placeholder="Country" style="flex:1">
       </div>
-      <button class="big fill" style="margin-top:12px" onclick="claim()">Create your page</button>
+      <button class="big fill" style="margin-top:12px" data-on-click="claim">Create your page</button>
       <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p>
       <p class="muted" style="font-size:12px;margin:8px 0 0">By creating a page you agree to MySet’s <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</p></div>`;
   }else if(m==='join'||m==='forgot'){
@@ -112,17 +150,17 @@ function gate(err,mode){
         ?'A free page for your venue: what’s on, who’s playing, your menu and your offers. We’ll email a 6-digit code; then you name the place and set a password.'
         :'No problem. We’ll email you a fresh 6-digit code, and you can set a new password once you’re in.'}</p>
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@yourbar.com" value="${esc(GATE_EMAIL)}">
-      <button class="big fill" style="margin-top:12px" onclick="sendCode('${m}')">Email me a code</button>
-      <button class="act" style="margin-top:6px;width:100%" onclick="gate()">← Back</button></div>`;
+      <button class="big fill" style="margin-top:12px" ${ON.click('sendCode',String(m))}>Email me a code</button>
+      <button class="act" style="margin-top:6px;width:100%" data-on-click="gate">← Back</button></div>`;
   }else{
     inner=`<div class="signbox"><h2>Welcome back</h2>
       ${err==='unauthorized'?`<p class="muted" style="font-size:14px;margin:0 0 12px">That didn’t work — try again.</p>`:''}
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="username" placeholder="Email" value="${esc(GATE_EMAIL)}">
       <input class="inp" id="pw" type="password" autocomplete="current-password" placeholder="Password" style="margin-top:8px">
-      <button class="big fill" style="margin-top:12px" onclick="passwordSignIn()">Sign in</button>
-      <p class="signlinks"><a href="#" onclick="event.preventDefault();gate(null,'forgot')">Forgot your password?</a></p></div>
+      <button class="big fill" style="margin-top:12px" data-on-click="passwordSignIn">Sign in</button>
+      <p class="signlinks"><a href="#" ${ON.click(['prevent'],['gate',null,'forgot'])}>Forgot your password?</a></p></div>
       <p class="join">New here? Join the MySet family</p>
-      <button class="big ring" onclick="gate(null,'join')">Create account</button>
+      <button class="big ring" ${ON.click('gate',null,'join')}>Create account</button>
       <p class="foot">Musician, not a venue? <a href="/studio?tab=setlist">Artist Studio →</a></p>`;
   }
   $('#app').innerHTML=`<div class="gate">${inner}</div>`;
@@ -218,13 +256,13 @@ async function drawVPush(){
   if(!st.can&&st.why==='ios') return paint(row('Add the Venue Studio to your home screen first',
     'On iPhone, alerts only work from the home screen: tap Share, then Add to Home Screen, and open it from there.'));
   if(!st.can) return paint(row('Couldn’t start alerts here','Reload the page and try again.',
-    `<button class="act" onclick="VPUSHKEY=null;drawVPush()">Retry</button>`));
+    `<button class="act" data-on-click="vpushKeyReset">Retry</button>`));
   if(st.denied) return paint(row('Alerts are blocked','Your phone is blocking them. Turn them back on in its Settings → Notifications.'));
   const on=!!(st.sub&&VPUSHKEY.mine);
   paint(row(on?'Alerts are on':'Get alerts on this phone',
     on?`You’ll hear when an artist asks to play or writes back, and when someone buys your merch.${VPUSHKEY.devices>1?` · ${VPUSHKEY.devices} devices`:''}`
       :'Know the moment an artist asks to play here or writes back, and when someone buys your merch.',
-    `<button class="act${on?'':' pri'}" onclick="toggleVPush(${on?'false':'true'})">${on?'Turn off':'Turn on'}</button>`));
+    `<button class="act${on?'':' pri'}" ${ON.click('toggleVPush',(on?false:true))}>${on?'Turn off':'Turn on'}</button>`));
 }
 async function toggleVPush(on){
   const st=await vpushState();
@@ -263,12 +301,12 @@ function drawSessions(){
     <div class="list">${VSESS.list.map(x=>`<div class="row">
       <div class="m"><div class="t">${x.current?'This device':esc(x.label)}</div>
         <div class="s">${x.current?esc(x.label)+' · ':''}signed in ${when(x.at)}${x.email?' · '+esc(x.email):''}</div></div>
-      ${x.current?`<button class="act" onclick="closeSheet();signOut()">Sign out</button>`
-                :`<button class="act warn" onclick="revokeSession('${esc(x.sid)}')">Sign out</button>`}</div>`).join('')
+      ${x.current?`<button class="act" ${ON.click(['closeSheet'],['signOut'])}>Sign out</button>`
+                :`<button class="act warn" ${ON.click('revokeSession',String(x.sid))}>Sign out</button>`}</div>`).join('')
       ||'<div class="row muted">Nothing to show yet.</div>'}
       ${VSESS.legacy?`<div class="row muted"><div class="m"><div class="t">An older sign-in</div>
         <div class="s">This one started before MySet kept a list, so we can’t tell which device it is. Signing out everywhere clears it.</div></div></div>`:''}</div>
-    <button class="big alt" style="margin-top:14px" onclick="signOutOthers()">Sign out our other devices</button>`);
+    <button class="big alt" style="margin-top:14px" data-on-click="signOutOthers">Sign out our other devices</button>`);
 }
 async function revokeSession(sid){
   const d=await post('/venueauth',{action:'sessionRevoke',sid});
@@ -305,15 +343,15 @@ async function openInvoices(){
 function deleteAccount(){
   openSheet(`<h3>Delete this venue page?</h3>
     <p class="lede">It goes offline straight away. We keep everything for 30 days in case you change your mind, then it’s gone for good.</p>
-    <button class="big alt" style="margin-top:16px" onclick="closeSheet()">Keep our page</button>
-    <button class="big" style="margin-top:10px;background:var(--accent-2);color:#fff" onclick="deleteAccountConfirm()">Yes, delete it</button>`);
+    <button class="big alt" style="margin-top:16px" data-on-click="closeSheet">Keep our page</button>
+    <button class="big" style="margin-top:10px;background:var(--accent-2);color:#fff" data-on-click="deleteAccountConfirm">Yes, delete it</button>`);
 }
 function deleteAccountConfirm(){
   openSheet(`<h3>Last check.</h3>
     <p class="lede">Your page, photos, what’s on, your numbers and your community posts. Any plan is cancelled today, so you won’t be charged again.</p>
     <div class="field"><label>Type DELETE to confirm</label><input class="inp" id="delWord" autocapitalize="characters" autocomplete="off" placeholder="DELETE"></div>
-    <button class="big" style="margin-top:14px;background:var(--accent)" onclick="deleteAccountNow()">Delete for good</button>
-    <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Keep our page</button>`);
+    <button class="big" style="margin-top:14px;background:var(--accent)" data-on-click="deleteAccountNow">Delete for good</button>
+    <button class="big alt" style="margin-top:10px" data-on-click="closeSheet">Keep our page</button>`);
 }
 async function deleteAccountNow(){
   const w=(document.getElementById('delWord')||{}).value||'';
@@ -333,13 +371,13 @@ function leavingBar(){
   return `<div class="paybar">
     <b>This page is being deleted on ${vdate(del.purgeAt)}</b>
     <p>Everything is still here — your photos, what’s on, your numbers and your posts. Nothing has been erased.</p>
-    <button class="big" style="margin-top:12px" onclick="undelete()">Undo, keep our page</button></div>`;
+    <button class="big" style="margin-top:12px" data-on-click="undelete">Undo, keep our page</button></div>`;
 }
 function cardTrouble(){
   const B=(VPLAN&&VPLAN.billing)||{};
   if(!B.pastDue)return '';
   const ends=Number(B.graceUntil||0);
-  const fix=B.subscribed?`onclick="openPortal()"`:`onclick="startCheckout()"`;
+  const fix=B.subscribed?`data-on-click="openPortal"`:`data-on-click="startCheckout"`;
   return `<div class="paybar">
     <b>Your card didn’t go through</b>
     <p>We couldn’t take this month’s payment for Pro. It’s almost always an expired card or a bank asking a question — nothing on your page has changed.</p>
@@ -440,11 +478,11 @@ function openPasswordSheet(prompt){
       :'For '+esc(em)+'. Next time it’s just your email and password.')}</p>
     ${has?`<div class="field" id="pwCurWrap"><label>Current password</label><input class="inp" id="pwCur" type="password" autocomplete="current-password" placeholder="Your current password"></div>
     <div class="field" id="pwCodeWrap" style="display:none"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
-    <p class="muted" style="font-size:12px;margin:6px 0 0"><a href="#" id="pwForgot" onclick="event.preventDefault();pwForgotCode()" style="color:var(--accent-2);font-weight:600">Forgot it? Email me a code instead</a></p>`:''}
+    <p class="muted" style="font-size:12px;margin:6px 0 0"><a href="#" id="pwForgot" ${ON.click(['prevent'],['pwForgotCode'])} style="color:var(--accent-2);font-weight:600">Forgot it? Email me a code instead</a></p>`:''}
     <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
     <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
-    <button class="big fill" style="margin-top:14px" onclick="savePassword()">${has?'Change it':'Save my password'}</button>
-    ${prompt&&!has?`<button class="big keep" onclick="closeSheet()">Not now</button>`:''}
+    <button class="big fill" style="margin-top:14px" data-on-click="savePassword">${has?'Change it':'Save my password'}</button>
+    ${prompt&&!has?`<button class="big keep" data-on-click="closeSheet">Not now</button>`:''}
     <p class="muted" style="font-size:12px;margin:12px 0 0">Your email code keeps working either way.</p>`);
 }
 function openPasswordFromCode(){
@@ -455,11 +493,11 @@ function openPasswordFromCode(){
     <div class="field"><label>Address</label>${one
       ?`<input class="inp" id="pwEmail" type="email" value="${esc(rows[0].email)}" readonly>`
       :`<select class="inp" id="pwEmail">${rows.map(x=>`<option value="${esc(x.email)}">${esc(x.email)}${x.pw?' · has a password':''}</option>`).join('')}</select>`}</div>
-    <button class="big ring" id="pwSend" style="margin-top:10px" onclick="pwCodeToAddress()">Email me a code</button>
+    <button class="big ring" id="pwSend" style="margin-top:10px" data-on-click="pwCodeToAddress">Email me a code</button>
     <div class="field" id="pwCodeWrap" style="display:none;margin-top:10px"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
     <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
     <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
-    <button class="big fill" style="margin-top:14px" onclick="savePassword()">Save my password</button>
+    <button class="big fill" style="margin-top:14px" data-on-click="savePassword">Save my password</button>
     <p class="muted" style="font-size:12px;margin:12px 0 0">Your Studio code and your email code keep working either way.</p>`);
 }
 async function pwCodeToAddress(){
@@ -524,12 +562,12 @@ function gigsSection(gigs){
   const k=g=>esc(g.key);
   return `${wait.length?`<div class="sec"><span class="kick">Waiting for you</span><span class="kick">${wait.length}</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Is each of these really at your place? Your page shows them either way until you say.</p>
-    <div class="list">${wait.map(g=>row(g,`<button class="act pri" onclick="gigAnswer('${k(g)}','ok')">Approve</button><button class="act warn" onclick="gigAnswer('${k(g)}','no')">Not here</button>`)).join('')}</div>`:''}
+    <div class="list">${wait.map(g=>row(g,`<button class="act pri" ${ON.click('gigAnswer',String(k(g)),'ok')}>Approve</button><button class="act warn" ${ON.click('gigAnswer',String(k(g)),'no')}>Not here</button>`)).join('')}</div>`:''}
     <div class="sec"><span class="kick">Confirmed</span><span class="kick">${ok.length}</span></div>
-    ${ok.length?`<div class="list">${ok.map(g=>row(g,`<button class="act" onclick="gigAnswer('${k(g)}','')">Undo</button>`)).join('')}</div>`
+    ${ok.length?`<div class="list">${ok.map(g=>row(g,`<button class="act" ${ON.click('gigAnswer',String(k(g)),'')}>Undo</button>`)).join('')}</div>`
       :`<div class="list"><div class="row muted">Nothing confirmed yet — a show you approve says “Confirmed by the venue” on your page.</div></div>`}
     ${no.length?`<div class="sec"><span class="kick">Not at your place</span><span class="kick">${no.length}</span></div>
-    <div class="list">${no.map(g=>row(g,`<button class="act" onclick="gigAnswer('${k(g)}','')">Undo</button>`)).join('')}</div>`:''}`;
+    <div class="list">${no.map(g=>row(g,`<button class="act" ${ON.click('gigAnswer',String(k(g)),'')}>Undo</button>`)).join('')}</div>`:''}`;
 }
 function gigAnswer(key,st){
   const g=((GIGS&&GIGS.gigs)||[]).find(x=>x.key===key); if(!g)return;
@@ -538,8 +576,8 @@ function gigAnswer(key,st){
   if(st==='ok'&&g.repeat){
     openSheet(`<div class="dg"><h3>Is this a recurring show?</h3>
       <p class="muted" style="font-size:14px"><b>${esc(g.artist)}</b> says they play here <b>${esc(lc1(REPEAT_WORD[g.repeat](g.next)))}</b> at ${fmtTime(g.time)}. Approving it confirms <b>every</b> one of those nights, not just the next — you only do this once.</p>
-      <button class="big" style="margin-top:16px" onclick="closeSheet();gigSend('${esc(key)}','ok',true)">Yes, it’s ${esc(lc1(REPEAT_WORD[g.repeat](g.next)))}</button>
-      <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Not now</button></div>`);
+      <button class="big" style="margin-top:16px" ${ON.click(['closeSheet'],['gigSend',String(key),'ok',true])}>Yes, it’s ${esc(lc1(REPEAT_WORD[g.repeat](g.next)))}</button>
+      <button class="big alt" style="margin-top:10px" data-on-click="closeSheet">Not now</button></div>`);
     return;
   }
   gigSend(key,st,false);
@@ -659,7 +697,7 @@ function lock(flag,html,why){
      clipped mid-word. */
   return `<div class="lock${soon?' soon':''}"><div class="lockin">${html}</div>`+
     (soon?`<div class="lockveil">${pill}</div>`
-         :`<button type="button" class="lockveil" aria-label="${esc(cap)} \u2014 see the plans" onclick="showPlans()">${pill}</button>`)+
+         :`<button type="button" class="lockveil" aria-label="${esc(cap)} \u2014 see the plans" data-on-click="showPlans">${pill}</button>`)+
     `</div>`+(why?`<p class="lockwhy">${esc(why)}</p>`:'');
 }
 function showPlans(){
@@ -684,7 +722,7 @@ function planBox(){
   const now=V.plan||'free', B=VPLAN&&VPLAN.billing;
   return `<div class="sec"><span class="kick">Your plan</span></div>
     <div class="list" id="planbox" style="padding:14px 16px">
-      <button class="bigup" onclick="openPlans()">${now==='pro'?'Pro membership':'Upgrade your plan'} <span>↗</span></button>
+      <button class="bigup" data-on-click="openPlans">${now==='pro'?'Pro membership':'Upgrade your plan'} <span>↗</span></button>
       <p class="planwhen">${vPlanWhen()}</p>
     </div>`;
 }
@@ -694,7 +732,7 @@ function planBox(){
 function vPlanWhen(){
   const B=(VPLAN&&VPLAN.billing)||{}, now=(V&&V.plan)||'free';
   const label=esc((V&&V.limits&&V.limits.label)||'Free');
-  const link=B.portal?` · <a href="#" onclick="event.preventDefault();openPortal()">Card, invoices and receipts ↗</a>`:'';
+  const link=B.portal?` · <a href="#" ${ON.click(['prevent'],['openPortal'])}>Card, invoices and receipts ↗</a>`:'';
   if(now==='free') return 'Everything your page does for the public is free, and stays free.';
   const when=B.renewsAt||(VPLAN&&VPLAN.until);
   if(when) return `${B.cancelAtPeriodEnd?'Ends':'Renews'} ${vdate(when)}${link}`;
@@ -738,9 +776,9 @@ function openPlans(){
   const cur=V.plan||'free', sub=VPLAN.billing&&VPLAN.billing.subscribed, comped=cur!=='free'&&!sub;
   const cta=(k)=>{
     if(k===cur) return `<button class="big now" disabled>Your plan</button>`;
-    if(k==='pro') return `<button class="big" onclick="startCheckout()">Upgrade to Pro</button>`;
+    if(k==='pro') return `<button class="big" data-on-click="startCheckout">Upgrade to Pro</button>`;
     if(comped) return `<button class="big now" disabled>Comped${VPLAN.until?' until '+vdate(VPLAN.until):''}</button>`;
-    return `<button class="big alt" onclick="confirmDowngrade()">Switch to Free</button>`;
+    return `<button class="big alt" data-on-click="confirmDowngrade">Switch to Free</button>`;
   };
   openSheet(`<div class="plansheet"><h3>Plans</h3><p class="lede">What each plan gives you. Change any time.</p>
     ${['free','pro'].map(k=>`<div class="tier">
@@ -748,7 +786,7 @@ function openPlans(){
       ${VTIER_COPY[k].lead?`<p class="plus">${VTIER_COPY[k].lead}</p>`:''}<ol>${vTierList(k)}</ol>
       <div class="cta">${cta(k)}</div></div>`).join('')}
     <p class="fine">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p>
-    <button class="big alt" style="margin-top:14px" onclick="openSuggest()">Suggestions &amp; feedback</button></div>`);
+    <button class="big alt" style="margin-top:14px" data-on-click="openSuggest">Suggestions &amp; feedback</button></div>`);
 }
 /* SUGGESTIONS & FEEDBACK (decision 0127): straight to MySet — the founder's phone and
    the Sheet's Suggestions tab. Any seat may send one. */
@@ -757,7 +795,7 @@ function openSuggest(){
   openSheet(`<div class="dg"><h3>Suggestions &amp; feedback</h3>
     <p class="muted" style="font-size:14px">What would make MySet better for your venue? Anything goes — it comes straight to us.</p>
     <textarea class="inp" id="sugT" rows="5" maxlength="1000" placeholder="I wish MySet could…" style="margin-top:12px;min-height:120px"></textarea>
-    <button class="big" id="sugGo" style="margin-top:12px" onclick="sendSuggest()">Send it</button></div>`);
+    <button class="big" id="sugGo" style="margin-top:12px" data-on-click="sendSuggest">Send it</button></div>`);
   setTimeout(()=>{const t=$('#sugT'); if(t) t.focus();},80);
 }
 async function sendSuggest(){
@@ -781,16 +819,16 @@ async function changePlan(plan){
 function confirmDowngrade(){
   openSheet(`<div class="dg"><h3>Are you sure you want to lose your Pro membership benefits?</h3>
     <p class="muted" style="font-size:14px">Merch, the tick, hiding posts and the photos past five go with it. Your items stay saved.</p>
-    <button class="big no" style="margin-top:16px" onclick="closeSheet()">No, keep Pro</button>
-    <button class="big yes" style="margin-top:10px" onclick="retentionOffer()">Yes, switch to Free</button></div>`);
+    <button class="big no" style="margin-top:16px" data-on-click="closeSheet">No, keep Pro</button>
+    <button class="big yes" style="margin-top:10px" data-on-click="retentionOffer">Yes, switch to Free</button></div>`);
 }
 function retentionOffer(){
   if(VPLAN.billing&&VPLAN.billing.retentionUsed){ changePlan('free'); return; }
   post('/venueadmin',{action:'planRetainOffered'});
   openSheet(`<div class="dg"><h3>We’re sad to see you go…</h3>
     <p class="muted" style="font-size:14px">Would you like to keep your plan for <b>50% off</b> for 1 more month?</p>
-    <button class="big no" style="margin-top:16px" onclick="keepPlan()">Yes — keep it, half price this month</button>
-    <button class="big yes" style="margin-top:10px" onclick="changePlan('free')">No thanks, switch to Free</button></div>`);
+    <button class="big no" style="margin-top:16px" data-on-click="keepPlan">Yes — keep it, half price this month</button>
+    <button class="big yes" style="margin-top:10px" ${ON.click('changePlan','free')}>No thanks, switch to Free</button></div>`);
 }
 async function keepPlan(){
   const d=await post('/venueadmin',{action:'planRetain'});
@@ -855,7 +893,7 @@ function vEarnings(){
     <div class="cnt mono">${vm$(m.net)}</div></div>`).join('')}</div>`
    :`<div class="list"><div class="row muted">No payments in the last twelve months.</div></div>`}
   <div class="wrap" style="margin-top:12px">
-    <button class="big alt" onclick="vLedgerCsv()">Download it as a spreadsheet</button>
+    <button class="big alt" data-on-click="vLedgerCsv">Download it as a spreadsheet</button>
     <p class="muted" style="font-size:12px;margin:8px 0 0">Straight from Stripe — the same numbers your bank sees. Hand the file to whoever does your books.</p>
   </div>`;
 }
@@ -911,7 +949,7 @@ function payCard(){
     <div class="list"><div class="row"><div class="m">
       <div class="t">Card payments are on <span style="color:var(--good)">✓</span></div>
       <div class="s muted">MySet’s transaction fee is ${p.cutPct}% on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}</div>
-    </div><button class="act" onclick="payDash()">Stripe ↗</button></div></div>`;
+    </div><button class="act" data-on-click="payDash">Stripe ↗</button></div></div>`;
   const started=p.started;
   return `<div class="sec"><span class="kick">Getting paid</span></div>
     <div class="list"><div class="row muted" style="display:block">
@@ -926,8 +964,8 @@ function payCard(){
         <p class="s muted" style="margin:6px 0 0">Stripe can’t change this later, so it has to be right.</p>
       </div>`}
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="big" style="flex:1;min-width:180px;margin:0" onclick="payStart()">${started?'Finish with Stripe':'Start with Stripe'}</button>
-        ${started?`<button class="act" onclick="loadPay(true)">Check again</button>`:''}
+        <button class="big" style="flex:1;min-width:180px;margin:0" data-on-click="payStart">${started?'Finish with Stripe':'Start with Stripe'}</button>
+        ${started?`<button class="act" ${ON.click('loadPay',true)}>Check again</button>`:''}
       </div>
     </div></div>`;
 }
@@ -961,8 +999,8 @@ function ordersSection(){
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''} · $${Number(x.amount||0).toFixed(2)}</div>
           <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' shipping':''} · ${vdate(x.at)}${x.refunded?' · Refunded — don’t hand it over':x.short?' · Sold out before it was paid — refunding the buyer':(done?' · '+verb:'')+vlossNote(x)}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
-        <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
-        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button>`}</div></div>`;}).join('')
+        <button class="act" ${ON.click('orderDetail',String(x.sid))}>Details</button>
+        ${x.refunded||x.short?'':`<button class="act ${done?'':'pri'}" ${ON.click('orderDone',String(x.sid),(done?false:true))}>${done?'Undo':verb}</button>`}</div></div>`;}).join('')
       ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
 }
 async function orderDone(sid,done){ const d=await post('/venueadmin',{action:'orderDone',sid,done}); if(d&&d.ok){ VORDERS=null; loadOrders(); } else toast((d&&d.error)||'Couldn’t update that'); }
@@ -978,9 +1016,9 @@ async function orderDetail(sid){
     <div class="list" style="margin:0"><div class="row"><div class="m"><div class="t">${o.code?'Code '+esc(o.code)+' · ':''}$${Number(o.amount||0).toFixed(2)}${o.qty>1?' · × '+o.qty:''}${o.post>0?' · incl. '+vmoney(o.post)+' shipping':''}</div><div class="s">${vdate(o.at)} · ${o.ship==='ship'?'To be shipped':'Pickup at the bar'}</div></div></div>
       ${b.name||b.email?`<div class="row"><div class="m"><div class="t">${esc(b.name||'Name not given')}</div><div class="s">${esc(b.email||'')}${b.email?' · from Stripe':''}</div></div></div>`:''}
       ${addr?`<div class="row"><div class="m"><div class="t">${esc(addr)}</div><div class="s">Post it here</div></div>
-        <button class="act" data-copy="${esc(addr)}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute('data-copy'));toast('Copied')">Copy</button></div>`:''}</div>
+        <button class="act" data-copy="${esc(addr)}" data-on-click="copyData">Copy</button></div>`:''}</div>
     <p class="muted" style="font-size:12px;margin:12px 0 0">Fetched from Stripe just now. MySet doesn’t keep it.</p>
-    <button class="big alt" style="margin-top:14px" onclick="closeSheet()">Close</button>`);
+    <button class="big alt" style="margin-top:14px" data-on-click="closeSheet">Close</button>`);
 }
 
 const speakerCard=()=>soonCard('speakerVotes','What plays between the sets',
@@ -1015,7 +1053,7 @@ function wishesSection(){
     <div class="list">${VWISHES===null?'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>':w.slice(0,60).map(x=>`<div class="row ${x.done?'muted':''}">
       <div class="m"><div class="t" style="white-space:normal">${esc(x.text)}</div>
         <div class="s">${x.name?esc(x.name)+' · ':''}${x.itemTitle?'about '+esc(x.itemTitle)+' · ':''}${vdate(x.at)}${x.done?' · Done':''}</div></div>
-      <button class="act ${x.done?'':'pri'}" onclick="wishDone('${esc(x.id)}',${x.done?'false':'true'})">${x.done?'Undo':'Done'}</button></div>`).join('')
+      <button class="act ${x.done?'':'pri'}" ${ON.click('wishDone',String(x.id),(x.done?false:true))}>${x.done?'Undo':'Done'}</button></div>`).join('')
       ||'<div class="row muted">Nothing asked for yet. Requests land here the moment a fan sends one.</div>'}</div>`;
 }
 const vmoney=c=>'$'+(c/100).toFixed(c%100?2:0);
@@ -1029,11 +1067,11 @@ function vMerchTab(){
         <div class="m" style="flex:1 1 100%"><div class="t">${esc(m.title)}</div>
           <div class="s">${m.cents?vmoney(m.cents):'No price'}${m.link?' · '+esc((m.link||'').replace(/^https?:\/\//,'').slice(0,40)):''}${m.ship==='ship'?' · Shipped'+(m.post>0?' +'+vmoney(m.post):''):''}${(m.imgs||[]).length>1?' · '+m.imgs.length+' photos':''}${m.stock!=null&&!m.out?(m.stock===0?' · <b style="color:var(--accent)">Sold out</b>':' · '+m.stock+' left'):''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${vsizes(m)}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
-        <button class="act" onclick="vmMove('${esc(m.id)}','up')" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
-        <button class="act" onclick="vmMove('${esc(m.id)}','down')" ${i===items.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
-        <button class="act" onclick="openVMerch('${esc(m.id)}')">Edit</button>
-        <button class="act warn" onclick="rmVMerch('${esc(m.id)}')">✕</button></div></div>`).join('')||`<div class="row muted">${stored?'Your items are saved and come back with Pro.':'Nothing yet.'}</div>`}</div>
-    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openVMerch('')">+ Add an item</button></div>`;
+        <button class="act" ${ON.click('vmMove',String(m.id),'up')} ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
+        <button class="act" ${ON.click('vmMove',String(m.id),'down')} ${i===items.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
+        <button class="act" ${ON.click('openVMerch',String(m.id))}>Edit</button>
+        <button class="act warn" ${ON.click('rmVMerch',String(m.id))}>✕</button></div></div>`).join('')||`<div class="row muted">${stored?'Your items are saved and come back with Pro.':'Nothing yet.'}</div>`}</div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" ${ON.click('openVMerch','')}>+ Add an item</button></div>`;
   const posts=VCOMM||[];
   /* a sample's shop and community page are not public until it is claimed (0101), so
      neither is linked from its Studio: both would answer "No page here" */
@@ -1051,12 +1089,12 @@ function vMerchTab(){
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}</div>
         ${p.reply?`<div class="s" style="color:var(--accent-2)">You: ${esc(p.reply.text)}</div>`:''}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">
-        <button class="act" onclick="vReply('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
-        <button class="act" onclick="vComm('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
-        ${p.hidden?`<button class="act" onclick="vComm('postHide','${esc(p.id)}',false)">Show</button>`
-  :has('moderate')?`<button class="act" onclick="${esc(`if(confirm(${JSON.stringify((p.photos&&p.photos.length)||p.clip?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))vComm('postHide','${esc(p.id)}',true)`)}">Hide</button>
-        <button class="act warn" onclick="if(confirm('Delete this post for good?'))vComm('postDelete','${esc(p.id)}')">✕</button>`
-  :`<button class="act" onclick="showPlans()" aria-label="Hiding or deleting a post comes with Pro">${LOCKICON.replace('<svg ','<svg style="width:13px;height:13px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:2" ')} Hide · Pro</button>`}</div>
+        <button class="act" ${ON.click('vReply',String(p.id))}>${p.reply?'Edit reply':'Reply'}</button>
+        <button class="act" ${ON.click('vComm','postPin',String(p.id),(p.pinned?false:true))}>${p.pinned?'Unpin':'Pin'}</button>
+        ${p.hidden?`<button class="act" ${ON.click('vComm','postHide',String(p.id),false)}>Show</button>`
+  :has('moderate')?`<button class="act" ${ON.click('postHideAsk',String(p.id),(p.photos&&p.photos.length)||p.clip?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}>Hide</button>
+        <button class="act warn" ${ON.click('postDeleteAsk',String(p.id))}>✕</button>`
+  :`<button class="act" data-on-click="showPlans" aria-label="Hiding or deleting a post comes with Pro">${LOCKICON.replace('<svg ','<svg style="width:13px;height:13px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:2" ')} Hide · Pro</button>`}</div>
     </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
 }
 /* THE ITEM EDITOR — the artist Studio's, with the venue's ids. Sizes are one
@@ -1137,19 +1175,19 @@ function openVMerch(id){
       <div id="vmVarQty">${vmVarQtyRows(vmVar)}</div></div>
     <div class="field"><label>${PAY&&PAY.ready?'Link to where it sells (optional — fans can buy right here)':'Link to where it sells'}</label><input class="inp" id="vmLink" value="${esc(m.link)}" placeholder="https://…"></div>
     <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Shipped asks for an address at checkout</div></div>
-      <div class="tog"><button id="vmPick" class="${vmcShip!=='ship'?'on':''}" onclick="vmcShip='pickup';this.classList.add('on');document.getElementById('vmPost').classList.remove('on');document.getElementById('vmPostWrap').hidden=true">Pickup</button>
-      <button id="vmPost" class="${vmcShip==='ship'?'on':''}" onclick="vmcShip='ship';this.classList.add('on');document.getElementById('vmPick').classList.remove('on');document.getElementById('vmPostWrap').hidden=false">Shipped</button></div></div>
+      <div class="tog"><button id="vmPick" class="${vmcShip!=='ship'?'on':''}" data-on-click="vmPickup">Pickup</button>
+      <button id="vmPost" class="${vmcShip==='ship'?'on':''}" data-on-click="vmShipIt">Shipped</button></div></div>
     <div class="field" id="vmPostWrap"${vmcShip==='ship'?'':' hidden'}><label>Shipping per order (USD)</label><input class="inp" id="vmPostage" inputmode="decimal" value="${m.post?(m.post/100):''}" placeholder="6">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${vmPostHelp()}</p></div>
     <div class="field" id="vmStockWrap"${vmVar.length?' hidden':''}><label>Quantity in stock (optional)</label><input class="inp" id="vmStock" type="number" inputmode="numeric" min="0"${VMLIM.maxStock?' max="'+VMLIM.maxStock+'"':''} value="${m.stock!=null?m.stock:''}" placeholder="Leave blank if you’re not counting">
       <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back.</p></div>
     <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
-      <div class="tog"><button id="vmIn" class="${m.out!==true?'on':''}" onclick="vmcOut=false;this.classList.add('on');document.getElementById('vmSold').classList.remove('on')">In stock</button>
-      <button id="vmSold" class="${m.out===true?'on':''}" onclick="vmcOut=true;this.classList.add('on');document.getElementById('vmIn').classList.remove('on')">Sold out</button></div></div>
+      <div class="tog"><button id="vmIn" class="${m.out!==true?'on':''}" data-on-click="vmInStock">In stock</button>
+      <button id="vmSold" class="${m.out===true?'on':''}" data-on-click="vmSoldOut">Sold out</button></div></div>
     <div class="row"><div class="m"><div class="t">On the page</div></div>
-      <div class="tog"><button id="vmOn" class="${m.on!==false?'on':''}" onclick="vmcOn=true;this.classList.add('on');document.getElementById('vmOff').classList.remove('on')">On</button>
-      <button id="vmOff" class="${m.on===false?'on':''}" onclick="vmcOn=false;this.classList.add('on');document.getElementById('vmOn').classList.remove('on')">Off</button></div></div>
-    <button class="big" style="margin-top:14px" id="vmSave" onclick="saveVMerch('${esc(id)}')">Save</button>`);
+      <div class="tog"><button id="vmOn" class="${m.on!==false?'on':''}" data-on-click="vmShowOn">On</button>
+      <button id="vmOff" class="${m.on===false?'on':''}" data-on-click="vmShowOff">Off</button></div></div>
+    <button class="big" style="margin-top:14px" id="vmSave" ${ON.click('saveVMerch',String(id))}>Save</button>`);
   const sv=document.getElementById('vmVariants'); if(sv) sv.addEventListener('input',vmSyncSizes);
 }
 async function saveVMerch(id){
@@ -1196,7 +1234,7 @@ function vReply(id){
   const p=(VCOMM||[]).find(x=>x.id===id)||{};
   openSheet(`<h3>Reply</h3><p class="lede">${esc((p.text||'').slice(0,160))}</p>
     <textarea class="inp" id="vrTxt" maxlength="500" style="min-height:110px">${esc(p.reply?p.reply.text:'')}</textarea>
-    <button class="big" style="margin-top:14px" onclick="vReplySave('${esc(id)}')">Save</button>`);
+    <button class="big" style="margin-top:14px" ${ON.click('vReplySave',String(id))}>Save</button>`);
 }
 async function vReplySave(id){ const t=(document.getElementById('vrTxt')||{}).value||''; const d=await post('/venueadmin',{action:'postReply',id,text:t}); if(d&&d.ok){VCOMM=d.posts;closeSheet();render();toast('Replied');} else toast((d&&d.error)||'Couldn’t reply'); }
 
@@ -1252,7 +1290,7 @@ function render(){
         <input class="inp" id="${id}" type="url" inputmode="url" spellcheck="false"
           value="${esc((V.links||{})[k]||'')}" placeholder="${ph}"></div>`).join('')}
 
-    <div class="wrap" style="margin-top:16px"><button class="big" onclick="savePage()">Save everything above</button></div>
+    <div class="wrap" style="margin-top:16px"><button class="big" data-on-click="savePage">Save everything above</button></div>
 
     <div class="sec"><span class="kick">Good to know</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Tap what applies. <b>House PA / backline</b> is the one artists look for first.</p>
@@ -1309,7 +1347,7 @@ function render(){
       <p>Artists keep their own gig calendars in MySet. Any gig at a venue name matching <b>${esc(V.name||'yours')}</b> in ${esc([V.city,V.country].filter(Boolean).join(', ')||'your city')} appears here and on your public page automatically. <b>Approve</b> the ones that are really here, and anything that isn’t comes off your page. Everything else — quiz night, a DJ, the football — you add below.</p></div>
 
     ${gigsSection(gigs)}
-    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Invite acts to list their gigs here</button></div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" data-on-click="shareInvite">Invite acts to list their gigs here</button></div>
 
     <div class="sec"><span class="kick">Your own events</span><span class="kick">${occ?occ.length:''}</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Quiz night, a DJ, the football, a full-moon party. Enter a weekly one <b>once</b> — it repeats itself, shows on your page, and goes into the local “what’s on tonight” feed like a gig does.</p>
@@ -1322,7 +1360,7 @@ function render(){
         <button class="act" data-act="evedit" data-id="${esc(o.eventId)}">Edit</button>
         <button class="act warn" data-act="evskip" data-id="${esc(o.eventId)}|${o.date}">✕</button>
       </div>`).join('')}</div>`}
-    <div class="wrap" style="margin-top:14px"><button class="big" onclick="openEvent()">+ Add an event</button></div>
+    <div class="wrap" style="margin-top:14px"><button class="big" data-on-click="openEvent">+ Add an event</button></div>
     ${rules.length?`<p class="muted" style="font-size:12px;padding:12px 20px 0">✕ cancels one night. Edit changes the whole run.</p>`:''}
 
     <div class="sec"><span class="kick">Who wants to play here</span>${waiting.length?`<span class="kick" style="color:var(--accent)">${waiting.length} new</span>`:''}</div>
@@ -1388,7 +1426,7 @@ function render(){
         placeholder="https://… (a PDF, a page, anything)"></div>
     <div class="field"><label>One line about the food</label>
       <input class="inp" id="mNote" maxlength="140" value="${esc(M.note)}" placeholder="Thai and wood-fired pizza until 11pm"></div>
-    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="saveMenu()">Save</button></div>
+    <div class="wrap" style="margin-top:12px"><button class="big alt" data-on-click="saveMenu">Save</button></div>
 
     <div class="sec"><span class="kick">Highlights</span><span class="kick">${(M.items||[]).length}/24</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">A handful of things worth ordering. This is what shows on your page — the full menu stays behind the link.</p>
@@ -1397,7 +1435,7 @@ function render(){
         <div class="by">${esc([it.section,it.note].filter(Boolean).join(' · ')||'—')}</div></div>
       <button class="act warn" data-act="mrm" data-id="${i}">✕</button>
     </div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
-    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMenuItem()">+ Add a highlight</button></div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" data-on-click="openMenuItem">+ Add a highlight</button></div>
 
     <div class="sec"><span class="kick">Offers</span><span class="kick">${(V.offers||[]).length}/6</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Happy hour, two-for-one, free shot for anyone who votes — whatever brings people in.</p>
@@ -1408,7 +1446,7 @@ function render(){
       <button class="act" data-act="oedit" data-id="${esc(o.id)}">Edit</button>
       <button class="act warn" data-act="orm" data-id="${esc(o.id)}">✕</button>
     </div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
-    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openOffer()">+ Add an offer</button></div>`;
+    <div class="wrap" style="margin-top:14px"><button class="big alt" data-on-click="openOffer">+ Add an offer</button></div>`;
   }
 
   if(TAB==='settings'){
@@ -1418,7 +1456,7 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">The link you give people, yours to choose. Change it any time — the old one keeps working too, so QR codes already printed still land here.</p>
     <div class="field"><label>myset.vip/v/</label><div style="display:flex;gap:8px">
       <input class="inp" id="slugIn" maxlength="32" value="${esc(V.slug||'')}" placeholder="yourbar" style="flex:1">
-      <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
+      <button class="act pri" style="min-width:64px" data-on-click="saveSlug">Save</button></div></div>
     ${V.slug?`<div class="wrap" style="margin-top:10px">
       <a class="big alt" href="/v/${esc(V.slug)}">Open myset.vip/v/${esc(V.slug)} ↗</a></div>`:''}
 
@@ -1432,7 +1470,7 @@ function render(){
             :'Your website, and the artists who play here'}</div></div>
           <span class="pill ok">✓</span></div></div>`
       : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. Four things are needed and they’re all needed — the checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
-         <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}`}
+         <div class="wrap"><button class="big alt" ${ON.click('setTab','page')}>Show me the checklist</button></div>`}`}
 
     <div class="sec"><span class="kick">Codes to print</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">On tables, on the bar, by the door. Tap one to bring it up full size.</p>
@@ -1457,7 +1495,7 @@ function render(){
      :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
     <div class="field"><label>Add a manager or barman</label><div style="display:flex;gap:8px">
       <input class="inp" id="addEmail" type="email" inputmode="email" placeholder="them@email.com" style="flex:1">
-      <button class="act pri" style="min-width:64px" onclick="addStaff()">Add</button></div></div>
+      <button class="act pri" style="min-width:64px" data-on-click="addStaff">Add</button></div></div>
 
     <p class="muted" style="font-size:12px;padding:8px 20px 0">A venue page can’t reach an artist’s setlist, votes or money — different account, different door.</p>
 
@@ -1473,31 +1511,31 @@ function render(){
         <div class="s">Sign-in address${ME&&ME.emails?` · ${ME.emails.length} sign-in${ME.emails.length===1?'':'s'} on this page`:''}</div></div></div>`}
       ${SAMPLE?'':ME&&ME.email?`<div class="row"><div class="m"><div class="t">Password${ME&&ME.ok?(myPw()?' · set':' · not set'):''}</div>
         <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
-        <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>`
+        <button class="act" data-on-click="openPasswordSheet">${myPw()?'Change':'Create'}</button></div>`
       :codeAddrs().length?`<div class="row"><div class="m"><div class="t">Password${codeAddrs().some(x=>x.pw)?' · set':' · not set'}</div>
         <div class="s">You’re in with the Studio code. Set a password for ${codeAddrs().length===1?esc(codeAddrs()[0].email):'one of the addresses on this account'} and you can sign in with your email and password.</div></div>
-        <button class="act" onclick="openPasswordSheet()">${codeAddrs().some(x=>x.pw)?'Change':'Create'}</button></div>`
+        <button class="act" data-on-click="openPasswordSheet">${codeAddrs().some(x=>x.pw)?'Change':'Create'}</button></div>`
       :`<div class="row"><div class="m"><div class="t">Password</div>
         <div class="s">This sign-in has no email on it. Sign in with your email to set a password for it.</div></div></div>`}
       <div class="row"><div class="m"><div class="t">Where you’re signed in</div>
         <div class="s">Every phone and tablet with a live sign-in.</div></div>
-        <button class="act" onclick="openSessions()">See them</button></div>
+        <button class="act" data-on-click="openSessions">See them</button></div>
       <div class="row"><div class="m"><div class="t">Download our data</div>
         <div class="s">Everything MySet holds about this venue, as one file. Never a customer’s device.</div></div>
-        <button class="act" onclick="exportAccount()">Download</button></div>
+        <button class="act" data-on-click="exportAccount">Download</button></div>
       ${VPLAN&&VPLAN.billing&&VPLAN.billing.portal?`<div class="row"><div class="m"><div class="t">Invoices and receipts</div>
         <div class="s">Every payment made to MySet.</div></div>
-        <button class="act" onclick="openInvoices()">Open</button></div>`:''}
+        <button class="act" data-on-click="openInvoices">Open</button></div>`:''}
     </div>
     <div class="wrap" style="margin-top:14px">
-      <button class="big alt" onclick="signOut()">Sign out of this device</button>
+      <button class="big alt" data-on-click="signOut">Sign out of this device</button>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0;text-align:center">
-        <a href="#" onclick="event.preventDefault();signOutEverywhere()" style="color:var(--accent);font-weight:600">Sign out everywhere, including this one</a></p>
+        <a href="#" ${ON.click(['prevent'],['signOutEverywhere'])} style="color:var(--accent);font-weight:600">Sign out everywhere, including this one</a></p>
     </div>
     <div class="list" style="margin-top:14px">
       <div class="row"><div class="m"><div class="t">Delete this venue page</div>
         <div class="s">The page goes offline today. We keep everything for 30 days, then it’s gone.</div></div>
-        <button class="act warn" onclick="deleteAccount()">Delete</button></div>
+        <button class="act warn" data-on-click="deleteAccount">Delete</button></div>
     </div>`;
   }
 
@@ -1517,11 +1555,11 @@ function render(){
         : `<h1>${esc(V.name||'Your venue')}</h1>`}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px">
-      <div class="headtopactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
-      ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
+      <div class="headtopactions"><button class="tipsbtn" type="button" data-on-click="showTips" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
+      ${SAMPLE?`<button class="claimbtn" data-on-click="openClaim">Claim profile</button>`
         :(V.plan||'free')==='free'
-        ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
-        :`<button class="plantag" onclick="openPlans()">${esc((V.limits&&V.limits.label)||'Pro')} <span>↗</span></button>`}</div>
+        ?`<button class="upg" data-on-click="openPlans">Upgrade <span>↗</span></button>`
+        :`<button class="plantag" data-on-click="openPlans">${esc((V.limits&&V.limits.label)||'Pro')} <span>↗</span></button>`}</div>
       ${SAMPLE?'':`<span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>`}
     </div>
   </div>${leavingBar()}${cardTrouble()}${body}
@@ -1550,23 +1588,23 @@ function tabBar(){
   const on=t=>t==='menu'?(TAB==='menu'||TAB==='settings'):TAB===t;
   return `<nav class="tabbar" aria-label="Venue Studio"><div class="in">
     ${[['page','Page'],['shows','What’s on'],['numbers','Numbers'],['merch','Merch'],['menu','Menu']].map(([t,l])=>
-      `<button class="${on(t)?'on':''}" onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
+      `<button class="${on(t)?'on':''}" ${t==='menu'?ON.click('openMenu'):ON.click('setTab',String(t))} aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
   </div></nav>`;
 }
 function openMenu(){
   const M=(V&&V.menu)||{}, n=(M.items||[]).length;
   const planLine=(V&&V.plan||'free')==='free'?'Free plan · see the plans':esc((V.limits&&V.limits.label)||V.plan)+' · manage';
   openSheet(`<h3>Menu</h3>
-    <button class="menurow" onclick="closeSheet();setTab('menu')">
+    <button class="menurow" ${ON.click(['closeSheet'],['setTab','menu'])}>
       <svg viewBox="0 0 24 24"><path d="M6 3v7a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.7 1.4-2.5 3.4-2.5 6.2V13h3.5v8"/></svg>
       <div class="m">Food &amp; drink<span>${n?n+' highlight'+(n===1?'':'s')+' on your page':'The menu link, highlights and offers'}</span></div><span class="chev">›</span></button>
-    <button class="menurow" onclick="closeSheet();setTab('settings')">
+    <button class="menurow" ${ON.click(['closeSheet'],['setTab','settings'])}>
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>
       <div class="m">Settings<span>Address, verification, codes, sign-in</span></div><span class="chev">›</span></button>
-    <button class="menurow" onclick="closeSheet();openPlans()">
+    <button class="menurow" ${ON.click(['closeSheet'],['openPlans'])}>
       <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
       <div class="m">Your plan<span>${planLine}</span></div><span class="chev">›</span></button>
-    <button class="menurow out" onclick="closeSheet();signOut()">
+    <button class="menurow out" ${ON.click(['closeSheet'],['signOut'])}>
       <svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>
       <div class="m">Sign out<span>Of this device</span></div></button>`);
 }
@@ -1684,7 +1722,7 @@ function verifyBlock(){
     ${VERIFY&&C.siteNamesTown?line(true,'…and your town','A bonus, not required'):''}
   </div>
   <div class="wrap" style="margin-top:14px">
-    <button class="big alt" onclick="runVerify()">${VERIFY?'Run the check again':'Run the check now'}</button>
+    <button class="big alt" data-on-click="runVerify">${VERIFY?'Run the check again':'Run the check now'}</button>
   </div>
   ${VERIFY&&!C.siteNamesVenue&&VERIFY.why?`<p class="muted" style="font-size:12px;padding:10px 20px 0">
     If your name is only in an image or drawn by a script we can’t see it — put it in the
@@ -1701,7 +1739,7 @@ function verifyBlock(){
       <div class="s">${vouches?esc(names.join(', ')):'Nobody yet — send them your page'}</div></div>
     <span class="pill ${vouches>=need?'ok':'no'}">${Math.min(100,Math.round(vouches/need*100))}%</span>
   </div></div>
-  <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Send artists your page</button></div>
+  <div class="wrap" style="margin-top:14px"><button class="big alt" data-on-click="shareInvite">Send artists your page</button></div>
   <p class="muted" style="font-size:12px;padding:14px 20px 0">No website at all? Get to ${need} artists and message us — we check those by hand.</p>`;
 }
 async function runVerify(){
@@ -1744,11 +1782,11 @@ function qrBig(k){
   const row=QRS.find(x=>x[0]===k); if(!row)return;
   if(k!=='home'&&!(V&&V.slug)){ toast('Set your page address first'); return; }
   const copy=qrCopy(k);
-  $('#qrbig').innerHTML=`<div onclick="event.stopPropagation()">
+  $('#qrbig').innerHTML=`<div data-on-click="stop">
     <div class="qrpaper"><img src="${qrSrc(k,10)}" alt="${esc(row[1])} QR code">
       <div class="cap">${esc(copy.head)}</div><div class="cap2">${esc(copy.line)}</div><div class="sub">${esc(copy.url)}</div></div>
-    <div class="qracts"><button onclick="qrDownload('${k}')">Download print-ready</button>
-      <button onclick="qrHide()">Done</button></div></div>`;
+    <div class="qracts"><button ${ON.click('qrDownload',String(k))}>Download print-ready</button>
+      <button data-on-click="qrHide">Done</button></div></div>`;
   $('#qrbig').classList.add('on');
 }
 function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
@@ -1768,7 +1806,7 @@ function qrDownload(k){
 function openSheet(h){
   const sh=$('#sheet');
   sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
-    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+    <button class="sheetx" data-on-click="closeSheet" aria-label="Close">✕</button></div>${h}`;
   sh.style.transform=''; sh.scrollTop=0;
   $('#bg').classList.add('on'); sh.classList.add('on');
   attachDrag(sh);
@@ -1955,7 +1993,7 @@ function openMenuItem(){
       <input class="inp" id="miSection" maxlength="30" placeholder="Section (Food, Drinks…)" style="flex:1.4">
     </div>
     <input class="inp" id="miNote" maxlength="60" placeholder="Note (optional)" style="margin-top:8px">
-    <button class="big" style="margin-top:16px" onclick="addMenuItem()">Add it</button>`);
+    <button class="big" style="margin-top:16px" data-on-click="addMenuItem">Add it</button>`);
   setTimeout(()=>{const e=$('#miName');if(e)e.focus()},260);
 }
 async function addMenuItem(){
@@ -2008,7 +2046,7 @@ function shareInvite(){
   openSheet(`<h3>Invite the acts</h3>
     <p class="lede">Send them this. They add their own gigs once and every night at your place shows up on your page from then on.</p>
     <input class="inp" id="invLink" readonly value="${esc(link)}">
-    <button class="big" style="margin-top:12px" onclick="copyInv()">Copy the link</button>
+    <button class="big" style="margin-top:12px" data-on-click="copyInv">Copy the link</button>
     <p class="muted" style="font-size:12.5px;margin:14px 0 0">Tell them to put the venue name as <b>${esc(V.name)}</b> and the city as <b>${esc(V.city||'—')}</b>, and it lands here automatically.</p>
     ${V.slug?`<p class="muted" style="font-size:12.5px;margin:12px 0 0">Your own page is <b>myset.vip/v/${esc(V.slug)}</b> — that’s where they tap “I play here” to help verify you, and where they can ask you for a spot.</p>`:''}`);
 }

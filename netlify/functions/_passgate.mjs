@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc } from './_lib.mjs';
+import { scriptSrc } from './_csp.mjs';
 
 /* THE FOUNDER'S PASSCODE — one door for the pages that are his and nobody else's.
 
@@ -73,13 +74,17 @@ export async function stamp(code) {
 }
 
 /* The same policy netlify.toml puts on static files, restated because custom headers
-   do not reach a function's response. Nothing external, nothing that can phone home. */
+   do not reach a function's response. Nothing external, nothing that can phone home.
+   A page this file family sends names its own inline scripts by hash (SEC-006, decision 0209,
+   _csp.mjs): pass the page as `html` and script-src is worked out from it, so the door, the
+   Show log's lock and the money model run their own code and nothing injected into them. */
 export const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'none'; manifest-src 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'";
-export const baseHeaders = (type = 'text/html; charset=utf-8') => ({
+export const cspFor = (html) => CSP.replace("script-src 'self' 'unsafe-inline'", `script-src ${scriptSrc(html)}`);
+export const baseHeaders = (type = 'text/html; charset=utf-8', html = null) => ({
   'content-type': type,
   'cache-control': 'private, no-store',
   'x-robots-tag': 'noindex, nofollow',
-  'content-security-policy': CSP,
+  'content-security-policy': html == null ? CSP : cspFor(html),
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-frame-options': 'SAMEORIGIN',
@@ -139,6 +144,9 @@ export const noteRight = () =>
   }, null, 5).catch(() => {});
 
 const minutes = (ms) => Math.max(1, Math.ceil(ms / 60e3));
+/* Show / Hide on the passcode field — wired here, not in an onclick=, so the page's policy can
+   name it by hash (decision 0209). */
+const PEEK = "document.getElementById('peek').addEventListener('click',function(){const i=document.getElementById('code'),on=i.type==='password';i.type=on?'text':'password';this.textContent=on?'Hide':'Show';this.setAttribute('aria-pressed',on);i.focus()});";
 const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
 export const gatePage = ({ wrong = false, locked = 0, unset = false, action = '/', title = 'MySet Money Model', kicker = 'MySet · Money Model', button = 'Open the model' } = {}) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${esc(title)}</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
@@ -161,12 +169,13 @@ export const gatePage = ({ wrong = false, locked = 0, unset = false, action = '/
   <div class="k">${esc(kicker)}</div>
   <h1>Enter the passcode</h1>
   <p>This page is not public. Ask Perry if you need it.</p>
-  <div class="pw"><input id="code" name="code" type="password" maxlength="200" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus aria-label="passcode" required${locked || unset ? ' disabled' : ''}><button type="button" aria-controls="code" aria-pressed="false" onclick="const i=document.getElementById('code'),on=i.type==='password';i.type=on?'text':'password';this.textContent=on?'Hide':'Show';this.setAttribute('aria-pressed',on);i.focus()">Show</button></div>
+  <div class="pw"><input id="code" name="code" type="password" maxlength="200" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus aria-label="passcode" required${locked || unset ? ' disabled' : ''}><button type="button" id="peek" aria-controls="code" aria-pressed="false">Show</button></div>
   <button type="submit"${locked || unset ? ' disabled' : ''}>${esc(button)}</button>
   ${unset ? '<p class="no">This door has no passcode set. Set FINMODEL_CODE in Netlify and redeploy.</p>'
     : locked ? `<p class="no">Too many tries. The door is shut for about ${minutes(locked - Date.now())} minute${minutes(locked - Date.now()) === 1 ? '' : 's'}.</p>`
     : wrong ? '<p class="no">That is not the passcode.</p>' : ''}
-</form></body></html>`;
+</form>
+<script>${PEEK}</script></body></html>`;
 
 /**
  * The door. Returns a Response to send when the request is not (yet) allowed in, or
@@ -187,6 +196,8 @@ async function codeFrom(req) {
   return '';
 }
 
+const gateAnswer = (status, opts, more = {}) => { const html = gatePage(opts); return new Response(html, { status, headers: { ...baseHeaders(undefined, html), ...more } }); };
+
 export async function gate(req, { landing, page = {} } = {}) {
   const url = new URL(req.url);
   const to = landing || url.pathname;
@@ -196,16 +207,16 @@ export async function gate(req, { landing, page = {} } = {}) {
   if (req.method === 'POST') {
     const given = await codeFrom(req);
     if (given) {
-      if (!code) return new Response(gatePage({ unset: true, action: to, ...page }), { status: 503, headers: baseHeaders() });
+      if (!code) return gateAnswer(503, { unset: true, action: to, ...page });
       const shut = await lockedUntil();
-      if (shut) return new Response(gatePage({ locked: shut, action: to, ...page }), { status: 429, headers: { ...baseHeaders(), 'retry-after': String(Math.ceil((shut - Date.now()) / 1000)) } });
+      if (shut) return gateAnswer(429, { locked: shut, action: to, ...page }, { 'retry-after': String(Math.ceil((shut - Date.now()) / 1000)) });
       if (sameCode(given, code)) {
         await noteRight();
         return new Response(null, { status: 303, headers: { ...baseHeaders(), location: to, 'set-cookie': setCookie(await stamp(code), MAX_AGE, cookiePath(to)) } });
       }
       const until = await noteWrong();
-      if (until) return new Response(gatePage({ locked: until, action: to, ...page }), { status: 429, headers: { ...baseHeaders(), 'retry-after': String(Math.ceil((until - Date.now()) / 1000)) } });
-      return new Response(gatePage({ wrong: true, action: to, ...page }), { status: 200, headers: baseHeaders() });
+      if (until) return gateAnswer(429, { locked: until, action: to, ...page }, { 'retry-after': String(Math.ceil((until - Date.now()) / 1000)) });
+      return gateAnswer(200, { wrong: true, action: to, ...page });
     }
   }
   if (url.searchParams.get('signout') === '1') {
@@ -218,6 +229,6 @@ export async function gate(req, { landing, page = {} } = {}) {
   if (/\.(json|csv)$/.test(url.pathname) || (req.headers.get('accept') || '').includes('application/json')) {
     return new Response(JSON.stringify({ ok: false, error: 'passcode' }), { status: 401, headers: baseHeaders('application/json; charset=utf-8') });
   }
-  if (!code) return new Response(gatePage({ unset: true, action: to, ...page }), { status: 503, headers: baseHeaders() });
-  return new Response(gatePage({ action: to, ...page }), { status: 200, headers: baseHeaders() });
+  if (!code) return gateAnswer(503, { unset: true, action: to, ...page });
+  return gateAnswer(200, { action: to, ...page });
 }
