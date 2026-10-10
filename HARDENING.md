@@ -149,7 +149,9 @@ secret" any legal meaning later — you cannot claim you kept something secret i
 were no measures keeping it.
 Note what public costs, too: no measure in code can keep the code from being
 copied — only making the repository private can, one click and a few dollars a month
-for the rulesets.
+for the rulesets. **Pro first, then private** (GitHub Pro, about $4 a month): the account is
+on GitHub Free, where a private repository's ruleset is not enforced, so private first
+would switch off the lock on `main` (decision 0047's addendum, ledger PER-022).
 
 **Two-factor** — <https://github.com/settings/security>. If it is not on, nothing
 else on this list matters.

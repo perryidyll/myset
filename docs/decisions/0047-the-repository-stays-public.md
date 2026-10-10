@@ -40,3 +40,15 @@ A partner, investor or venue chain asking for it; a document that genuinely must
 ## How it was verified
 
 `gh api repos/perryidyll/myset -q .visibility` → `public` on 2026-09-12. `HARDENING.md §2` corrected the same day. Nothing else was run.
+
+## Addendum 2026-10-10 — the founder asks for private: Pro first
+
+The founder asked for the repository to go private *"if there's no need for it to be public"*, and whether a plan is needed. Read the same day:
+
+- **The account is on GitHub Free.** `gh api repos/perryidyll/agent-config/rulesets` (the founder's one private repository this session can see) answers 403 *"Upgrade to GitHub Pro or make this repository public to enable this feature."* On Free, rulesets and branch protection are enforced on public repositories only.
+- **So private first switches off the lock on `main`.** Ruleset 23031933 (`main is production`: pull request only, `suite` required, no force-push, no deletion — 0045, 0197) would stop being enforced the moment the repository turned private, and the next stray push would deploy unreviewed and untested. That is the *need* to stay public, for now.
+- **Pro keeps it.** About $4 a month (third-party 2026 price lists; GitHub's own pricing page no longer shows Pro, only Free, Team at $4 a user a month, and Enterprise). Pro also raises Actions to 3,000 minutes a month on private repositories; Free private gets 2,000. Measured use: 628 billable minutes in the 12.4 days to 2026-10-10 (`tests` 163 runs, `watch` 42, Dependabot 4, each run rounded up to a minute), about 1,500 a month.
+- **Also lost by going private:** GitHub's free secret scanning (public repositories only); the `curl … raw.githubusercontent.com …` one-liner in `tools/serversecret.mjs`'s header (run it from a checkout instead). Netlify's GitHub app keeps building a private repository; nothing on myset.vip reads from GitHub.
+- **No free route keeps the lock.** A home-made gate in Netlify's build (refuse to build a commit that did not come through a merged pull request with `suite` green) would need a GitHub token in Netlify, would not stop a force-push, and would be weaker than the ruleset — more risk than $4 a month saves.
+
+**Still A until Pro is on; then B, in this order:** (1) GitHub → Settings → Billing → Pro; (2) the repository → Settings → General → Change visibility → Private; (3) an agent reads back `gh api repos/perryidyll/myset/rulesets` (the ruleset, not *Upgrade…*) and `.visibility` (`private`). Ledger PER-022. When it happens, this record is superseded by one that says *the repository is private*, with that read-back as its verification.

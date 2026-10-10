@@ -268,13 +268,15 @@ done, it runs exactly as it did before — safe, but not yet with the new locks 
    live variables (Netlify → Project configuration → Environment variables → Site
    policies → sensitive variable policy: **Require approval**, Netlify's default for a
    public repository; every variable marked secret falls under it). A preview runs
-   the functions against the production store.
+   the functions against the production store. **Done:** Netlify's site record read
+   `untrusted_flow: review` on 2026-10-02 and 10-03 (PER-020).
 
 And the one honest limit of all of this: **the code cannot be hidden while the
 repository is public.** Everything above protects the data and the money, which is
 what matters; a copycat with the source has none of either. If "hard to steal the
 code" is also the goal, the one lever is decision `0047` — one click and a few
-dollars a month, the founder's call.
+dollars a month, the founder's call. **Pro first, then private:** on GitHub Free a private
+repository's ruleset is not enforced (0047's addendum, PER-022).
 
 ---
 

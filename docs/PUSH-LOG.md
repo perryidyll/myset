@@ -14,6 +14,10 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** The outside watch now really runs every five minutes: a Cloudflare clock starts it, so an outage or a build held during a show is caught in minutes, not hours
 **Other sessions:** New cloudflare/clock: Worker myset-watch-clock (cron */5) dispatches watch.yml on main, no inputs (release=no), token in its secret GH_DISPATCH_TOKEN (fine-grained, this repo, Actions rw); redeploy only with npx -y wrangler@4.146.0 deploy from that folder. GitHub's */5 stays as backstop. Expect workflow_dispatch runs every 5 min in Actions. Decision 0208, SCL-031; next free 0209/0jk/SCL-032.
 
+### 2026-10-10 19:05 — 8d69672 — myset@claude/myset-encryption-security-460mph (8 files since origin/main)
+**tl;dr:** The ledger reads true again: ADMIN_CODE and the Site-policies check were already done, four stale PER rows gone, PER-022 says GitHub Pro first, then private (0047's addendum); the probe's allowScripts names the versions #254 brought
+**Other sessions:** Docs and the by-hand probe only: merge with [skip ci]. Dependabot #253 (busboy) and #254 (sharp) are merged and live as 25fb3dc; #255 is superseded. The repo stays public until the account has GitHub Pro — on Free a private repo's ruleset is not enforced, so private-first would switch off main's lock.
+
 ### 2026-10-11 01:45 — 6c5153b — caskeep-blank@docs/0205-live (4 files since origin/main)
 **tl;dr:** Nothing a person sees: the records now say the blank-profile-version fix (0205) is live
 **Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-030 done, 0205 commits: [b9467b6], session note. No process sheet cites the race.
