@@ -115,6 +115,12 @@ jobs:
           prod=$(curl -sS -m 20 'https://myset.vip/version.json' 2>/dev/null | jq -r '.commit // empty' 2>/dev/null || true)
           [ -n "$prod" ] || { echo "production does not say which commit it runs (no version.json yet); not releasing"; exit 0; }
           [ "$prod" != "$main" ] || { echo "production is main ($main); nothing held"; exit 0; }
+          # A docs-only merge carries Netlify's skip marker and is never built, so production
+          # stays one commit behind main without anything being held. Release only when some
+          # commit since production's was meant to build; if GitHub cannot say, release as before.
+          if docs=$(gh api "repos/$GITHUB_REPOSITORY/compare/$prod...$main" --jq '[.commits[].commit.message | test("\\[(skip ci|ci skip|no ci|skip netlify|netlify skip)\\]"; "i")] | all' 2>/dev/null) && [ "$docs" = "true" ]; then
+            echo "production ran $prod; every commit since is marked not to build; nothing held"; exit 0
+          fi
           if [ "$FORCE" != "yes" ]; then
             live=$(curl -sS -m 20 'https://myset.vip/api/live' 2>/dev/null) || { echo "could not ask who is live; not releasing"; exit 0; }
             echo "$live" | jq -e '.live == 0 and .sure == true' >/dev/null || { echo "a show is live, or the count is not sure: $live"; exit 0; }
