@@ -3413,9 +3413,9 @@ function owedPanel(){
   if(!owed.length) return '';
   return `<div class="askpanel rise">
     <div class="ah"><b>Votes still owed back</b><span>The refund didn’t finish</span></div>
-    ${owed.map(o=>`<div class="arow"><div class="m"><div class="t">${esc(o.title||'A declined song')}</div>
-      <div class="s">Declined · its votes haven’t all gone back to the room yet</div></div>
-      <button class="act pri" onclick="act('declineSong',{song:'${o.id}'})">Finish the refund</button></div>`).join('')}</div>`;
+    ${owed.map(o=>`<div class="arow"><div class="m"><div class="t">${esc(o.title||(o.ask?'A declined request':'A declined song'))}</div>
+      <div class="s">${o.ask?'Declined request · its votes haven’t gone back to the fan yet':'Declined · its votes haven’t all gone back to the room yet'}</div></div>
+      <button class="act pri" onclick="act(${o.ask?`'askDecline',{id:'${esc(o.id)}'}`:`'declineSong',{song:'${esc(o.id)}'}`})">Finish the refund</button></div>`).join('')}</div>`;
 }
 function asksPanel(){
   const all=(D&&D.asks)||[];

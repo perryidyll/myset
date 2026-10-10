@@ -211,6 +211,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0199](0199-a-session-lasts-a-week-and-renews-itself-in-use.md) | A session lasts a week and renews itself in use | 2026-10-09 | auth | decided | perry-confirmed |
 | [0200](0200-the-activity-log-is-complete-append-only-in-parts.md) | The activity log is complete: append-only, in parts, never trimmed | 2026-10-09 | storage | decided | perry-confirmed |
 | [0201](0201-every-studio-call-has-a-clock-and-the-live-tab-polls-one-at-a-time.md) | Every Studio call has a clock, and the Live tab polls one at a time | 2026-10-09 | ui | decided | claude |
+| [0202](0202-a-declined-requests-votes-owed-back-are-written-down-in-the-decline.md) | A declined request's votes owed back are written down in the decline, and given back once | 2026-10-09 | voting | decided | claude |
 | [0207](0207-a-paying-referrer-s-free-month.md) | The referral month is a month of Bar Star for a Hobbyist — a referrer who already pays is owed nothing, and the Studio says so | 2026-10-09 | money | decided | perry-confirmed |
 
 ## By area
@@ -261,7 +262,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **venues** — [0127](0127-venue-plans-tips-for-the-staff-25-and-5-percent-fi.md) · [0128](0128-a-venue-approves-the-shows-artists-list-at-its-pla.md) · [0129](0129-a-venue-page-leads-with-its-photos-and-its-next-th.md) · [0131](0131-a-venue-page-s-header-a-cover-always-four-doors-be.md) · [0134](0134-a-venue-sample-carries-its-hours-menu-link-and-goo.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md) · [0172](0172-the-artist-sets-what-a-song-costs-a-fresh-phone-ho.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) · [0147](0147-play-is-one-write.md) · [0151](0151-one-tap-one-song.md) · [0155](0155-a-refund-owed-is-written-down-before-it-is-paid.md) · [0172](0172-the-artist-sets-what-a-song-costs-a-fresh-phone-ho.md) · [0202](0202-a-declined-requests-votes-owed-back-are-written-down-in-the-decline.md)
 
 ## What counts as a decision
 

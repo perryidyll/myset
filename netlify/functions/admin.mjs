@@ -969,6 +969,8 @@ async function handleAsks(aid, action, body, seat) {
     }
     const row = await resolveRequest(aid, id, action === 'askDone' ? 'played' : 'declined', show);
     if (!row) return bad('That one has already been dealt with', 409);
+    /* declined, but its votes did not all go back: never "from an earlier show" (0202) */
+    if (row.owed) return json({ ok: false, error: 'Declined — its votes haven’t gone back yet. Tap “Finish the refund” on the Live tab.' }, 503);
     /* `row.refunded` is what was really given back, not what it cost. A decline of
        a request from an earlier show refunds nothing on purpose — those credits have
        already refreshed, so refunding would mint votes (INVARIANT 0ac). */

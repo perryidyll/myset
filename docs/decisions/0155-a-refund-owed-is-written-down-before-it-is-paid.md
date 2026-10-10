@@ -33,7 +33,7 @@ The scale audit of 2 October 2026: under contention the refund fails, and the cr
 B. It is the only option where every state the store can be left in still has a way forward.
 
 - **One write hides and owes.** `declineSong` sets `active: false` and `refundsOwed[song] = { show, title, at }` together. Then `settleOwedRefund` runs `refundSongVotes` and `declineRequestsForSong` — the existing calls, unchanged: who is refunded and how much is exactly what it was — and takes the mark off only after both have run.
-- **Never twice.** `refundSongVotes` takes a vote off its fan in the same write that gives its credit back, so any pass finds only what has not been given back yet; a request already declined is not declined again (`resolveRequest`). So retrying is always safe, wherever it is done from.
+- **Never twice.** `refundSongVotes` takes a vote off its fan in the same write that gives its credit back, so any pass finds only what has not been given back yet; a request already declined is not declined again (`resolveRequest`). So retrying is always safe, wherever it is done from. *(Amended by 0202: a declined request's refund could fail silently, so the request now carries its own `owed` mark and `declineRequestsForSong` throws while one is still owed.)*
 - **Never stranded with nothing to retry.** The mark stays until the refund has run whole:
   - **The Live tab** shows "Votes still owed back" with **Finish the refund** for each (the stage payload's `owed`, tonight's marks only and only while live — the same rule as every refund affordance). The button sends the same `declineSong`.
   - **An End** finishes what is owed while the night's fans are still the night's.

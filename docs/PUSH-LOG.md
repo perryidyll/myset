@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:35 — b08ba47 — scale-p3-req@fix/request-refund-owed (16 files since origin/main)
+**tl;dr:** Nothing new for a person: a declined request's owed votes (#259, 0202) now sit on today's main, ready to merge
+**Other sessions:** Restacked onto 38881d6 (#266, after #258 56555bc). Ledger row is SCL-029. studio.js carries both 0201's clocks and 0202's Finish the refund; stamp 4fa4d6b9. Suite 6,799 / 0 failing.
+
 ### 2026-10-10 13:12 — 472605d — wt5@fix/dash-title-plates (0 files since origin/main)
 **tl;dr:** Dash window titles sit on a 72% backing plate above the chart lines, so lines no longer cross the text
 **Other sessions:** CSS only: .stat now has z-index 4 + color-mix(--screen 72%) background in public/dash.html

@@ -241,11 +241,21 @@ export async function authorizeRequestSession(aid, session, fallbackFan, stripe,
            request: r.request, already: !!r.already };
 }
 
-const refund = (aid, fanId, cost) =>
+/* A REQUEST'S VOTES GO BACK ONCE (decision 0202). The fan's own record says so: a
+   `back:<request id>` mark in `rq`, beside the `ask:` marks that stop a request being
+   charged twice, written in the same write that gives the credits back. So a decline
+   retried after a write that landed but whose answer was lost finds the mark and
+   gives nothing more. */
+const BACK = (id) => `back:${id}`;
+const refund = (aid, fanId, cost, id) =>
   mutateFan(aid, fanId, (me) => {
+    me.rq ||= [];
+    if (me.rq.includes(BACK(id))) return false;
     // clamped at zero: if the credits already refreshed there is nothing owed,
     // and handing back what was never charged would be free votes
     me.spent = Math.max(0, (me.spent || 0) - cost);
+    me.rq.push(BACK(id));
+    if (me.rq.length > 40) me.rq = me.rq.slice(-40);
     return true;
   });
 
@@ -257,14 +267,30 @@ function trim(d) {
     .sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 
-/** The artist's verdict. `declined` gives the votes back. */
+/** The artist's verdict. `declined` gives the votes back.
+ *
+ *  THE VOTES OWED BACK ARE WRITTEN DOWN IN THE DECLINE ITSELF (decision 0202,
+ *  INVARIANT 0je). A decline of a request from tonight that cost votes sets `owed` on
+ *  the row in the same write that declines it; the votes go back to the fan
+ *  (`refund`, once — its own mark); only then is `owed` taken off and `refunded` set.
+ *  Until 0202 a refund that failed was swallowed: the row said declined, nothing said
+ *  the votes were still owed, a second Decline found nothing to do, and the artist
+ *  was told the request was "from an earlier show". Now a row still owed is answered
+ *  as owed, a second Decline (or Finish the refund) finishes it, and the End and the
+ *  next fresh start finish it on their own (`settleOwedRefunds`). A mark from another
+ *  night is dropped, never paid: those credits refreshed (INVARIANT 0ac). */
 export async function resolveRequest(aid, id, status, show) {
-  let row = null;
+  let row = null, again = false;
   await mutateRequests(aid, (d) => {
     const r = d.list.find((x) => x.id === id);
-    if (!r || r.status === status) return false;
+    if (!r) return false;
+    if (r.status === status) {                  // already done: only a refund still owed is left to finish
+      if (status === 'declined' && r.owed) { again = true; row = { ...r }; }
+      return false;
+    }
     r.status = status;
     r.doneAt = Date.now();
+    if (status === 'declined' && r.cost > 0 && show && r.showId === show.showId) r.owed = r.cost;
     row = { ...r };
     return true;
   });
@@ -274,12 +300,32 @@ export async function resolveRequest(aid, id, status, show) {
      show is deliberately NOT refunded (its credits have already refreshed, so
      refunding would mint votes, INVARIANT 0ac), and the write can fail. Both cases
      used to be announced as a refund. */
-  row.refunded = 0;
-  if (status === 'declined' && row.cost > 0 && show && row.showId === show.showId) {
-    try { await refund(aid, row.fan, row.cost); row.refunded = row.cost; }
-    catch { row.refunded = 0; }
+  row.refunded = row.refunded || 0;
+  if (row.owed) await settleRequestRefund(aid, row, show);
+  if (status === 'declined' && row.paymentIntent && !again) await cancelPledge(aid, row);
+  return row;
+}
+
+/* Gives a declined row's votes back and takes its `owed` off. `row` is updated in
+   place: `refunded` set and `owed` gone when it ran whole, `owed` left when it did
+   not. A row from another night has its mark dropped and nothing given (0ac). */
+async function settleRequestRefund(aid, row, show) {
+  const tonight = !!(show && row.showId === show.showId);
+  try {
+    if (tonight) await refund(aid, row.fan, row.owed, row.id);
+    await mutateRequests(aid, (d) => {
+      const r = d.list.find((x) => x.id === row.id);
+      if (!r || !r.owed) return false;
+      if (tonight) r.refunded = r.owed;
+      delete r.owed;
+      return true;
+    });
+  } catch (e) {
+    console.error('request refund still owed', aid, row.id, e && e.message);
+    return row;
   }
-  if (status === 'declined' && row.paymentIntent) await cancelPledge(aid, row);
+  if (tonight) row.refunded = row.owed;
+  delete row.owed;
   return row;
 }
 
@@ -376,8 +422,12 @@ export async function completeSongRequests(aid, songId) {
  *  the held card authorization. */
 export async function declineRequestsForSong(aid, songId, show) {
   const rows = (await readRequests(aid)).list.filter((r) =>
-    r.kind === 'song' && r.songId === songId && r.status === 'added');
-  for (const r of rows) await resolveRequest(aid, r.id, 'declined', show);
+    r.kind === 'song' && r.songId === songId && (r.status === 'added' || (r.status === 'declined' && r.owed)));
+  let owed = 0;
+  for (const r of rows) { const done = await resolveRequest(aid, r.id, 'declined', show); if (done && done.owed) owed++; }
+  /* a request whose votes did not all go back keeps the song's own mark too (0155,
+     0202): the Finish the refund that follows runs this again and finishes it */
+  if (owed) throw new Error(`${owed} request refund(s) still owed`);
   return rows.length;
 }
 
@@ -390,8 +440,10 @@ export async function declineRequestsForSong(aid, songId, show) {
    finish it on their own, the fresh start before it wipes the fans.
 
    It can never refund twice: a vote is taken off its fan in the same write that gives
-   its credit back, so a second pass finds nothing on that fan; a request already
-   declined is not declined again. And it can never leave a fan with nothing to retry:
+   its credit back, so a second pass finds nothing on that fan; a declined request's
+   votes go back once, by the fan's own mark, and a request still owed makes
+   `declineRequestsForSong` throw so this mark stays (0202). And it can never leave a
+   fan with nothing to retry:
    the mark stays until the refund has run whole. A mark from another night is
    dropped: its fans were carried into a new night, and there is nothing left to give
    back to. Returns { ok, given, owed } — `owed` false when there was nothing to do. */
@@ -423,6 +475,14 @@ export async function settleOwedRefunds(aid) {
   for (const songId of Object.keys(show.refundsOwed || {})) {
     const r = await settleOwedRefund(aid, songId).catch(() => ({ ok: false }));
     if (r.ok) out.settled += r.owed ? 1 : 0; else out.left.push(songId);
+  }
+  /* and every declined request whose votes are still owed (0202): tonight's are
+     given back, another night's are dropped */
+  const rows = (await readRequests(aid).catch(() => ({ list: [] }))).list.filter((r) => r && r.status === 'declined' && r.owed);
+  for (const row of rows) {
+    await settleRequestRefund(aid, { ...row }, show).then((r) => {
+      if (r.owed) out.left.push('request ' + r.id); else if (r.refunded) out.settled += 1;
+    });
   }
   return out;
 }
