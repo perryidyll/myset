@@ -118,7 +118,8 @@ random value made on your own machine) for every deploy context; set `FINMODEL_C
 to a long one; rotate `ADMIN_CODE`; turn on 2FA everywhere; check that Netlify does
 not build deploy previews for pull requests from strangers with the live variables;
 consider making the repository private, because a public repository is the one thing
-that cannot be secured by code.
+that cannot be secured by code. (2026-10-10: GitHub Pro first, then private — on Free a private
+repository's ruleset is not enforced; decision 0047's addendum, PER-022.)
 
 ## 2026-10-01 — slice C brought up to today's main, and the secret set in one command
 
@@ -225,7 +226,9 @@ whole run below. **Not checked:** a phone's Studio reading the renewal header (t
 lines, `node --check` clean); the mirror carrying a log part to R2 on production; the
 tool against the real Netlify CLI and Keychain — the founder's run.
 
-**Still the founder's:** `ADMIN_CODE`; 2FA; the Site-policies glance. Decision numbers
+**Still the founder's:** 2FA. (This line also named `ADMIN_CODE` and the Site-policies
+glance until 2026-10-10; both were already done — PER-019 on 2026-09-28, PER-020 read on
+2026-10-02 and 10-03.) Decision numbers
 were taken on this branch without the sessions board (a cloud session cannot read it) —
 0172 and 0173 at first, which turned out to be taken; renumbered below.
 
@@ -340,3 +343,45 @@ regenerated. It rides PR #257 with this
 paperwork, so that merge needs a production build: no `[skip ci]`. Not checked: `setCode`
 on the preview, a write path on production data. Puzzle: nothing to update — no step, rule or number changed; the record
 0176, INVARIANT 0ip and SCL-013 now say the line is on the list.
+
+### 2026-10-10 — #257 live, Dependabot closed, the repository question, the ledger read against itself
+
+The founder said *please merge if everything is ready*: `suite` green on `609386d`, no
+conflict, nothing on `main` the branch lacked, so #257 was squash-merged (no `[skip ci]`)
+and read live by content — `version.json` `b8c9fb0`, built 18:24:55Z, no room live,
+`/api/health` `ok`. The founder then asked whether everything was good, and on the answer
+said: fix the ledger, go ahead with SEC-006, make the repository private if nothing needs
+it public, and check the Dependabot alerts — and, mid-turn, *don't ask me for any more
+permissions, just go until the job is done*.
+
+**Dependabot.** The alerts API refuses this session (403, *Resource not accessible by
+integration*), so the alerts were read another way: `npm audit --package-lock-only` on
+copies of both lockfiles — the root, 1 moderate (`@fastify/busboy` <3.2.2, CRLF in a
+multipart filename, GHSA-gxm5-99cw-xjw9; it arrives through `@netlify/dev-utils`, and no
+function parses multipart); the probe, 3 high (`sharp` <0.35.5 under `miniflare` and
+`wrangler`, dev only). Dependabot's own pull requests were already open and green:
+#253 merged as `9330f44`, #254 as `25fb3dc` with `[skip ci]` (the probe is never built).
+Netlify built the branch head, `25fb3dc`, which carries both (built 18:51:27Z). #255,
+another session's 2026-10-09 pull request with the same two bumps, is superseded; its one
+extra line — the probe's `allowScripts` naming esbuild 0.28.2 and workerd 1.20261006.1, the
+versions #254 brought in — rides on the ledger fix.
+
+**The repository.** The founder can't be helped through a browser extension from a cloud
+session, and this session's GitHub access cannot change settings or billing. More to the
+point, the account is on GitHub Free — `agent-config`'s rulesets answer *Upgrade to GitHub
+Pro or make this repository public* — and on Free a private repository's ruleset is not
+enforced, so private first would switch off `main is production` (0045, 0197). Pro is
+about $4 a month (third-party 2026 price lists; GitHub's own page now lists only Free, Team
+and Enterprise) and keeps it, with 3,000 Actions minutes a month against ~1,500 measured
+(628 billable in the 12.4 days to today). No free route keeps the lock; a home-made gate in
+Netlify's build would be weaker and need a GitHub token in Netlify. Written down as
+decision 0047's addendum and ledger PER-022 — Pro first, then private, then an agent reads
+the ruleset back.
+
+**The ledger.** The 2026-10-09 header said rotating `ADMIN_CODE` and the Site-policies
+glance were still the founder's; both were done (PER-019 on 2026-09-28, PER-020 read on
+2026-10-02 and 10-03), and four stale copies of PER-017–PER-020 stood beside their done
+twins — slice C's own rows, carried in by its merges. They are gone; PER-010 is cancelled
+behind PER-018. HARDENING §2, SECURITY.md's founder list and the founder's-accounts sheet
+(y07) say *Pro first*. Puzzle: step y07 re-noted the same way.
+
