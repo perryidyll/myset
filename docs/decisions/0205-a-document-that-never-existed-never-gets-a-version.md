@@ -1,21 +1,21 @@
 ---
 id: 0205
 title: A document that never existed never gets a version, even when its blank carries the clock
-date: 2026-10-11
+date: 2026-10-10
 status: decided
 decided_by: perry-confirmed
 area: storage
 reverses:
 superseded_by:
 invariants: [0fr]
-commits: []
+commits: [b9467b6]
 tests: [test/foundations.mjs]
 files: [netlify/functions/_versions.mjs, test/foundations.mjs]
 ---
 
 ## The question
 
-`casKeep` (decision 0067) keeps the bytes of a document before every change, and promises never to keep a version of a document that did not exist: it serialises `fallback()` once as the blank and compares what the write read against it. But `casDoc` called `fallback()` again for each read of the missing document, and `defaultProfile()` carries `updatedAt: Date.now()`. When the two calls fell in different milliseconds the read no longer matched the blank, and a version of a profile that was never written was kept as the oldest entry of a brand-new artist's history. Restoring it would wipe what they typed. The same race made `test/foundations.mjs` ("A VERSION BEFORE EVERY OVERWRITE") fail at random, and since 0197 made the suite a required check, that could block any pull request. Found while merging #264 on 2026-10-10; the founder asked for the fix on 2026-10-11.
+`casKeep` (decision 0067) keeps the bytes of a document before every change, and promises never to keep a version of a document that did not exist: it serialises `fallback()` once as the blank and compares what the write read against it. But `casDoc` called `fallback()` again for each read of the missing document, and `defaultProfile()` carries `updatedAt: Date.now()`. When the two calls fell in different milliseconds the read no longer matched the blank, and a version of a profile that was never written was kept as the oldest entry of a brand-new artist's history. Restoring it would wipe what they typed. The same race made `test/foundations.mjs` ("A VERSION BEFORE EVERY OVERWRITE") fail at random, and since 0197 made the suite a required check, that could block any pull request. Found while merging #264 on 2026-10-10; the founder asked for the fix the same day.
 
 ## The options
 

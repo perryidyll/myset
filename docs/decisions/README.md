@@ -214,7 +214,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0202](0202-a-declined-requests-votes-owed-back-are-written-down-in-the-decline.md) | A declined request's votes owed back are written down in the decline, and given back once | 2026-10-09 | voting | decided | claude |
 | [0203](0203-no-short-field-a-page-draws-holds-markup.md) | No short field a page draws holds markup | 2026-10-09 | auth | decided | claude |
 | [0204](0204-a-sample-page-is-erased-leaves-first-and-its-row-goes-last.md) | A sample page is erased leaves first, and its register row goes only when nothing it names is left | 2026-10-09 | storage | decided | claude |
-| [0205](0205-a-document-that-never-existed-never-gets-a-version.md) | A document that never existed never gets a version, even when its blank carries the clock | 2026-10-11 | storage | decided | perry-confirmed |
+| [0205](0205-a-document-that-never-existed-never-gets-a-version.md) | A document that never existed never gets a version, even when its blank carries the clock | 2026-10-10 | storage | decided | perry-confirmed |
 | [0207](0207-a-paying-referrer-s-free-month.md) | The referral month is a month of Bar Star for a Hobbyist — a referrer who already pays is owed nothing, and the Studio says so | 2026-10-09 | money | decided | perry-confirmed |
 
 ## By area
