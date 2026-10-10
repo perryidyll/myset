@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0gy, 0gz]
-commits: []
+commits: [e996865]
 tests: [test/secret.mjs, test/passgate.mjs, test/studiocode.mjs, test/everyshow.mjs, test/gmail.mjs, test/hq.mjs, test/serversecret.mjs]
 files: [netlify/functions/_secret.mjs, netlify/functions/_auth.mjs, netlify/functions/_session.mjs, netlify/functions/_venues.mjs, netlify/functions/_lib.mjs, netlify/functions/_passgate.mjs, netlify/functions/_hqlock.mjs, netlify/functions/_showlock.mjs, netlify/functions/admin.mjs, tools/serversecret.mjs, HARDENING.md]
 ---

@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0jb, 0dd]
-commits: []
+commits: [e996865]
 tests: [test/sessionlife.mjs, test/accounts.mjs]
 files: [netlify/functions/_auth.mjs, netlify/functions/_venues.mjs, netlify/functions/_lib.mjs, netlify/functions/_errlog.mjs, public/studio.js, public/venue-studio.js]
 ---

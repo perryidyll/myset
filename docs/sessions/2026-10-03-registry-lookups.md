@@ -19,7 +19,7 @@ The audit's row *"The whole artist list is read on every poll, vote and Studio c
 - **`_account.mjs` `keysFor`** names the copies, so a purge deletes them as leaves.
 - **`_mirror.mjs` FAMILIES:** `aslug_`, `arow_` and `alookheal` are `skip`. They are rebuilt from `artists`, which is copied; a copy restored beside a list from a different moment could disagree with it.
 - **`citycron`** rings `healLookups` beside the city index's heal, each caught on its own.
-- **`admin.mjs` `setCode`** was moved to the list and then put back. PR #150 changes the lines around it, so the one-line move waits for #150 (0176, *What this makes harder*).
+- **`admin.mjs` `setCode`** was moved to the list and then put back. PR #150 changes the lines around it, so the one-line move waits for #150 (0176, *What this makes harder*). Done on 2026-10-09, after #150 merged, on #257.
 - **`me.mjs`**: a comment that said a slug room reads the list on every poll now says what it reads.
 
 ## Not built, and why

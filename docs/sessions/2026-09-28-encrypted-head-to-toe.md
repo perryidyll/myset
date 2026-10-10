@@ -294,3 +294,49 @@ call theirs, so they are not a sealed family.
 — `test/keyfamilies.mjs` naming `fmgate` — which is what the one line in `FAMILIES`
 answers. **Read before the merge, after this push:** the PR's `suite` check on the new
 head, the rebuilt preview's `/api/health` by content, and its pages at phone width.
+
+### Live — `e996865`, 2026-10-09 08:41 UTC
+
+The `suite` check passed on `b3f9f86` (run 37905865762); the rebuilt preview answered
+`/api/health` with `ok: true`, `seal: { secret: true, ring: 'absent' }` and served both
+Studio scripts with the renewal header; its pages rendered at phone width in a headless
+browser (the artists page, the Venue Studio's sign-in — this container's proxy, not the
+site, broke a few of the browser's fetches, so the by-content reads are the record).
+PR #150 was marked ready and squash-merged as `e996865`, keeping the number. Production,
+read by content fifteen seconds later: `studio.html` serves `studio.js?v=c3a8e6af`,
+`venue-studio.html` serves `venue-studio.js?v=70103e05`, both carry `x-myset-token`;
+`/api/health` 200, `ok: true`, `seal: { secret: true, ring: 'absent' }`, `errorsLastHour:
+0`. The keyring appears at the first protected write (a sign-in, a note, the mirror's
+five-minute ring), and `seal.ring` reads `ours` from then on — which it did at 08:47:04Z:
+`seal: { secret: true, ring: 'ours' }`, `ok: true`, `errorsLastHour: 0`. The keyring exists,
+wrapped by the secret; sealing is live. **Not checked:** a sign-in on the new build — the
+founder's next Studio open is the proof.
+
+Paperwork: decisions 0112, 0113, 0199, 0200 carry the commit; SEC-003–SEC-005 live in
+the ledger; Puzzle changelog 2474 and 2475 completed, 2973/2974 (titled 0172/0173)
+replaced by 2983 and 2984 (0199/0200), steps t02/t04/t09/t10 re-noted; the founder's
+dashboard in Notion now asks for `ADMIN_CODE` and 2FA instead of the secret. The branch
+was restarted from `main` for this note, which went up as PR #257 on the founder's word
+(*open the docs PR too*).
+
+### The same afternoon — 0176's deferred line, on the founder's word (*Do this task here*)
+
+`setCode` in `admin.mjs` read the page's name through `artistById`, the artist's small
+copy since 0176, which wanted `readArtists()` there once #150 landed: a rename whose copy
+write was lost would have let the new name through as a code until the heal. One line
+now reads the list — `own((await readArtists()).byId, aid)` — and `artistById` leaves
+`admin.mjs`'s static imports (its two other uses import it where they stand). The proof
+is a section in `test/studiocode.mjs`: a fourth artist is renamed on the list with the
+copies' writes made to fail, her row copy is shown still carrying the old name, and the
+new name is refused as a code (400) while a real code lands — 42 ✓, 0 ✗; with HEAD's
+line put back, that one assertion is red (41 ✓ / 1 ✗). `lookups` 75 ✓, `cost` 33 ✓. The
+whole suite: 6,309 ✓ / 0 ✗ on `e996865` plus the change, then 6,441 ✓ / 0 ✗ with today's
+main merged in (`e52d6f5` — 0185, 0186/0187/0191, 0193 — as `4b8fe5e`), then 6,630 ✓ / 0 ✗
+with the next two merges in (`28ff11b` — 0177/0178, 0194/0195 — as `8974839`), then 6,682 ✓
+/ 0 ✗ with two more (`974353e` — 0189/0190, 0192 — as `bbe9f15`): main moved under the
+branch every few minutes this morning. The push log was the one collision each time,
+every entry from both sides kept; from the second time the generated overview too,
+regenerated. It rides PR #257 with this
+paperwork, so that merge needs a production build: no `[skip ci]`. Not checked: `setCode`
+on the preview, a write path on production data. Puzzle: nothing to update — no step, rule or number changed; the record
+0176, INVARIANT 0ip and SCL-013 now say the line is on the list.

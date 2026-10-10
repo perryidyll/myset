@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 07:59 — 1b2435b — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main an eleventh time (67d273a: 0203, 0204, 0196 amended, the leftovers on record); suite 6,828 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Ledger header: main's new opening kept, #257's 'slice C is LIVE as e996865' segment reinserted before the older slice C text; SCL-013 keeps #257's setCode sentence. Push log: two blocks, every entry from both sides kept.
+
 ### 2026-10-10 14:00 — 05680ee — scale-p2-docs@docs/leftovers-live (10 files since origin/main)
 **tl;dr:** Nothing a person sees: the records now say the scale audit's four leftovers (0201–0204) are live
 **Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-026–029 done; commits: filled on 0201–0204; sheets a02/r10/n03/s21 and Puzzle steps say live with the SHA. The foundations.mjs version flake is real (defaultProfile() updatedAt twice), not built.
@@ -22,13 +26,25 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Artist and venue pages: names, taglines, titles and other short fields can no longer hold < or >, so a page that forgets to escape shows text, never a tag
 **Other sessions:** Restacked onto d1eeeab (#259). 0203 / INVARIANT 0jf / SCL-026. Every short-field clean() in _profile, _maps, _requests, _community, _diary, _wishes strips [<>] (test/nomarkup.mjs reads the line). Suite 6,816 / 0 failing.
 
+### 2026-10-10 06:47 — a01d245 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main a tenth time (d1eeeab: a declined request's votes owed back, 0202); suite 6,803 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. The push log and the two generated files collided; main's taken, then regenerated.
+
 ### 2026-10-10 13:35 — b08ba47 — scale-p3-req@fix/request-refund-owed (16 files since origin/main)
 **tl;dr:** Nothing new for a person: a declined request's owed votes (#259, 0202) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto 38881d6 (#266, after #258 56555bc). Ledger row is SCL-029. studio.js carries both 0201's clocks and 0202's Finish the refund; stamp 4fa4d6b9. Suite 6,799 / 0 failing.
 
+### 2026-10-10 06:38 — 0762054 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main a ninth time (38881d6: dash titles, #266); suite 6,751 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Only the push log collided.
+
 ### 2026-10-10 13:12 — 472605d — wt5@fix/dash-title-plates (0 files since origin/main)
 **tl;dr:** Dash window titles sit on a 72% backing plate above the chart lines, so lines no longer cross the text
 **Other sessions:** CSS only: .stat now has z-index 4 + color-mix(--screen 72%) background in public/dash.html
+
+### 2026-10-10 06:33 — 9ec8a75 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main an eighth time (56555bc: every Studio call has a clock, 0201); suite 6,751 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Ledger: main's SCL-013 (now live) with #257's setCode sentence, and main's new SCL-028 row.
 
 ### 2026-10-10 13:18 — 68dcba2 — scale-p3-studio@fix/studio-clocks (14 files since origin/main)
 **tl;dr:** Nothing new for a person: the Studio's clocks (#258, 0201) now sit on today's main, ready to merge
@@ -38,45 +54,89 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** The outage watch no longer starts a paid production build after every docs-only merge.
 **Other sessions:** watch.yml release step: releases only when GitHub's compare of version.json's commit...main has a commit WITHOUT a Netlify skip marker; a gap of docs-only merges is not a held build. Compare failure = release as before.
 
+### 2026-10-10 06:24 — 92df220 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main a seventh time (9250218: scale audit merge day on record, docs only); suite 6,721 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. The ledger header collided: main's 2026-10-10 scale-audit opening kept, then #257's 'slice C is LIVE as e996865' segment with the setCode note, then the shared tail.
+
 ### 2026-10-10 13:11 — 9ac695a — docs-merge-day@docs/scale-merge-day-live (25 files since origin/main)
 **tl;dr:** The scale audit's paperwork caught up: every merged decision names its live commit, the test suite is now required before any merge, and the deploy-release hook was replaced after its id turned up in a public file.
 **Other sessions:** suite is a REQUIRED check on main (0197): a branch commit with [skip ci] never runs it and cannot merge — [skip ci] only in the squash subject. The watch's */5 cron runs 3–7 h apart: after a show, gh workflow run watch.yml -f release=no releases a held build (still refuses while anyone is live). Build hook rotated: its URL lives only in the GitHub secret NETLIFY_BUILD_HOOK — never write a hook id into a doc.
+
+### 2026-10-10 06:18 — 7320ce0 — myset@claude/myset-encryption-security-460mph (41 files since origin/main)
+**tl;dr:** Brought up to main a sixth time (472605d: scale audit phase two marked live in the ledger, docs only); suite 6,721 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list, 0176's deferred line, plus the slice C paperwork): still NOT docs only, merge without [skip ci]. This time the ledger collided too: main's SCL-008…SCL-023 live rows taken, #257's SCL-013 sentence about setCode kept.
 
 ### 2026-10-10 13:05 — 60e3a55 — scale-p2-docs@docs/phase-two-live (27 files since origin/main)
 **tl;dr:** Nothing a person sees: the records now say the scale audit's phase two is live
 **Other sessions:** Docs only; merge with a skip-ci squash subject. Phase two's ledger rows SCL-001…007 are now SCL-017…023; main's SCL-024/025 are week one's (0196/0197), so the open leftovers #258/#259 move off SCL-024/025. Every 0145–0156/0173–0179 record has commits:.
 
+### 2026-10-10 06:08 — 599bd18 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to today's main a fifth time (80cc05a: No deploy lands on a live room; the suite becomes a required check; the referral month said plainly (0196, 0197, 0207)); suite 6,721 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork): still NOT docs only, merge without [skip ci]. Main moves every few minutes; the push log is the one collision each time (every entry from both sides kept, newest first), the generated overview regenerated.
+
 ### 2026-10-09 16:24 — b8309ef — hold-deploys@ops/hold-deploys (20 files since origin/main)
 **tl;dr:** A code merge while a show is live is no longer built on top of the room: Netlify holds it and the outside watch starts it once the last show ends; myset.vip/version.json says which commit is live; the Studio's Invite card says the referral month is for Hobbyists (0196, 0197, 0207)
 **Other sessions:** New: netlify/functions/live.mjs (/api/live, counts only), tools/hold.sh ([build] ignore), tools/version.sh ([build] command writes public/version.json — verify 'is it live' by that file), watch.yml release step + release=yes input (secret NETLIFY_BUILD_HOOK, variable LAST_RELEASE_AT), test/live.mjs before keyfamilies in run.sh. The suite check becomes REQUIRED on main after this merges (0197): a PR with a red or missing suite cannot merge; [skip ci] only ever in the squash subject.
+
+### 2026-10-09 09:33 — 3dcf8c0 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to today's main a fourth time (970ddfe: The last face-value money readers are net of refunds (0179);Deleting a gig never re-prices a night that was played (0198)); suite 6,703 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork): still NOT docs only, merge without [skip ci]. Main moves every few minutes; the push log is the one collision each time (every entry from both sides kept, newest first), the generated overview regenerated.
+
 ### 2026-10-09 16:16 — d3a59e4 — scale-p2-net@fix/net-of-lost-readers (12 files since origin/main)
 **tl;dr:** Nothing new for a person: the last three money readers net of refunds (#240) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto main 28ff11b (#239). Conflicts: imports in _lifecycle/stage/_warehouse (kept sameNightResume, readPaidAll); _warehouse packs = readPaidAll(...) filtered !tipGone; INVARIANT 0iq = the 0179 version (a superset of main's).
-
-### 2026-10-03 04:22 — ca1c555 — scale-p2-net@fix/net-of-lost-readers (89 files since origin/main)
-**tl;dr:** A refunded tip or pack no longer counts in the discard warning, the Money tab's all-time tips or the sheet's counts (0179)
-**Other sessions:** STACKED on week one's #239. _lib.mjs exports netOf(row) (amount - lost/100) and tipGone(row); every reader that sums or counts money rows uses them (INVARIANT 0iq). Decisions 0145-0156 and 0173-0179 are now all used by c8fc2f.
 
 ### 2026-10-09 15:20 — 7f7c7c4 — gig-delete-rules@fix/deleted-gig-keeps-played-nights (90 files since origin/main)
 **tl;dr:** The three restored Crystal Day nights now carry $60, on the artist's word — decision 0198 and the session note say so
 **Other sessions:** Doc-only follow-up on the same branch as the pruneRules fix. The repaired nights are 69→74 records plus pay=6000 on gimj34ujp@2026-09-15/-09-29/-10-06; that $60 is the artist's decision, NOT a restoration — no snapshot holds the deleted rule's pay. Live book now has no record with a blank pay.
 
+### 2026-10-09 09:27 — 712a091 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to today's main a third time (974353e: abuse ceilings 0189/0190, the song list once then tallies 0192); suite 6,682 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list, 0176's deferred line, plus the slice C paperwork): still NOT docs only — merge without [skip ci]. The push log is the one collision each time; every entry from both sides kept, newest first.
+
+### 2026-10-09 09:22 — d6478d0 — myset@claude/myset-encryption-security-460mph (35 files since origin/main)
+**tl;dr:** Brought up to today's main a second time (28ff11b: refunds and chargebacks heard, merch held while the buyer pays 0177/0178; money net of refunds, stock net of checkouts 0194/0195); suite 6,630 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257 (setCode reads the list — 0176's deferred line — plus the slice C paperwork) is still NOT docs only: merge without [skip ci]. Main is moving every few minutes; the push log is the one collision each time, resolved by keeping every entry from both sides, newest first.
+
+### 2026-10-03 04:22 — ca1c555 — scale-p2-net@fix/net-of-lost-readers (89 files since origin/main)
+**tl;dr:** A refunded tip or pack no longer counts in the discard warning, the Money tab's all-time tips or the sheet's counts (0179)
+**Other sessions:** STACKED on week one's #239. _lib.mjs exports netOf(row) (amount - lost/100) and tipGone(row); every reader that sums or counts money rows uses them (INVARIANT 0iq). Decisions 0145-0156 and 0173-0179 are now all used by c8fc2f.
+
+### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
+**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
+**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
+
 ### 2026-10-03 03:24 — 0c76c92 — scale-abuse@fix/abuse-ceilings (47 files since origin/main)
 **tl;dr:** No change for people: two rule numbers renamed to avoid a clash
 **Other sessions:** #230's INVARIANTS are now 0iw (clips, 0189) and 0ix (promo tries, 0190); 0ii–0iv belong to c8fc2f.
 
-### 2026-10-03 03:04 — dcdf9aa — scale-abuse@fix/abuse-ceilings (18 files since origin/main)
-**tl;dr:** Abuse ceilings: anonymous clip uploads have one door and a cap per network, trimmed pending clips are deleted, promo codes get five guesses an hour, and a junk QR address answers 404 instead of crashing (0189, 0190)
-**Other sessions:** NOT MERGED — waits on the founder's word. community.mjs legacy 'clip' action REMOVED (no page sent it; use /api/clipup). New key families cliplim_<owner> (clipBeginAllowed, fails open) and global promolim (promoTryAllowed, fails CLOSED); both in _mirror SKIP, keysFor, venue delete list, backup.py skip. Promo errors are one message now. When #218 replaces SKIP with FAMILIES, carry these two.
 ### 2026-10-03 03:22 — 6ea0f6b — scale-songlist@fix/vote-song-list (47 files since origin/main)
 **tl;dr:** In a big room every song stays votable: the vote page fetches the song list once and then polls only the tallies (when the server supports it; otherwise exactly today's page) (0192)
 **Other sessions:** NOT MERGED. Stacked on #228; pairs with c8fc2f's #226 (0150). vote.html: detection = board carries songsV; lean=1 polls only while the held list matches songsV; fromList() rebuilds a today-shaped board from tally+list; falls back to the full board on list failure/5 s/version mismatch/unknown song. INVARIANT 0ig.
-### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
-**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
-**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
+
+### 2026-10-03 03:04 — dcdf9aa — scale-abuse@fix/abuse-ceilings (18 files since origin/main)
+**tl;dr:** Abuse ceilings: anonymous clip uploads have one door and a cap per network, trimmed pending clips are deleted, promo codes get five guesses an hour, and a junk QR address answers 404 instead of crashing (0189, 0190)
+**Other sessions:** NOT MERGED — waits on the founder's word. community.mjs legacy 'clip' action REMOVED (no page sent it; use /api/clipup). New key families cliplim_<owner> (clipBeginAllowed, fails open) and global promolim (promoTryAllowed, fails CLOSED); both in _mirror SKIP, keysFor, venue delete list, backup.py skip. Promo errors are one message now. When #218 replaces SKIP with FAMILIES, carry these two.
+
 ### 2026-10-09 15:52 — ac8b93e — scale-p2-money@fix/refunds-and-stock (36 files since origin/main)
 **tl;dr:** Nothing new for a person: the refunds-and-merch-hold change (#238) now sits on today's main, ready to merge
 **Other sessions:** Restacked onto main e996865 (#227 b2dbfec + #150). money/02: refunds are w14, expired checkouts w15 (week one's w12/w13 kept); mhold in FAMILIES owner regex + keysFor/keysForVenue; moneyForShow keeps 0153's resume AND 0177's lostOf. Suite 6,466 ✓ exit 0.
+
+### 2026-10-09 09:13 — 2895729 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** setCode reads the page's name from the artist list, not its small copy — the line decision 0176 deferred until #150; on PR #257 beside the slice C paperwork, brought up to today's main (e52d6f5)
+**Other sessions:** NOT docs only any more: #257's merge needs a production build (no [skip ci] in the subject). admin.mjs: pageSlug = own((await readArtists()).byId, aid); artistById is no longer statically imported there. test/studiocode.mjs +4 (42 ✓). Suite 6,441 ✓ / 0 ✗ on the merged tree (4b8fe5e). The push log was the one merge collision: every entry from both sides kept, newest first.
+
+### 2026-10-09 08:47 — 6345ec3 — myset@claude/myset-encryption-security-460mph (10 files since origin/main)
+**tl;dr:** Sealing is live on production: /api/health reads seal.ring ours at 08:47 UTC (the keyring sealkeys exists, wrapped by MYSET_SECRET); docs only
+**Other sessions:** Nothing to do; the ring is 'ours'. If it ever reads 'other' the watch tells the founder (HARDENING.md §0).
+
+### 2026-10-09 08:45 — 91c1a84 — myset@claude/myset-encryption-security-460mph (9 files since origin/main)
+**tl;dr:** Security slice C is LIVE as e996865 (#150, 08:41 UTC): MYSET_SECRET signs everything, the records that hold a person are sealed at rest from the first write on, a session lasts a week and renews itself (0199), the activity log is complete (0200); docs only on this branch — the records carry the commit
+**Other sessions:** Verified by content on myset.vip: /api/health seal.secret true, ring absent until the first protected write (then ours). Decisions 0199/0200 and INVARIANTS 0jb/0jc are on main. A new kind of document needs a FAMILIES line (sealkeys global, fmgate skip are in). Follow-up for whoever has the suite open: 0176's deferred line — setCode in admin.mjs should read the page's name through readArtists() now that #150 is in.
+
+### 2026-10-03 04:19 — 26d3c7a — scale-netrefund@fix/money-net-of-refunds (84 files since origin/main)
+**tl;dr:** The Money tab and stats count money after refunds and chargebacks, refunded rows say so, and the shop shows stock net of checkouts in progress ('Sold out for now') (0194, 0195)
+**Other sessions:** NOT MERGED, stacked on c8fc2f's #238. RULE (0177/0194): anything summing money subtracts marker/tip/order 'lost' (cents); revenue rows carry gross/lost/refunded/dispute. _warehouse.mjs 523–524/550–551 still face value (c8fc2f's). community.mjs merch read subtracts live mhold_ holds and sends 'held'; shop.html 'Sold out for now'.
 
 ### 2026-10-03 04:04 — 4499b59 — scale-paidarc@fix/paid-archive (60 files since origin/main)
 **tl;dr:** No change for people yet: old payment records now wait 130 days, not 90, before moving to the archive
@@ -85,6 +145,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 03:36 — b1b3bba — scale-paidarc@fix/paid-archive (60 files since origin/main)
 **tl;dr:** The payments file stops growing forever: payment records older than 90 days move to a yearly archive, and every check that stops a pack being granted twice still finds them (0193)
 **Other sessions:** NOT MERGED, stacked on #227. New key family paidarc_<owner>_<YYYY> (MIRRORED; in keysFor/keysForVenue). readPaidAll()/archivedMarker()/archivePaid() in _pay.mjs; autocron step after heal (PAIDARC_BUDGET_MS 1.5 s, paidarcCursor). Any reader that needs lifetime payments must use readPaidAll, not meta.paid (INVARIANT 0ih). Touches _warehouse.mjs line 524, _metrics.mjs, _register.mjs (old nights), tools/metrics.mjs.
+
 ### 2026-10-03 03:10 — 626fdbf — scale-ops@ops/small-leaks (25 files since origin/main)
 **tl;dr:** No change for people: the ledger now records that strangers' pull requests already need approval before they build
 **Other sessions:** PER-020 done: Netlify untrusted_flow=review (API, 2026-10-02/03). Deploy retention is still 90 days (desk card).
@@ -96,9 +157,11 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-03 03:03 — 03adb2e — scale-ops@ops/small-leaks (22 files since origin/main)
 **tl;dr:** Small fixes: shared page scripts stay fresh for ten minutes instead of one, 'near me' can ask for location, myset.vip/robots.txt is a real file, the home page has a share picture, a first-night letter can never go out twice, and the error log keeps counting during an incident (0186, 0187)
 **Other sessions:** NOT MERGED — waits on the founder's word. netlify.toml: /*.css and /*.js rules moved BELOW /:slug (later rule wins per header); Permissions-Policy geolocation=(self), artistpage.mjs SITE_HEADERS kept equal. _errlog: 4 shards/hour (shard 0 = old key), per-shard count n, readErrs(); _watch look() adds overflow. _auto sweepNotes claims before sending. README/GIG-NIGHT/SECURITY/PER-019 corrected.
+
 ### 2026-10-03 03:03 — 1377ee2 — scale-vote@fix/vote-page-cadence (17 files since origin/main)
 **tl;dr:** The vote page asks the server less: it shows the board first, asks for the fan's own votes only after they act, on wake or once a minute, waits a random moment when a phone wakes in a big room, keeps the keyboard in search, warns inside Instagram's/TikTok's browser before a purchase, and says 'lots of people are buying' instead of 'payments broken' (0185)
 **Other sessions:** NOT MERGED — waits on the founder's word. vote.html: ME_DUE/ME_EVERY (60 s) cadence; <head> starts only the board; wake() jitter 0–1.5 s with a 'Catching up…' dim; WV moved from shop.html into fan.js (all fan pages re-stamped). _lib.mjs: mutateFan gains optional 5th arg tries; markPresence uses PRESENCE_TRIES=3 (INVARIANT 0if). Reads confirm's asCredits.
+
 ### 2026-10-09 08:35 — 92ad67a — myset@claude/myset-encryption-security-460mph (60 files since origin/main)
 **tl;dr:** PR #150 (security slice C) is on main b2dbfec with five merges in and the founder's word to merge: the week-long session is decision 0199 (0jb) and the complete activity log 0200 (0jc) — 0172/0173 and 0hs/0ht were taken; fmgate joins the mirror's skip list; the rebuilt preview says MYSET_SECRET is already set (seal.secret true), so nothing is left for the founder to run
 **Other sessions:** Decisions 0199/0200 and INVARIANTS 0jb/0jc are taken on this branch, merging today. keysFor/keysForVenue: the activity log's head is read for its parts (logKeys) and is a namer, parts before head (0im). FAMILIES: sealkeys global, fmgate skip. After the merge every protected family is sealed on first write and the keyring sealkeys appears; readDoc/casDoc fail closed on a record that cannot be opened. x-myset-token rides back on no-store replies from guard(); both Studios' api() keep it.
@@ -283,7 +346,6 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
 **tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
 **Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
-
 
 ### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
 **tl;dr:** Sample page builds: the cover is now chosen twice: the best four candidates go back to the model side by side and it picks the one the act would be proudest of; live videos beyond the top three now give frames too (0159)

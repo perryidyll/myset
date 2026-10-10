@@ -82,6 +82,30 @@ console.log('\nTHE PAGE\'S OWN NAME IS REFUSED AS A CODE  (0110: the guard read 
 eq('through the endpoint, not only the helper', (await A(TA, 'setCode', { code: 'ana-reyes' })).status, 400);
 ok('while a real code still lands', (await A(TA, 'setCode', { code: 'anacode123' })).ok);
 
+console.log('\n…AND THE NAME IS READ FROM THE LIST, NOT THE ARTIST\'S SMALL COPY  (0176: a rename whose copy write was lost)');
+{
+  const { mutateArtists } = await import('../netlify/functions/_auth.mjs');
+  const { readDoc } = await import('../netlify/functions/_lib.mjs');
+  const { ROW_KEY } = await import('../netlify/functions/_lookup.mjs');
+  const { __failWrites } = await import('./blobs-fake.mjs');
+  const di = await createArtist({ email: 'di@example.com', name: 'Di Park', slug: 'di-park' });
+  const TD = await signToken('di@example.com', revOf(await readArtists(), di.artistId));
+  /* The list's write lands; the writes of her two small copies are lost, as when the
+     function dies between them. Her row copy goes on saying the old name. */
+  __failWrites(/^a(slug|row)_/);
+  const renamed = await mutateArtists((r) => {
+    r.byId[di.artistId].slug = 'di-park-live';
+    delete r.bySlug['di-park']; r.bySlug['di-park-live'] = di.artistId;
+    r.oldSlug = { ...(r.oldSlug || {}), 'di-park': { aid: di.artistId, at: Date.now() } };
+    return true;
+  });
+  __failWrites(null);
+  ok('Di is renamed on the list', renamed.ok && (await readArtists()).byId[di.artistId].slug === 'di-park-live', renamed);
+  eq('…while her small copy still carries the old name', (((await readDoc(ROW_KEY(di.artistId), null)).data || {}).row || {}).slug, 'di-park');
+  eq('THE RULE: her new name is refused as a code — the check read the list, not the copy', (await A(TD, 'setCode', { code: 'di-park-live' })).status, 400);
+  ok('while a real code still lands', (await A(TD, 'setCode', { code: 'dicode2026' })).ok);
+}
+
 console.log('\nA CODE IS KEPT AS A SLOW SALTED HASH, AND A CODE SET THE OLD WAY STILL OPENS THE DOOR (0112)');
 {
   const { readDoc, mutateShow, sha } = await import('../netlify/functions/_lib.mjs');
