@@ -305,5 +305,8 @@ echo "── one small file per page address and per artist, beside the artist l
 node --import ./test/register.mjs test/lookups.mjs
 
 echo
+echo "── no deploy lands on a live room: who is live, for the build hold (0196) ──"
+node --import ./test/register.mjs test/live.mjs
+echo
 echo "── no kind of document without a second home, or a reason (0146) ──"
 node --import ./test/register.mjs test/keyfamilies.mjs

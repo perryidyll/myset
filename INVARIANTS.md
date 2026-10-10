@@ -2936,3 +2936,16 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
 ## Deleting a gig does not re-price the past (2026-10-09, decision `0198`)
 
 0ja. **A gig's rule is written onto every night already played under it before the rule goes.** A rule in the artist's book (`biz_<aid>.rules[eventId]`) is typed once on the gig form, and every night of the run with no record of its own reads its pay, its band splits and its four kinds of time from there — nights already played included (0065, D5). So `pruneRules` dropping the rule when its gig leaves the calendar re-priced history: a night that was played, filed and counted went to no pay and no hours, because the rule was the only thing that had ever said what it was worth. `pruneRules(doc, events, filed)` now takes every `<eventId>@<date>` key the history index carries and copies the dying rule onto each of those nights that has no record of its own — it becomes that night's own record, which nothing prunes — and only then deletes the rule. A record the artist typed is never overwritten, and a night never played is never invented. A caller with no index in hand passes none and NOTHING is pruned: an orphan rule left standing is a figure still on the page, and that is the safe way to fail. Both callers (`eventDelete`, and the orphan sweep on a rule save) read the index. Found 2026-10-09: three repeating gigs that had stopped running were deleted on the 7th, and five nights already filed under them — three Crystal Day, two Anantara — showed $0 and no hours in the Money tab. `test/biz.mjs` "A DELETED GIG LEAVES ITS PLAYED NIGHTS PRICED", which fails on the old code with no pay, no splits and no time.
+0jj. **No deploy lands on a live room.** A production build started by a git push is
+    held while any artist's show record says `live` — Netlify's `[build] ignore`
+    (`tools/hold.sh`) asks `/api/live` (`live.mjs`: one read per artist from the
+    registry, counts only, never cached) and exits 0 while `live > 0` or the count is
+    not `sure`, or the address cannot be asked. Previews and branch deploys are never
+    held (`CONTEXT` must be `production`). A held build is released by the outside
+    watch (`.github/workflows/watch.yml`): when `/version.json` — written by the build
+    itself, `tools/version.sh`, the one place production says which commit it runs —
+    is not `main`'s tip and nobody is live, it POSTs the build hook in the GitHub
+    secret `NETLIFY_BUILD_HOOK`, at most once every thirty minutes
+    (`LAST_RELEASE_AT`). The valve for a hotfix during a show is the watch run by hand
+    with `release=yes`, or the Netlify variable `HOLD_DEPLOYS=off`; a session never
+    pulls it on its own. `test/live.mjs`. Decision `0196`.
