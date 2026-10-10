@@ -10,6 +10,14 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-11 01:39 — 9a6e275 — caskeep-blank@fix/caskeep-blank-version (11 files since origin/main)
+**tl;dr:** Nothing a person sees: the blank-profile-version fix is now also tested through the real profile save, with the clock moving
+**Other sessions:** 0205: test/foundations.mjs adds a mutateProfile check with Date.now ticking (aid a_verrace, its keys deleted after). Suite 6,831 / 0 failing.
+
+### 2026-10-11 01:33 — 8607f15 — caskeep-blank@fix/caskeep-blank-version (11 files since origin/main)
+**tl;dr:** Nothing a person sees: a brand-new artist's profile history never starts with a blank copy, and the suite stops failing at random on 'A VERSION BEFORE EVERY OVERWRITE'
+**Other sessions:** Restacked onto b8c9fb0 (#257). 0205 / SCL-030 / INVARIANT 0fr amended: casKeep hands casDoc a fallback made once (same bytes, fresh object per read). Suite 6,829 / 0 failing.
+
 ### 2026-10-10 07:59 — 1b2435b — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to main an eleventh time (67d273a: 0203, 0204, 0196 amended, the leftovers on record); suite 6,828 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Ledger header: main's new opening kept, #257's 'slice C is LIVE as e996865' segment reinserted before the older slice C text; SCL-013 keeps #257's setCode sentence. Push log: two blocks, every entry from both sides kept.

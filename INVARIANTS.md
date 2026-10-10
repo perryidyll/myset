@@ -54,8 +54,10 @@ If you are about to violate one, stop and say so rather than working around it.
     `ev_` and the show record's library go through `casKeep`: the bytes as read to
     `ver_<key>_<ts>` (write-once), the stamp to `vers_<key>`, at most one every
     thirty seconds, never for a document that did not exist, never on a play, a
-    vote or a poll. A new capped list names its sibling in the same change; a new
-    hand-edited document uses `casKeep`. Decisions `0067`, `0068`.
+    vote or a poll. "Did not exist" is the fallback's bytes made once per call and
+    handed to every read, so a fallback that stamps the clock is still the blank
+    (`0205`). A new capped list names its sibling in the same change; a new
+    hand-edited document uses `casKeep`. Decisions `0067`, `0068`, `0205`.
 
 0fs. **An id, once minted, is never reused and never changes meaning.** Artist,
     venue, show, song, post, clip, version stamp, log part — the event log, the

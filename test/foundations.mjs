@@ -21,7 +21,7 @@ const voteFn = (await import('../netlify/functions/vote.mjs')).default;
 const history = (await import('../netlify/functions/history.mjs')).default;
 const { appendLog, readLog, readLogHead, logKeys, partKey } = await import('../netlify/functions/_append.mjs');
 const { readEventLog, EVT, devHash } = await import('../netlify/functions/_evlog.mjs');
-const { keepVersion, listVersions, versionKeys, verKey, VER_GAP_MS } = await import('../netlify/functions/_versions.mjs');
+const { keepVersion, casKeep, listVersions, versionKeys, verKey, VER_GAP_MS } = await import('../netlify/functions/_versions.mjs');
 const { spillPosts, readArchivedPosts, MAX_POSTS, ARCH: PARCH } = await import('../netlify/functions/_community.mjs');
 const { spillFeedback, readArchivedFeedback, MAX_NOTES, ARCH: FARCH } = await import('../netlify/functions/_feedback.mjs');
 const { keysFor, exportArtist } = await import('../netlify/functions/_account.mjs');
@@ -165,6 +165,26 @@ console.log('\nA VERSION BEFORE EVERY OVERWRITE');
   await A('eventSave', { event: { venue: 'The Bar', city: 'Here', date: '2026-12-01', time: '20:00' } });
   await keepVersion(`ev_${AID}`, JSON.stringify({ v: 1, list: [] }), Date.now() + VER_GAP_MS() + 1);
   ok('the calendar is versioned through the same door', (await listVersions(`ev_${AID}`)).length >= 1);
+
+  // a fallback that reads differently every call (the clock, a millisecond on) is still the blank (0205)
+  let tick = 0;
+  const drifting = () => ({ v: 1, updatedAt: ++tick, list: [] });
+  const fresh = await casKeep('log_test_drift', drifting, (d) => { d.list.push('x'); return true; });
+  ok('a first write keeps nothing, even when the blank reads differently a moment later', fresh.ok && (await listVersions('log_test_drift')).length === 0, await listVersions('log_test_drift'));
+
+  // the same, through the real profile door, with the clock a millisecond on at every read
+  const { mutateProfile } = await import('../netlify/functions/_profile.mjs');
+  const realNow = Date.now; let t = realNow();
+  Date.now = () => ++t;
+  try {
+    await mutateProfile('a_verrace', (p) => { p.name = 'Only Name'; });
+    eq('a new artist\'s first profile write keeps no version, with the clock moving', (await listVersions(KEY.profile('a_verrace'))).length, 0);
+    await mutateProfile('a_verrace', (p) => { p.name = 'Second Name'; });
+    const pv = await listVersions(KEY.profile('a_verrace'));
+    const pd = pv.length ? (await readDoc(verKey(KEY.profile('a_verrace'), pv[0].ts), null)).data : null;
+    eq('and the second keeps one: the first, never a blank', [pv.length, pd && pd.name], [1, 'Only Name']);
+  } finally { Date.now = realNow; }
+  for (const k of [KEY.profile('a_verrace'), ...(await versionKeys(KEY.profile('a_verrace')))]) await store().delete(k);
 }
 
 console.log('\nTHE FEED IS CAPPED, THE RECORD IS NOT');
