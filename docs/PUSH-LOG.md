@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:12 — 472605d — wt5@fix/dash-title-plates (0 files since origin/main)
+**tl;dr:** Dash window titles sit on a 72% backing plate above the chart lines, so lines no longer cross the text
+**Other sessions:** CSS only: .stat now has z-index 4 + color-mix(--screen 72%) background in public/dash.html
+
 ### 2026-10-10 13:18 — 68dcba2 — scale-p3-studio@fix/studio-clocks (14 files since origin/main)
 **tl;dr:** Nothing new for a person: the Studio's clocks (#258, 0201) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto 9250218 (#265). Ledger row is SCL-028. tools/mock.mjs FLAGS now carry both 'short' (0178) and 'slow' (0201). Suite 6,747 / 0 failing.
