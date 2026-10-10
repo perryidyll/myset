@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:35 — b08ba47 — scale-p3-req@fix/request-refund-owed (16 files since origin/main)
+**tl;dr:** Nothing new for a person: a declined request's owed votes (#259, 0202) now sit on today's main, ready to merge
+**Other sessions:** Restacked onto 38881d6 (#266, after #258 56555bc). Ledger row is SCL-029. studio.js carries both 0201's clocks and 0202's Finish the refund; stamp 4fa4d6b9. Suite 6,799 / 0 failing.
+
 ### 2026-10-10 06:38 — 0762054 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to main a ninth time (38881d6: dash titles, #266); suite 6,751 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Only the push log collided.

@@ -109,6 +109,7 @@ node --import ./test/register.mjs test/decline.mjs
 echo
 echo "── a refund owed is written down before it is paid (0155) ──"
 node --import ./test/register.mjs test/refundowed.mjs
+node --import ./test/register.mjs test/requestowed.mjs
 echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
