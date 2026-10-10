@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 06:24 — 92df220 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main a seventh time (9250218: scale audit merge day on record, docs only); suite 6,721 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. The ledger header collided: main's 2026-10-10 scale-audit opening kept, then #257's 'slice C is LIVE as e996865' segment with the setCode note, then the shared tail.
+
 ### 2026-10-10 13:11 — 9ac695a — docs-merge-day@docs/scale-merge-day-live (25 files since origin/main)
 **tl;dr:** The scale audit's paperwork caught up: every merged decision names its live commit, the test suite is now required before any merge, and the deploy-release hook was replaced after its id turned up in a public file.
 **Other sessions:** suite is a REQUIRED check on main (0197): a branch commit with [skip ci] never runs it and cannot merge — [skip ci] only in the squash subject. The watch's */5 cron runs 3–7 h apart: after a show, gh workflow run watch.yml -f release=no releases a held build (still refuses while anyone is live). Build hook rotated: its URL lives only in the GitHub secret NETLIFY_BUILD_HOOK — never write a hook id into a doc.
