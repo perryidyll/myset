@@ -76,7 +76,8 @@ need one that is not in §2.1, add it to `tools/overview.mjs`.
 
 | Area | Path | Rule |
 | --- | --- | --- |
-| Pages | `public/*.html` | Hand-written, self-contained, no build step. What you see is what ships. |
+| Pages | `public/*.html` | Hand-written, self-contained, no build step. What you see is what ships. **No code in markup** (decision 0209): a button names its action — `data-on-click="name"`, or `${ON.click('name', …)}` in a script — and the page's script registers it with `ON.add`; an `onclick=` runs nothing under the page's own policy, and `test/csp.mjs` refuses it. After ANY edit to an inline `<script>`, run `node tools/stamp.mjs`: the page's policy names each block by its hash. |
+| Action listener | `public/on.js` | Rides **inline in all twenty pages**, right after each page's policy (decision 0209): after ANY edit run `node tools/stamp.mjs`, or the suite refuses the stale copies. Never put a closing script tag in it. |
 | Shared fan script | `public/fan.js` | The sheet, the toast, the share sheet, the date words, the strips — one copy for every fan page (decision 0087, INVARIANT 0gc). A page never redeclares a name it declares; run `node tools/stamp.mjs` after ANY edit. |
 | Shared styles | `public/app.css` | Careful — it rides **inline in all nine fan pages** (decision 0094): after ANY edit run `node tools/stamp.mjs`, or the structure test refuses the stale copies. **Neither Studio loads it.** |
 | Studio styles | `public/lock.css` | Loaded by both Studios and nothing else. |

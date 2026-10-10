@@ -53,7 +53,8 @@ already set (2026-09-28); `FINMODEL_CODE` is not needed since decision 0130. `/a
 reports the seal by content (`seal.secret`, `seal.ring`); HARDENING.md §0 holds the rotation.
 
 **What did not change:** the front end is still public and still fine to be public;
-`script-src` still needs `'unsafe-inline'` (see below); the repository is still public
+since decision `0209` (2026-10-10) no page runs inline code it does not carry by hash (see
+below); the repository is still public
 by decision `0047` — and see the short version at the end for why that is now the one
 thing worth reconsidering.
 
@@ -129,16 +130,26 @@ already hidden.
    The cheapest security control that exists: it is the difference between a
    finder emailing you and a finder posting it.
 
-### The one honest weakness in the new CSP
+### The weakness the CSP had, and how it closed (decision `0209`, 2026-10-10)
 
-`script-src` still allows `'unsafe-inline'`, because every page is a single file
-with its script inline and its buttons wired with `onclick`. That is a deliberate
-architecture (one request, no build step) and not something to undo for a header.
+Until 2026-10-10 `script-src` allowed `'unsafe-inline'`, because every page is a single
+file with its script inline and its buttons were wired with `onclick` — 487 of them. So
+the policy did not stop an injected inline script; it stopped that script *loading*
+anything or *sending* anything anywhere (`connect-src 'self'`), no more.
 
-Say plainly what it costs: **the policy does not stop an injected inline script.**
-What it does stop is that script *loading* anything or *sending* anything anywhere
-— `connect-src 'self'` means a stolen token has nowhere to go, which removes most
-of the value of the injection. Moving to per-script hashes is Tier 1 below.
+**Now no page runs code it does not carry.** Every page in `public/` carries its own
+policy — a `<meta>` right after the charset, ahead of every script — naming each of its
+inline blocks by SHA-256 (`netlify/functions/_csp.mjs`, written by `tools/stamp.mjs`).
+No markup holds code: a button names its action (`data-on-click="closeSheet"`), and one
+small listener inlined in every page (`public/on.js`) runs what the page's scripts
+registered. So an injected `<script>` or `onclick=` runs nothing, and an injected
+`data-on-click` can only name something already registered. The pages stay one request
+each — nothing was moved into files. The founder's function-served pages send the same
+policy as a header worked out from the page. The site header keeps `'unsafe-inline'` as
+the floor for anything without a page of its own; a browser enforces every policy it is
+given, so the page's is what binds (and `'unsafe-inline'` beside a hash is ignored by
+every browser that knows hashes). `test/csp.mjs` refuses an `onclick=`, a stale policy
+or an unregistered action.
 
 ---
 
@@ -187,7 +198,7 @@ company buys with headcount. Almost everything below is paperwork and habits.
 | **Edge rate limiting** | Netlify has traffic rules. A per-IP ceiling on `/api/*` bounds both abuse and the bill. In-code limits on every anonymous write are `0111`; the edge rule is still worth having as a ceiling on scripts, set well above what a bar's wifi produces. |
 | **A backup you have actually restored** | ~~Blobs are the only datastore. Nobody has ever tested a restore.~~ Done 2026-09-14: `tools/backup.py --restore` wrote the 2026-09-13 copy into a rehearsal store and read every key back equal (decision `0069`, session `2026-09-14-data-foundations.md`); and `mirrorcron` copies every document to R2 nightly. Still to do: rehearse it again in six months, and the R2 copy on a hard delete. |
 | **Error and alert monitoring** | Today a failure is a line in a log nobody reads. Sentry's free tier, or Netlify's own alerts, plus one alert on a spike in 5xx. |
-| **CSP script hashes** | Removes `'unsafe-inline'`. A build step that hashes each inline block, or moving the scripts to files. **Measured 2026-10-09 and deferred, not forgotten:** a hash covers a `<script>` block, never a button's `onclick=`, and the pages wire about 480 of those — some 130 in the HTML and about 350 built inside scripts (`studio.js` 247, `venue-studio.js` 104, `vote.html` 45). `'unsafe-hashes'` cannot carry the ones built at run time, and Safari before 15.4 does not know the keyword at all, so a half-step would kill the vote page's buttons for part of a room. The real step is moving every handler to `addEventListener` with a real-browser CSP check on every page first — a pass of its own, after the secret is live. |
+| **CSP script hashes** | ~~Removes `'unsafe-inline'`.~~ **Done 2026-10-10 (decision `0209`, SEC-006):** all 487 inline handlers became named actions (`data-on-*`, wired by `public/on.js` on the element itself, so each fires where its `onclick=` did); every page names its own inline blocks by hash in a `<meta>` policy `tools/stamp.mjs` keeps current; the function-served pages send theirs as a header. `'unsafe-hashes'` was never needed, so Safari before 15.4 loses nothing. Checked in a real browser on every page, and tap by tap against the old pages. |
 | **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. Since 2026-09-28 the photo is never mirrored and its R2 copy is deleted with the original (`0110`); `0113` seals it at rest, with the other records that hold a person. |
 | **A privacy policy and a data-retention rule** | You collect email addresses and sell things. Both are legally required in most of the markets you would sell into, and neither exists. |
 
