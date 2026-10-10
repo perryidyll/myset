@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-11 02:13 — 30ecdc3 — gig-delete-rules@docs/0205-review-and-merge-mixup (0 files since origin/main)
+**tl;dr:** Nothing a person sees: on record why a profile-version race held a documentation merge, and why the merge the founder assigned was made by a different session
+**Other sessions:** A pull request binds to ONE session's monitor: a session named as merger that does not hold the binding cannot watch its own check. Hand over the binding or hand over the merge, in writing, before the suite goes green.
+
 ### 2026-10-11 01:46 — c5fd14f — watch-clock@ops/watch-clock (13 files since origin/main)
 **tl;dr:** The outside watch now really runs every five minutes: a Cloudflare clock starts it, so an outage or a build held during a show is caught in minutes, not hours
 **Other sessions:** New cloudflare/clock: Worker myset-watch-clock (cron */5) dispatches watch.yml on main, no inputs (release=no), token in its secret GH_DISPATCH_TOKEN (fine-grained, this repo, Actions rw); redeploy only with npx -y wrangler@4.146.0 deploy from that folder. GitHub's */5 stays as backstop. Expect workflow_dispatch runs every 5 min in Actions. Decision 0208, SCL-031; next free 0209/0jk/SCL-032.
