@@ -26,6 +26,8 @@
      ?founder=1   the Studio is the founding page: the founder's cards (codes, venues, sheet, books)
      ?seat=member the signed-in seat is a band mate (or crew), not the owner — with ?founder=1,
                   the server's answer to the founder's tools is its 401 (decisions 0099, 0100)
+     ?slow=12000  every Studio stage and admin answer waits that many ms (a stalled store);
+                  the Studio gives up on a read at 10 s and on a tap at 20 s (decision 0201)
      ?access=money:1,gigs:0   that seat's tabs, 0 hidden / 1 view / 2 edit (decision 0105); left
                   out, the seat is what the owner's grid (Settings → Who can sign in → Access)
                   last set in this process, from the role's preset
@@ -277,14 +279,15 @@ const SHOW_LABEL = 'Fri, Sep 11 · The Room';
    The address on a PAGE request sets the cookies; the API calls that page makes carry the
    cookies back. The query on the API call itself and the referer are read too, so a call
    made by hand (curl) can name a state without a cookie. */
-const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat', 'access', 'short'];
+const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat', 'access', 'short', 'slow'];
 const cookies = (rq) => Object.fromEntries((rq.headers.cookie || '').split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
 function stateOf(rq, q) {
   const ck = cookies(rq);
   let ref = null; try { ref = new URL(rq.headers.referer || '', 'http://x').searchParams; } catch { ref = null; }
   const pick = (k) => q.get(k) ?? ck['mock_' + k] ?? (ref && ref.get(k)) ?? null;
   return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1', first: pick('first') === '1',
-           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner', access: pick('access') || '', short: pick('short') === '1' };
+           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner', access: pick('access') || '', short: pick('short') === '1',
+           slow: Math.max(0, Math.min(60000, parseInt(pick('slow'), 10) || 0)) };
 }
 /* what the page request does to the cookies: a flag in the address sets it; a return trip
    from checkout (?paid= / ?cancelled=) keeps them; a plain address clears them all */
@@ -968,7 +971,9 @@ const srv = http.createServer(async (rq, rs) => {
     rs.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8' });
     return rs.end(qrSvg('https://myset.vip/demo', { scale: Math.max(2, Math.min(24, parseInt(u.searchParams.get('s'), 10) || 8)) }));
   }
-  /* the Studios, signed in */
+  /* the Studios, signed in. ?slow=<ms> holds every stage and admin answer that long, the
+     way a stalled store holds a function: the Studio's clocks (decision 0201) give up first */
+  if (st.slow && (u.pathname === '/api/stage' || u.pathname === '/api/admin')) await new Promise((r) => setTimeout(r, st.slow));
   if (u.pathname === '/api/stage') return json(rs, stageFixture(st));
   if (u.pathname === '/api/admin') {
     const body = rq.method === 'POST' ? await readBody(rq) : {};
