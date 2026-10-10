@@ -40,6 +40,6 @@ A fallback that must differ between the tries of one write, which no caller has.
 
 ## How it was verified
 
-- `node --import ./test/register.mjs test/foundations.mjs` → 104 ✓ / 0 ✗, five runs in a row. The new assertion hands `casKeep` a fallback that reads differently on every call: with the old `casKeep` it is red (a version of the blank was kept), with the fix it is green.
+- `node --import ./test/register.mjs test/foundations.mjs` → 106 ✓ / 0 ✗, every run. Two new checks: `casKeep` handed a fallback that reads differently on every call, and the real `mutateProfile` for a new artist with `Date.now` a millisecond on at every call (first write keeps none; the second keeps one, the first name, never a blank). On the old `casKeep` all three assertions are red (103 ✓ / 3 ✗). The profile-path check was suggested by another session, which measured the same.
 - The whole suite, `sh test/run.sh`.
 - Not checked: whether any live profile already holds a blank version from before this fix. Finding one needs a read of each artist's oldest version; it is harmless unless someone restores it.

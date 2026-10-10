@@ -171,6 +171,20 @@ console.log('\nA VERSION BEFORE EVERY OVERWRITE');
   const drifting = () => ({ v: 1, updatedAt: ++tick, list: [] });
   const fresh = await casKeep('log_test_drift', drifting, (d) => { d.list.push('x'); return true; });
   ok('a first write keeps nothing, even when the blank reads differently a moment later', fresh.ok && (await listVersions('log_test_drift')).length === 0, await listVersions('log_test_drift'));
+
+  // the same, through the real profile door, with the clock a millisecond on at every read
+  const { mutateProfile } = await import('../netlify/functions/_profile.mjs');
+  const realNow = Date.now; let t = realNow();
+  Date.now = () => ++t;
+  try {
+    await mutateProfile('a_verrace', (p) => { p.name = 'Only Name'; });
+    eq('a new artist\'s first profile write keeps no version, with the clock moving', (await listVersions(KEY.profile('a_verrace'))).length, 0);
+    await mutateProfile('a_verrace', (p) => { p.name = 'Second Name'; });
+    const pv = await listVersions(KEY.profile('a_verrace'));
+    const pd = pv.length ? (await readDoc(verKey(KEY.profile('a_verrace'), pv[0].ts), null)).data : null;
+    eq('and the second keeps one: the first, never a blank', [pv.length, pd && pd.name], [1, 'Only Name']);
+  } finally { Date.now = realNow; }
+  for (const k of [KEY.profile('a_verrace'), ...(await versionKeys(KEY.profile('a_verrace')))]) await store().delete(k);
 }
 
 console.log('\nTHE FEED IS CAPPED, THE RECORD IS NOT');

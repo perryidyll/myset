@@ -564,7 +564,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
 | Invariants | 340 (last: 0jj) |
 | Test suites | 102 |
-| Assertions | **6,829**, 0 failing, last run 2026-10-10 |
+| Assertions | **6,831**, 0 failing, last run 2026-10-10 |
 | Decision records | 206 |
 
 ### Feature flags in force
