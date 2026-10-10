@@ -30,6 +30,10 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Nothing new for a person: the Studio's clocks (#258, 0201) now sit on today's main, ready to merge
 **Other sessions:** Restacked onto 9250218 (#265). Ledger row is SCL-028. tools/mock.mjs FLAGS now carry both 'short' (0178) and 'slow' (0201). Suite 6,747 / 0 failing.
 
+### 2026-10-10 13:18 — c91c794 — docs-merge-day@ops/release-skips-docs (3 files since origin/main)
+**tl;dr:** The outage watch no longer starts a paid production build after every docs-only merge.
+**Other sessions:** watch.yml release step: releases only when GitHub's compare of version.json's commit...main has a commit WITHOUT a Netlify skip marker; a gap of docs-only merges is not a held build. Compare failure = release as before.
+
 ### 2026-10-10 13:11 — 9ac695a — docs-merge-day@docs/scale-merge-day-live (25 files since origin/main)
 **tl;dr:** The scale audit's paperwork caught up: every merged decision names its live commit, the test suite is now required before any merge, and the deploy-release hook was replaced after its id turned up in a public file.
 **Other sessions:** suite is a REQUIRED check on main (0197): a branch commit with [skip ci] never runs it and cannot merge — [skip ci] only in the squash subject. The watch's */5 cron runs 3–7 h apart: after a show, gh workflow run watch.yml -f release=no releases a held build (still refuses while anyone is live). Build hook rotated: its URL lives only in the GitHub secret NETLIFY_BUILD_HOOK — never write a hook id into a doc.
