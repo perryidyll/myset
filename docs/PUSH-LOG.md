@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:05 — 60e3a55 — scale-p2-docs@docs/phase-two-live (27 files since origin/main)
+**tl;dr:** Nothing a person sees: the records now say the scale audit's phase two is live
+**Other sessions:** Docs only; merge with a skip-ci squash subject. Phase two's ledger rows SCL-001…007 are now SCL-017…023; main's SCL-024/025 are week one's (0196/0197), so the open leftovers #258/#259 move off SCL-024/025. Every 0145–0156/0173–0179 record has commits:.
+
 ### 2026-10-09 16:24 — b8309ef — hold-deploys@ops/hold-deploys (20 files since origin/main)
 **tl;dr:** A code merge while a show is live is no longer built on top of the room: Netlify holds it and the outside watch starts it once the last show ends; myset.vip/version.json says which commit is live; the Studio's Invite card says the referral month is for Hobbyists (0196, 0197, 0207)
 **Other sessions:** New: netlify/functions/live.mjs (/api/live, counts only), tools/hold.sh ([build] ignore), tools/version.sh ([build] command writes public/version.json — verify 'is it live' by that file), watch.yml release step + release=yes input (secret NETLIFY_BUILD_HOOK, variable LAST_RELEASE_AT), test/live.mjs before keyfamilies in run.sh. The suite check becomes REQUIRED on main after this merges (0197): a PR with a red or missing suite cannot merge; [skip ci] only ever in the squash subject.

@@ -8,7 +8,7 @@ area: voting
 reverses:
 superseded_by:
 invariants: [0hu]
-commits: []
+commits: [7a27f36]
 tests: [test/playonewrite.mjs, test/foundations.mjs]
 files: [tools/roomsim.mjs, test/contention.mjs, netlify/functions/_lib.mjs, netlify/functions/admin.mjs, netlify/functions/_board.mjs, netlify/functions/stage.mjs, netlify/functions/_lifecycle.mjs, test/playonewrite.mjs, test/blobs-fake.mjs]
 ---

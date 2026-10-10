@@ -6,9 +6,9 @@ An overnight batch for the session "MySet Audit Solutions 2", while the founder 
 
 Three rows of the 2 October scale audit, in this order, one commit each, stopping after any of them if the next was unsafe:
 
-1. *A slow Play, then a second tap, burns the next song* — decision 0151, INVARIANT 0hy, ledger SCL-004.
-2. *Past 3,000 phones only the top 15 songs can be voted for* — the server half only — decision 0150, INVARIANT 0hx, ledger SCL-003.
-3. *The whole song library rides on every phone's poll* — decision 0152, INVARIANT 0hz, ledger SCL-005.
+1. *A slow Play, then a second tap, burns the next song* — decision 0151, INVARIANT 0hy, ledger SCL-020.
+2. *Past 3,000 phones only the top 15 songs can be voted for* — the server half only — decision 0150, INVARIANT 0hx, ledger SCL-019.
+3. *The whole song library rides on every phone's poll* — decision 0152, INVARIANT 0hz, ledger SCL-021.
 
 ## What was built
 
