@@ -24,6 +24,7 @@ node test/structure.mjs
 echo
 echo "── what the public reads ──"
 node test/copy.mjs
+node --import ./test/register.mjs test/nomarkup.mjs
 echo
 echo "── unit ──"
 node test/unit.mjs

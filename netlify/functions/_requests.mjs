@@ -36,7 +36,7 @@ const OPEN = 'pending';
 
 export const emptyRequests = () => ({ v: 1, list: [] });
 
-const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+const clean = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);   // no markup (0203)
 
 export async function readRequests(aid) {
   const { data } = await readDoc(KEY.reqs(aid), null);

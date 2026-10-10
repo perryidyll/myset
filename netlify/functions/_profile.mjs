@@ -333,7 +333,13 @@ export function safeLink(kind, raw) {
   return u.toString().slice(0, 300);
 }
 
-const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+/* NO MARKUP IN A SHORT FIELD (decision 0203, INVARIANT 0jf). The pages escape what
+   they draw, and once they did not (the management name, fixed in #204); a name, a
+   tagline or a label has no use for `<` or `>`, so they are taken out here as well,
+   on every save and on every read (getProfile runs this), and a page that forgets to
+   escape draws text, not a tag. The bio keeps its own characters and is escaped
+   where it is drawn. */
+const clean = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 
 export function normProfile(p) {
   const d = defaultProfile();

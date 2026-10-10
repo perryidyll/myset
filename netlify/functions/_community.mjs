@@ -56,7 +56,7 @@ export const EDIT_WINDOW = 24 * 3600e3;
 const empty = () => ({ v: 1, list: [], recent: [], n: 0 });
 const emptyLikes = () => ({ v: 1, by: {} });
 export const h10 = (v) => sha(String(v || '')).slice(0, 10);
-const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+const clean = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);   // no markup (0203)
 
 export async function readPosts(owner) {
   const { data } = await readDoc(KEY(owner), null);
