@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 13:18 — 68dcba2 — scale-p3-studio@fix/studio-clocks (14 files since origin/main)
+**tl;dr:** Nothing new for a person: the Studio's clocks (#258, 0201) now sit on today's main, ready to merge
+**Other sessions:** Restacked onto 9250218 (#265). Ledger row is SCL-028. tools/mock.mjs FLAGS now carry both 'short' (0178) and 'slow' (0201). Suite 6,747 / 0 failing.
+
 ### 2026-10-10 06:24 — 92df220 — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
 **tl;dr:** Brought up to main a seventh time (9250218: scale audit merge day on record, docs only); suite 6,721 ✓ / 0 ✗ on the merged tree
 **Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. The ledger header collided: main's 2026-10-10 scale-audit opening kept, then #257's 'slice C is LIVE as e996865' segment with the setCode note, then the shared tail.
