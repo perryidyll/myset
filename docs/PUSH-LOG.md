@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-10 07:59 — 1b2435b — myset@claude/myset-encryption-security-460mph (17 files since origin/main)
+**tl;dr:** Brought up to main an eleventh time (67d273a: 0203, 0204, 0196 amended, the leftovers on record); suite 6,828 ✓ / 0 ✗ on the merged tree
+**Other sessions:** PR #257: still NOT docs only, merge without [skip ci]. Ledger header: main's new opening kept, #257's 'slice C is LIVE as e996865' segment reinserted before the older slice C text; SCL-013 keeps #257's setCode sentence. Push log: two blocks, every entry from both sides kept.
+
 ### 2026-10-10 14:00 — 05680ee — scale-p2-docs@docs/leftovers-live (10 files since origin/main)
 **tl;dr:** Nothing a person sees: the records now say the scale audit's four leftovers (0201–0204) are live
 **Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-026–029 done; commits: filled on 0201–0204; sheets a02/r10/n03/s21 and Puzzle steps say live with the SHA. The foundations.mjs version flake is real (defaultProfile() updatedAt twice), not built.
