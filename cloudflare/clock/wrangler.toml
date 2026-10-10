@@ -1,0 +1,19 @@
+# The outside watch's clock (decision 0208). GitHub runs watch.yml's own `*/5`
+# schedule when it likes — three to seven hours apart in October 2026 — so this
+# Worker asks GitHub to run that workflow every five minutes. Deployed by hand from
+# this directory, never by the Netlify pipeline:
+#   npx -y wrangler@4.146.0 deploy
+# Secrets (set with `npx -y wrangler@4.146.0 secret put <NAME>`, never in a file):
+#   GH_DISPATCH_TOKEN  a fine-grained GitHub token: this repository only, Actions read and write
+#   NTFY_TOPIC         the same topic as the repository's NTFY_TOPIC secret
+name = "myset-watch-clock"
+main = "src/index.mjs"
+compatibility_date = "2026-09-01"
+account_id = "7a48fa04262dcda3055ebc7ba845985b"
+workers_dev = false
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[observability]
+enabled = true
