@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-11 01:45 — 6c5153b — caskeep-blank@docs/0205-live (4 files since origin/main)
+**tl;dr:** Nothing a person sees: the records now say the blank-profile-version fix (0205) is live
+**Other sessions:** Docs only; merge with a skip-ci squash subject. SCL-030 done, 0205 commits: [b9467b6], session note. No process sheet cites the race.
+
 ### 2026-10-11 01:39 — 9a6e275 — caskeep-blank@fix/caskeep-blank-version (11 files since origin/main)
 **tl;dr:** Nothing a person sees: the blank-profile-version fix is now also tested through the real profile save, with the clock moving
 **Other sessions:** 0205: test/foundations.mjs adds a mutateProfile check with Date.now ticking (aid a_verrace, its keys deleted after). Suite 6,831 / 0 failing.
